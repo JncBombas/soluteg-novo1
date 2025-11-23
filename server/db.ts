@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,40 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Report queries
+export async function createReport(report: InsertReport) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(reports).values(report);
+  return result;
+}
+
+export async function getReportsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(reports).where(eq(reports.userId, userId)).orderBy(desc(reports.createdAt));
+}
+
+export async function getReportById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateReport(id: number, data: Partial<InsertReport>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(reports).set(data).where(eq(reports.id, id));
+}
+
+export async function deleteReport(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(reports).where(eq(reports.id, id));
+}

@@ -25,4 +25,27 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+/**
+ * Relatórios técnicos criados pelos usuários
+ */
+export const reports = mysqlTable("reports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  serviceType: varchar("serviceType", { length: 100 }).notNull(),
+  serviceDate: timestamp("serviceDate").notNull(),
+  location: text("location").notNull(),
+  description: text("description").notNull(),
+  equipmentDetails: text("equipmentDetails"),
+  workPerformed: text("workPerformed").notNull(),
+  partsUsed: text("partsUsed"),
+  technicianName: varchar("technicianName", { length: 255 }).notNull(),
+  observations: text("observations"),
+  status: mysqlEnum("status", ["draft", "completed", "reviewed"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
