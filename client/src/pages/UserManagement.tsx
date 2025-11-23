@@ -82,10 +82,10 @@ export default function UserManagement() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
-          <p className="text-muted-foreground">Crie convites e gerencie usuários do sistema</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Usuários</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Crie convites e gerencie usuários do sistema</p>
         </div>
 
         <Tabs defaultValue="invites" className="w-full">
@@ -107,8 +107,8 @@ export default function UserManagement() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleCreateInvite} className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
+                <form onSubmit={handleCreateInvite} className="space-y-3 sm:space-y-4">
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
                     <div className="space-y-2">
                       <Label htmlFor="email">Email do Usuário</Label>
                       <Input

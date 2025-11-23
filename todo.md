@@ -39,3 +39,9 @@
 - [x] Implementar CRUD de usuários (criar, editar, deletar)
 - [x] Configurar soluteggeradores@gmail.com como administrador
 - [x] Testar painel de gestão de usuários
+
+## Otimização Mobile (Nova)
+- [x] Otimizar DashboardLayout para telas pequenas
+- [x] Ajustar formulários para mobile
+- [x] Melhorar navegação em dispositivos móveis
+- [x] Testar área administrativa no celular

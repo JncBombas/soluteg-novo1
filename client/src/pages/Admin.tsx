@@ -10,16 +10,17 @@ export default function Admin() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Relatórios Técnicos</h1>
-            <p className="text-muted-foreground">Gerencie seus relatórios de serviço</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Relatórios Técnicos</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gerencie seus relatórios de serviço</p>
           </div>
-          <Link href="/admin/reports/new">
-            <Button className="gap-2">
+          <Link href="/admin/reports/new" className="w-full sm:w-auto">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              Novo Relatório
+              <span className="hidden sm:inline">Novo Relatório</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </Link>
         </div>
@@ -29,7 +30,7 @@ export default function Admin() {
             <p className="text-muted-foreground">Carregando relatórios...</p>
           </div>
         ) : reports && reports.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {reports.map((report) => (
               <Link key={report.id} href={`/admin/reports/${report.id}`}>
                 <Card className="hover:border-primary transition-colors cursor-pointer">

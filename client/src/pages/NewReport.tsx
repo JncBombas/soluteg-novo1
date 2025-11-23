@@ -62,19 +62,19 @@ export default function NewReport() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Novo Relatório Técnico</CardTitle>
-            <CardDescription>Preencha as informações do serviço realizado</CardDescription>
+      <div className="max-w-4xl mx-auto px-0 sm:px-2">
+        <Card className="border-0 sm:border">
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-xl sm:text-2xl">Novo Relatório Técnico</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Preencha as informações do serviço realizado</CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <CardContent className="p-3 sm:p-6">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
               {/* Informações Básicas */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Informações Básicas</h3>
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-base sm:text-lg font-semibold">Informações Básicas</h3>
                 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="title">Título do Relatório *</Label>
                     <Input
