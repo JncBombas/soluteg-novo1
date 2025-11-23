@@ -45,3 +45,9 @@
 - [x] Ajustar formulários para mobile
 - [x] Melhorar navegação em dispositivos móveis
 - [x] Testar área administrativa no celular
+
+## Integração de Contato (Nova)
+- [x] Adicionar botão de acesso á área administrativa na página pública
+- [x] Integrar WhatsApp nos botões de contato
+- [x] Integrar e-mail nos botões de contato
+- [x] Testar links de contato

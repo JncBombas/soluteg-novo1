@@ -53,6 +53,13 @@ export default function Home() {
               </Button>
             </Link>
           </div>
+          <div className="md:hidden">
+            <Link href="/admin">
+              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                Admin
+              </Button>
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -174,13 +181,17 @@ export default function Home() {
         <div className="container text-center">
           <h2 className="text-4xl font-bold mb-6">Entre em contato agora mesmo!</h2>
           <p className="text-xl mb-8">Estamos prontos para atender suas necessidades</p>
-          <div className="flex gap-4 justify-center">
-            <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100">
-              Enviar Mensagem
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary">
-              WhatsApp
-            </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="mailto:contato@soluteg.com.br" className="w-full sm:w-auto">
+              <Button size="lg" variant="secondary" className="bg-white text-primary hover:bg-gray-100 w-full">
+                Enviar Mensagem
+              </Button>
+            </a>
+            <a href="https://wa.me/message/UIVQB7X2QY2NN1" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary w-full">
+                WhatsApp
+              </Button>
+            </a>
           </div>
         </div>
       </section>
