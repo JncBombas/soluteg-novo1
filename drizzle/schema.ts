@@ -49,3 +49,19 @@ export const reports = mysqlTable("reports", {
 
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = typeof reports.$inferInsert;
+
+/**
+ * Convites para novos usuários (criados manualmente pelo admin)
+ */
+export const invites = mysqlTable("invites", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  used: timestamp("used"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+
+export type Invite = typeof invites.$inferSelect;
+export type InsertInvite = typeof invites.$inferInsert;

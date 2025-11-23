@@ -28,8 +28,8 @@ import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Relatórios", path: "/admin" },
+  { icon: Users, label: "Gestão de Usuários", path: "/admin/users", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -211,6 +211,8 @@ function DashboardLayoutContent({
             <SidebarMenu className="px-2 py-1">
               {menuItems.map(item => {
                 const isActive = location === item.path;
+                const isAdminOnly = (item as any).adminOnly;
+                if (isAdminOnly && user?.role !== "admin") return null;
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton

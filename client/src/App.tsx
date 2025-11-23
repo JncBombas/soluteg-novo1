@@ -8,12 +8,14 @@ import Home from "./pages/Home";
 import Admin from "./pages/Admin";
 import NewReport from "./pages/NewReport";
 import ReportDetail from "./pages/ReportDetail";
+import UserManagement from "./pages/UserManagement";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/admin"} component={Admin} />
+      <Route path={"/admin/users"} component={UserManagement} />
       <Route path={"/admin/reports/new"} component={NewReport} />
       <Route path={"/admin/reports/:id"} component={ReportDetail} />
       <Route path={"/404"} component={NotFound} />

@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -125,4 +125,56 @@ export async function deleteReport(id: number) {
   if (!db) throw new Error("Database not available");
   
   await db.delete(reports).where(eq(reports.id, id));
+}
+
+// Invite queries
+export async function createInvite(invite: InsertInvite) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(invites).values(invite);
+  return result;
+}
+
+export async function getInvites() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(invites).orderBy(desc(invites.createdAt));
+}
+
+export async function getInviteByCode(code: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(invites).where(eq(invites.code, code)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deleteInvite(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(invites).where(eq(invites.id, id));
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(users).where(eq(users.id, id));
+}
+
+export async function updateUserRole(id: number, role: "user" | "admin") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(users).set({ role }).where(eq(users.id, id));
 }

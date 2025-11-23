@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { TRPCError } from "@trpc/server";
+import crypto from "crypto";
 
 export const appRouter = router({
   system: systemRouter,
@@ -90,6 +92,74 @@ export const appRouter = router({
           throw new Error("Report not found or access denied");
         }
         await db.deleteReport(input.id);
+        return { success: true };
+      }),
+  }),
+
+  users: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can list users" });
+      }
+      return await db.getAllUsers();
+    }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can delete users" });
+        }
+        await db.deleteUser(input.id);
+        return { success: true };
+      }),
+
+    updateRole: protectedProcedure
+      .input(z.object({ id: z.number(), role: z.enum(["user", "admin"]) }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can update roles" });
+        }
+        await db.updateUserRole(input.id, input.role);
+        return { success: true };
+      }),
+  }),
+
+  invites: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can list invites" });
+      }
+      return await db.getInvites();
+    }),
+
+    create: protectedProcedure
+      .input(z.object({
+        email: z.string().email(),
+        role: z.enum(["user", "admin"]).default("user"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can create invites" });
+        }
+        const code = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await db.createInvite({
+          email: input.email,
+          code,
+          role: input.role,
+          expiresAt,
+        });
+        return { success: true, code };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can delete invites" });
+        }
+        await db.deleteInvite(input.id);
         return { success: true };
       }),
   }),

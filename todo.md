@@ -32,3 +32,10 @@
 - [x] Validar responsividade do site
 - [x] Criar checkpoint final
 - [x] Adicionar imagens reais do site original
+
+## Gestão de Usuários (Nova)
+- [x] Desabilitar inscrições abertas
+- [x] Criar painel administrativo de gestão de usuários
+- [x] Implementar CRUD de usuários (criar, editar, deletar)
+- [x] Configurar soluteggeradores@gmail.com como administrador
+- [x] Testar painel de gestão de usuários
