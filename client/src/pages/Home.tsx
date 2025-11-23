@@ -134,9 +134,7 @@ export default function Home() {
                 A JNC oferece serviços de Manutenção e Manufatura na área de Elétrica e Automação Industrial, atendendo em todo território nacional. Com time multidisciplinar qualificado, especialidade em Mecatrônica, a empresa oferece serviços de automação industrial, projetos de máquinas, projetos customizados de elétrica e de automação industrial, desenvolvimento e fabricação de painéis elétricos, modificação e adequação de máquinas, desenvolvimento de produtos, dentre outros.
               </p>
             </div>
-            <div className="bg-gray-200 h-80 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500">Imagem Industrial</span>
-            </div>
+            <img src="/manutencao_industrial.webp" alt="Manutenção Industrial" className="w-full h-80 object-cover rounded-lg" />
           </div>
         </div>
       </section>
@@ -145,9 +143,7 @@ export default function Home() {
       <section id="predial" className="py-20 bg-gray-50">
         <div className="container">
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="bg-gray-200 h-80 rounded-lg flex items-center justify-center order-2 md:order-1">
-              <span className="text-gray-500">Imagem Predial</span>
-            </div>
+            <img src="/manutencao_predial.webp" alt="Manutenção Predial" className="w-full h-80 object-cover rounded-lg order-2 md:order-1" />
             <div className="order-1 md:order-2">
               <h2 className="text-4xl font-bold mb-6">Manutenção Predial</h2>
               <p className="text-lg text-gray-700">
@@ -168,9 +164,7 @@ export default function Home() {
                 A JNC (Soluteg) dispõe de knowhow para atender a demanda do mercado, que está cada vez mais exigente, com a confecção, instalação e retrofit de painéis elétricos.
               </p>
             </div>
-            <div className="bg-gray-200 h-80 rounded-lg flex items-center justify-center">
-              <span className="text-gray-500">Imagem Painéis</span>
-            </div>
+            <img src="/paineis_eletricos.webp" alt="Painéis Elétricos" className="w-full h-80 object-cover rounded-lg" />
           </div>
         </div>
       </section>

@@ -30,4 +30,5 @@
 - [x] Testar fluxo completo de autenticação
 - [x] Testar CRUD de relatórios
 - [x] Validar responsividade do site
-- [ ] Criar checkpoint final
+- [x] Criar checkpoint final
+- [x] Adicionar imagens reais do site original
