@@ -1,164 +1,146 @@
-import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { FileText, Users, TrendingUp, Clock } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-
-const COLORS = ["#f97316", "#fb923c", "#fdba74", "#fcd34d"];
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+import { LogOut, Home, User } from "lucide-react";
+import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    // Simulated data - in production, fetch from API
-    const mockStats = {
-      totalReports: 24,
-      totalUsers: 5,
-      monthlyData: [
-        { month: "Jan", reports: 4 },
-        { month: "Fev", reports: 3 },
-        { month: "Mar", reports: 7 },
-        { month: "Abr", reports: 5 },
-        { month: "Mai", reports: 5 },
-      ],
-      serviceStats: [
-        { name: "Manutenção Industrial", value: 12 },
-        { name: "Manutenção Predial", value: 8 },
-        { name: "Painéis Elétricos", value: 4 },
-      ],
-      recentReports: [
-        { id: 1, client: "Cliente A", service: "Manutenção Industrial", date: "2024-11-20" },
-        { id: 2, client: "Cliente B", service: "Manutenção Predial", date: "2024-11-19" },
-        { id: 3, client: "Cliente C", service: "Painéis Elétricos", date: "2024-11-18" },
-      ],
-    };
-    setStats(mockStats);
-    setLoading(false);
-  }, []);
+  const logoutMutation = trpc.adminAuth.logout.useMutation({
+    onSuccess: () => {
+      toast.success("Logout realizado com sucesso!");
+      setLocation("/");
+    },
+    onError: (error) => {
+      toast.error("Erro ao fazer logout: " + error.message);
+    },
+  });
 
-  if (loading) {
-    return <div className="p-8">Carregando...</div>;
-  }
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Relatórios</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalReports || 0}</div>
-            <p className="text-xs text-muted-foreground">Relatórios criados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
-            <p className="text-xs text-muted-foreground">Administradores</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Este Mês</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.monthlyData?.[stats.monthlyData.length - 1]?.reports || 0}</div>
-            <p className="text-xs text-muted-foreground">Relatórios em maio</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">Aguardando revisão</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Relatórios por Mês</CardTitle>
-            <CardDescription>Últimos 5 meses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats?.monthlyData || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="reports" stroke="#f97316" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição de Serviços</CardTitle>
-            <CardDescription>Por tipo de serviço</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats?.serviceStats || []}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {stats?.serviceStats?.map((_: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Reports */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Relatórios Recentes</CardTitle>
-          <CardDescription>Últimos relatórios criados</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {stats?.recentReports?.map((report: any) => (
-              <div key={report.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                <div>
-                  <p className="font-medium">{report.client}</p>
-                  <p className="text-sm text-muted-foreground">{report.service}</p>
-                </div>
-                <p className="text-sm text-muted-foreground">{report.date}</p>
-              </div>
-            ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={APP_LOGO} alt={APP_TITLE} className="h-10" />
+            <div>
+              <h1 className="font-bold text-gray-900">Painel Administrativo</h1>
+              <p className="text-sm text-gray-500">Bem-vindo à área restrita</p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/admin/profile")}
+              className="gap-2"
+            >
+              <User className="w-4 h-4" />
+              Meu Perfil
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setLocation("/")}
+              className="gap-2"
+            >
+              <Home className="w-4 h-4" />
+              Página Inicial
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Welcome Card */}
+          <Card className="md:col-span-3">
+            <CardHeader>
+              <CardTitle>Bem-vindo ao Painel Administrativo</CardTitle>
+              <CardDescription>
+                Você está logado e tem acesso à área restrita do sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Este é o painel administrativo da Soluteg. Aqui você pode gerenciar as operações do sistema.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Stats Cards */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Sistema</CardTitle>
+              <CardDescription>Status do sistema</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                  Sistema Operacional
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                  Banco de Dados Conectado
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Acesso</CardTitle>
+              <CardDescription>Informações de acesso</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <strong>Tipo:</strong> Administrador
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Status:</strong> Autenticado
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Ações</CardTitle>
+              <CardDescription>Operações disponíveis</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  ✓ Gerenciar perfil
+                </p>
+                <p className="text-sm text-gray-600">
+                  ✓ Alterar senha
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }

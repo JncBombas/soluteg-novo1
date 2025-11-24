@@ -127,8 +127,6 @@ export const appRouter = router({
       }),
   }),
 
-
-
   adminAuth: router({
     login: publicProcedure
       .input(z.object({
@@ -177,7 +175,61 @@ export const appRouter = router({
         const hashedPassword = await hashPassword(input.password);
         await db.updateAdminPassword(1, hashedPassword);
         return { success: true, message: "Senha redefinida com sucesso" };
-      })
+      }),
+
+    changePassword: publicProcedure
+      .input(z.object({
+        adminId: z.number(),
+        currentPassword: z.string().min(6),
+        newPassword: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const admin = await db.getAdminById(input.adminId);
+        if (!admin) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
+        }
+        
+        try {
+          await authenticateAdmin(admin.email, input.currentPassword);
+        } catch (error) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual incorreta" });
+        }
+        
+        const hashedPassword = await hashPassword(input.newPassword);
+        await db.updateAdminPassword(input.adminId, hashedPassword);
+        return { success: true, message: "Senha alterada com sucesso" };
+      }),
+  }),
+
+  adminProfile: router({
+    getProfile: publicProcedure
+      .input(z.object({ adminId: z.number() }))
+      .query(async ({ input }) => {
+        const admin = await db.getAdminById(input.adminId);
+        if (!admin) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
+        }
+        return {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          phone: admin.phone,
+          profilePhoto: admin.profilePhoto,
+        };
+      }),
+
+    updateProfile: publicProcedure
+      .input(z.object({
+        adminId: z.number(),
+        name: z.string().min(1).optional(),
+        phone: z.string().optional(),
+        profilePhoto: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { adminId, ...updateData } = input;
+        await db.updateAdminProfile(adminId, updateData);
+        return { success: true, message: "Perfil atualizado com sucesso" };
+      }),
   }),
 });
 

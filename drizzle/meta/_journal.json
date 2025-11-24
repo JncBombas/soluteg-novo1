@@ -43,6 +43,13 @@
       "when": 1764008555736,
       "tag": "0005_modern_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1764015068847,
+      "tag": "0006_lonely_nightmare",
+      "breakpoints": true
     }
   ]
 }

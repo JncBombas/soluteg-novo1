@@ -328,3 +328,22 @@ export async function createUser(userData: {
   
   return result;
 }
+
+
+// Update admin profile
+export async function updateAdminProfile(id: number, data: { name?: string; phone?: string; profilePhoto?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.profilePhoto !== undefined) updateData.profilePhoto = data.profilePhoto;
+  
+  if (Object.keys(updateData).length === 0) {
+    throw new Error("No fields to update");
+  }
+  
+  await db.update(admins).set(updateData).where(eq(admins.id, id));
+}
+
