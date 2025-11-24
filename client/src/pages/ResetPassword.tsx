@@ -1,41 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { trpc } from "@/lib/trpc";
-import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { APP_LOGO, APP_TITLE } from "@/const";
+import { trpc } from "@/lib/trpc";
 
-export default function AdminLogin() {
+export default function ResetPassword() {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const loginMutation = trpc.adminAuth.login.useMutation({
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetToken = params.get("token");
+    if (resetToken) {
+      setToken(resetToken);
+    }
+  }, []);
+
+  const resetMutation = trpc.adminAuth.resetPassword.useMutation({
     onSuccess: () => {
-      toast.success("Login realizado com sucesso!");
-      // Armazenar token no localStorage
-      setLocation("/admin");
+      toast.success("Senha redefinida com sucesso! Redirecionando...");
+      setTimeout(() => setLocation("/admin/login"), 2000);
     },
-    onError: (error) => {
-      toast.error("Erro ao fazer login: " + error.message);
+    onError: (error: any) => {
+      toast.error("Erro: " + error.message);
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
+
+    if (!token) {
+      toast.error("Token de reset inválido");
+      return;
+    }
+
+    if (!password || !confirmPassword) {
       toast.error("Por favor, preencha todos os campos");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
+
+    if (password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     setIsLoading(true);
     try {
-      await loginMutation.mutateAsync({ email, password });
+      await resetMutation.mutateAsync({ token, password } as any);
     } finally {
       setIsLoading(false);
     }
@@ -46,34 +69,21 @@ export default function AdminLogin() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img src={APP_LOGO} alt={APP_TITLE} className="h-16 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-white">Área Administrativa</h1>
-          <p className="text-gray-400 mt-2">Acesso restrito</p>
+          <h1 className="text-3xl font-bold text-white">Redefinir Senha</h1>
+          <p className="text-gray-400 mt-2">Digite sua nova senha</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Login</CardTitle>
+            <CardTitle>Nova Senha</CardTitle>
             <CardDescription>
-              Faça login com suas credenciais de administrador
+              Crie uma nova senha para sua conta
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password">Nova Senha</Label>
                 <Input
                   id="password"
                   type="password"
@@ -85,25 +95,27 @@ export default function AdminLogin() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Entrando..." : "Entrar"}
+                {isLoading ? "Processando..." : "Redefinir Senha"}
               </Button>
             </form>
-
-            <div className="mt-6 pt-6 border-t space-y-3">
-              <p className="text-sm text-gray-600 text-center">
-                Não tem acesso? Contate o administrador do sistema.
-              </p>
-              <Link href="/reset-password">
-                <Button variant="ghost" className="w-full text-sm">
-                  Esqueci minha senha
-                </Button>
-              </Link>
-            </div>
           </CardContent>
         </Card>
       </div>

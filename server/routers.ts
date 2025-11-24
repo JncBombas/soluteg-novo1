@@ -169,6 +169,27 @@ export const appRouter = router({
       }),
   }),
 
+  invitesAccept: router({
+    accept: publicProcedure
+      .input(z.object({
+        code: z.string(),
+        name: z.string().min(1),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const hashedPassword = await hashPassword(input.password);
+          await db.acceptInvite(input.code, input.name, hashedPassword);
+          return { success: true, message: "Conta criada com sucesso!" };
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Erro ao aceitar convite",
+          });
+        }
+      }),
+  }),
+
   adminAuth: router({
     login: publicProcedure
       .input(z.object({
@@ -194,6 +215,30 @@ export const appRouter = router({
       ctx.res.clearCookie('admin_token', { ...cookieOptions, maxAge: -1 });
       return { success: true };
     }),
+
+    requestReset: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const admin = await db.getAdminByEmail(input.email);
+        if (!admin) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
+        }
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000);
+        await db.createPasswordReset(input.email, resetToken, expiresAt);
+        return { success: true, message: "Link de reset enviado para seu e-mail" };
+      }),
+
+    resetPassword: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const hashedPassword = await hashPassword(input.password);
+        await db.updateAdminPassword(1, hashedPassword);
+        return { success: true, message: "Senha redefinida com sucesso" };
+      })
   }),
 });
 

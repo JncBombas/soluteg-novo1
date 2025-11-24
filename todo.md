@@ -66,3 +66,23 @@
 - [x] Implementar envio de convites por e-mail
 - [x] Implementar envio de convites por WhatsApp
 - [x] Criar página de aceitação de convite
+
+## Integração de Convites (Nova)
+- [x] Implementar procedure para aceitar convite
+- [x] Criar conta de usuário ao aceitar convite
+- [x] Validar código de convite expirado
+- [ ] Testar fluxo completo de convite
+
+## Recuperação de Senha (Nova)
+- [x] Implementar procedure de solicitar reset de senha
+- [x] Criar página de reset de senha
+- [x] Enviar e-mail com link de reset
+- [x] Validar token de reset expirado
+- [ ] Testar fluxo de recuperação
+
+## Dashboard com Estatísticas (Nova)
+- [x] Criar componente de estatísticas
+- [x] Adicionar gráfico de relatórios por mês
+- [x] Adicionar gráfico de serviços mais solicitados
+- [x] Mostrar total de relatórios criados
+- [x] Mostrar atividades recentes

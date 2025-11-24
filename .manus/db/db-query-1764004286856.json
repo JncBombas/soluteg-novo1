@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO admins (email, password, name, active, createdAt, updatedAt) VALUES ('soluteggeradores@gmail.com', '$2b$10$YxWbJO4Cqf9ukJzsGeMniu9sKdrQLASkvAgoqDFwXie/2UYsPjXGG', 'Soluteg Admin', 1, NOW(), NOW())",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute INSERT INTO admins (email, password, name, active, createdAt, updatedAt) VALUES ('soluteggeradores@gmail.com', '$2b$10$YxWbJO4Cqf9ukJzsGeMniu9sKdrQLASkvAgoqDFwXie/2UYsPjXGG', 'Soluteg Admin', 1, NOW(), NOW())",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 249
+}

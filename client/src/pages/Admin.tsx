@@ -1,16 +1,48 @@
+import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { FileText, Plus } from "lucide-react";
 import { Link } from "wouter";
+import AdminDashboard from "./AdminDashboard";
 
 export default function Admin() {
   const { data: reports, isLoading } = trpc.reports.list.useQuery();
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'reports'>('dashboard');
 
   return (
     <DashboardLayout>
       <div className="space-y-4 sm:space-y-6">
+        <div className="flex gap-2 border-b">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'dashboard'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Dashboard
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`px-4 py-2 font-medium text-sm ${
+              activeTab === 'reports'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Relatórios
+          </button>
+        </div>
+
+        {activeTab === 'dashboard' && (
+          <AdminDashboard />
+        )}
+
+        {activeTab === 'reports' && (
+          <>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Relatórios Técnicos</h1>
@@ -74,6 +106,8 @@ export default function Admin() {
               </Link>
             </CardContent>
           </Card>
+        )}
+        </>
         )}
       </div>
     </DashboardLayout>

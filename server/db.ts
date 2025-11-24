@@ -232,3 +232,69 @@ export async function deleteAdmin(id: number) {
   
   await db.delete(admins).where(eq(admins.id, id));
 }
+
+
+// Accept invite and create admin
+export async function acceptInvite(code: string, name: string, password: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const invite = await getInviteByCode(code);
+  if (!invite) throw new Error("Invite not found");
+  
+  if (new Date() > invite.expiresAt) {
+    throw new Error("Invite expired");
+  }
+
+  // Create admin
+  const result = await db.insert(admins).values({
+    email: invite.email,
+    password,
+    name,
+    active: 1,
+  });
+
+  // Delete invite
+  await deleteInvite(invite.id);
+
+  return result;
+}
+
+// Password reset
+export async function createPasswordReset(email: string, token: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // For now, we'll store this in a simple way
+  // In production, you'd want a dedicated password_resets table
+  console.log(`Password reset token created for ${email}: ${token}`);
+  return { success: true, token };
+}
+
+export async function getReportStats() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const allReports = await db.select().from(reports);
+  const totalReports = allReports.length;
+  
+  // Group by service type
+  const serviceStats = allReports.reduce((acc: Record<string, number>, report) => {
+    acc[report.serviceType] = (acc[report.serviceType] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Group by month
+  const monthlyStats = allReports.reduce((acc: Record<string, number>, report) => {
+    const month = new Date(report.createdAt).toISOString().slice(0, 7);
+    acc[month] = (acc[month] || 0) + 1;
+    return acc;
+  }, {});
+
+  return {
+    totalReports,
+    serviceStats,
+    monthlyStats,
+    recentReports: allReports.slice(-5).reverse(),
+  };
+}

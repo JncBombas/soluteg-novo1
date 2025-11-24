@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { APP_LOGO, APP_TITLE } from "@/const";
+import { trpc } from "@/lib/trpc";
 
 export default function AcceptInvite() {
   const [, setLocation] = useLocation();
@@ -22,6 +23,16 @@ export default function AcceptInvite() {
       setCode(inviteCode);
     }
   }, []);
+
+  const acceptMutation = trpc.invitesAccept.accept.useMutation({
+    onSuccess: () => {
+      toast.success("Convite aceito com sucesso! Redirecionando...");
+      setTimeout(() => setLocation("/admin/login"), 2000);
+    },
+    onError: (error) => {
+      toast.error("Erro: " + error.message);
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,12 +59,7 @@ export default function AcceptInvite() {
 
     setIsLoading(true);
     try {
-      // Aqui você faria a chamada para aceitar o convite
-      // await trpc.invites.accept.useMutation({ code, name, password });
-      toast.success("Convite aceito com sucesso! Redirecionando...");
-      setTimeout(() => setLocation("/admin/login"), 2000);
-    } catch (error) {
-      toast.error("Erro ao aceitar convite");
+      await acceptMutation.mutateAsync({ code, name, password });
     } finally {
       setIsLoading(false);
     }
