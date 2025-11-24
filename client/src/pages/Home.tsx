@@ -47,14 +47,14 @@ export default function Home() {
             <a href="#predial" className="hover:text-primary transition-colors">Condomínios</a>
             <a href="#paineis" className="hover:text-primary transition-colors">Painéis</a>
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
-            <Link href="/admin">
+            <Link href="/admin/login" className="ml-2">
               <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white">
                 Área Administrativa
               </Button>
             </Link>
           </div>
           <div className="md:hidden">
-            <Link href="/admin">
+            <Link href="/admin/login">
               <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
                 Admin
               </Button>

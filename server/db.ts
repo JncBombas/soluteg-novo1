@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -177,4 +177,58 @@ export async function updateUserRole(id: number, role: "user" | "admin") {
   if (!db) throw new Error("Database not available");
   
   await db.update(users).set({ role }).where(eq(users.id, id));
+}
+
+
+// Admin queries
+export async function createAdmin(admin: InsertAdmin) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(admins).values(admin);
+  return result;
+}
+
+export async function getAdminByEmail(email: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(admins).where(eq(admins.email, email)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAdminById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(admins).where(eq(admins.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getAllAdmins() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(admins).orderBy(desc(admins.createdAt));
+}
+
+export async function updateAdminLastLogin(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(admins).set({ lastLogin: new Date() }).where(eq(admins.id, id));
+}
+
+export async function updateAdminPassword(id: number, password: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(admins).set({ password }).where(eq(admins.id, id));
+}
+
+export async function deleteAdmin(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(admins).where(eq(admins.id, id));
 }

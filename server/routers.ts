@@ -6,6 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
+import { authenticateAdmin, hashPassword } from "./adminAuth";
 
 export const appRouter = router({
   system: systemRouter,
@@ -162,6 +163,33 @@ export const appRouter = router({
         await db.deleteInvite(input.id);
         return { success: true };
       }),
+  }),
+
+  adminAuth: router({
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+        password: z.string().min(6),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        try {
+          const result = await authenticateAdmin(input.email, input.password);
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.setHeader('Set-Cookie', `admin_token=${result.token}; ${Object.entries(cookieOptions).map(([k, v]) => `${k}=${v}`).join('; ')}`);
+          return result;
+        } catch (error) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: error instanceof Error ? error.message : "Login failed",
+          });
+        }
+      }),
+
+    logout: publicProcedure.mutation(({ ctx }) => {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie('admin_token', { ...cookieOptions, maxAge: -1 });
+      return { success: true };
+    }),
   }),
 });
 

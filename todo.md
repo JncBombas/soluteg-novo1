@@ -51,3 +51,10 @@
 - [x] Integrar WhatsApp nos botões de contato
 - [x] Integrar e-mail nos botões de contato
 - [x] Testar links de contato
+
+## Sistema de Login Próprio (Nova)
+- [x] Criar sistema de autenticação com e-mail e senha
+- [x] Implementar página de login customizada
+- [x] Proteger rotas administrativas
+- [x] Adicionar criptografia de senha
+- [ ] Testar segurança do login
