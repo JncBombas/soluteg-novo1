@@ -56,7 +56,7 @@ export type InsertReport = typeof reports.$inferInsert;
 export const invites = mysqlTable("invites", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull().unique(),
-  code: varchar("code", { length: 64 }).notNull().unique(),
+  code: varchar("code", { length: 255 }).notNull().unique(),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   used: int("used").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
