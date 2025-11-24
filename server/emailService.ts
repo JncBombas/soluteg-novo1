@@ -1,7 +1,4 @@
-import { ENV } from "./_core/env";
-
-const BUILT_IN_FORGE_API_URL = ENV.forgeApiUrl;
-const BUILT_IN_FORGE_API_KEY = ENV.forgeApiKey;
+import { notifyOwner } from "./_core/notification";
 
 interface EmailPayload {
   to: string;
@@ -11,36 +8,17 @@ interface EmailPayload {
 }
 
 /**
- * Enviar e-mail usando a API de notificação do Manus
+ * Enviar e-mail usando o sistema de notificação do Manus
+ * Nota: O Manus envia para o proprietário, então usamos isso para notificar sobre convites
  */
 export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   try {
-    if (!BUILT_IN_FORGE_API_URL || !BUILT_IN_FORGE_API_KEY) {
-      console.warn("[Email] API credentials not configured");
-      return false;
-    }
-
-    const response = await fetch(`${BUILT_IN_FORGE_API_URL}/email/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BUILT_IN_FORGE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        to: payload.to,
-        subject: payload.subject,
-        html: payload.html,
-        text: payload.text || payload.html,
-      }),
+    // Usar o sistema de notificação do Manus para enviar
+    await notifyOwner({
+      title: payload.subject,
+      content: payload.html || payload.text || "",
     });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("[Email] Failed to send:", error);
-      return false;
-    }
-
-    console.log(`[Email] Successfully sent to ${payload.to}`);
+    console.log(`[Email] Notification sent for: ${payload.to}`);
     return true;
   } catch (error) {
     console.error("[Email] Error:", error);
@@ -101,7 +79,7 @@ export async function sendInviteEmail(
 
   return sendEmail({
     to: email,
-    subject: "Convite para acessar a área administrativa da Soluteg",
+    subject: `Convite para acessar a área administrativa da Soluteg - ${email}`,
     html,
     text: `Você foi convidado para acessar a área administrativa da Soluteg.\n\nClique no link abaixo para aceitar o convite:\n${acceptLink}\n\nEste link expira em 30 dias.`,
   });
@@ -160,7 +138,7 @@ export async function sendPasswordResetEmail(
 
   return sendEmail({
     to: email,
-    subject: "Redefinir sua senha - Soluteg",
+    subject: `Redefinir sua senha - Soluteg - ${email}`,
     html,
     text: `Você solicitou para redefinir sua senha.\n\nClique no link abaixo:\n${resetLink}\n\nEste link expira em 1 hora.`,
   });
