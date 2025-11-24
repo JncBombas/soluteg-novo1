@@ -17,8 +17,7 @@ export default function AdminLogin() {
   const loginMutation = trpc.adminAuth.login.useMutation({
     onSuccess: () => {
       toast.success("Login realizado com sucesso!");
-      // Armazenar token no localStorage
-      setLocation("/admin");
+      setLocation("/");
     },
     onError: (error) => {
       toast.error("Erro ao fazer login: " + error.message);
@@ -98,11 +97,7 @@ export default function AdminLogin() {
               <p className="text-sm text-gray-600 text-center">
                 Não tem acesso? Contate o administrador do sistema.
               </p>
-              <Link href="/reset-password">
-                <Button variant="ghost" className="w-full text-sm">
-                  Esqueci minha senha
-                </Button>
-              </Link>
+
             </div>
           </CardContent>
         </Card>
