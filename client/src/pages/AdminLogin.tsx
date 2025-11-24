@@ -17,7 +17,7 @@ export default function AdminLogin() {
   const loginMutation = trpc.adminAuth.login.useMutation({
     onSuccess: () => {
       toast.success("Login realizado com sucesso!");
-      setLocation("/");
+      setLocation("/admin/dashboard");
     },
     onError: (error) => {
       toast.error("Erro ao fazer login: " + error.message);
