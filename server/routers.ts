@@ -7,7 +7,7 @@ import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 import { authenticateAdmin, hashPassword } from "./adminAuth";
-import { sendInviteNotification, generateInviteLink } from "./inviteNotification";
+
 
 export const appRouter = router({
   system: systemRouter,
@@ -127,72 +127,7 @@ export const appRouter = router({
       }),
   }),
 
-  invites: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      if (ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can list invites" });
-      }
-      return await db.getInvites();
-    }),
 
-    create: protectedProcedure
-      .input(z.object({
-        email: z.string().email(),
-        role: z.enum(["user", "admin"]).default("user"),
-        whatsappNumber: z.string().optional(),
-      }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can create invites" });
-        }
-        const code = crypto.randomBytes(32).toString("hex");
-        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        await db.createInvite({
-          email: input.email,
-          code,
-          role: input.role,
-          expiresAt,
-        });
-        const result = await sendInviteNotification(input.email, code, input.whatsappNumber);
-        return { 
-          success: true, 
-          code, 
-          inviteLink: result.link,
-          message: `Convite criado com sucesso! Compartilhe este link com o usuário: ${result.link}`
-        };
-      }),
-
-    delete: protectedProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input, ctx }) => {
-        if (ctx.user.role !== "admin") {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Only admins can delete invites" });
-        }
-        await db.deleteInvite(input.id);
-        return { success: true };
-      }),
-  }),
-
-  invitesAccept: router({
-    accept: publicProcedure
-      .input(z.object({
-        code: z.string(),
-        name: z.string().min(1),
-        password: z.string().min(6),
-      }))
-      .mutation(async ({ input }) => {
-        try {
-          const hashedPassword = await hashPassword(input.password);
-          await db.acceptInvite(input.code, input.name, hashedPassword);
-          return { success: true, message: "Conta criada com sucesso!" };
-        } catch (error) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: error instanceof Error ? error.message : "Erro ao aceitar convite",
-          });
-        }
-      }),
-  }),
 
   adminAuth: router({
     login: publicProcedure
