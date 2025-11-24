@@ -7,6 +7,7 @@ import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
 import { authenticateAdmin, hashPassword } from "./adminAuth";
+import { sendInviteNotification, generateInviteLink } from "./inviteNotification";
 
 export const appRouter = router({
   system: systemRouter,
@@ -138,6 +139,7 @@ export const appRouter = router({
       .input(z.object({
         email: z.string().email(),
         role: z.enum(["user", "admin"]).default("user"),
+        whatsappNumber: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         if (ctx.user.role !== "admin") {
@@ -151,7 +153,9 @@ export const appRouter = router({
           role: input.role,
           expiresAt,
         });
-        return { success: true, code };
+        const inviteLink = generateInviteLink(code);
+        await sendInviteNotification(input.email, code, input.whatsappNumber);
+        return { success: true, code, inviteLink };
       }),
 
     delete: protectedProcedure

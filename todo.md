@@ -58,3 +58,11 @@
 - [x] Proteger rotas administrativas
 - [x] Adicionar criptografia de senha
 - [ ] Testar segurança do login
+
+## Melhorias de UX (Nova)
+- [x] Adicionar navegação para voltar á página inicial
+- [x] Criar menu de usuário logado com nome e logout
+- [x] Substituir botão de admin por ícone de usuário quando logado
+- [x] Implementar envio de convites por e-mail
+- [x] Implementar envio de convites por WhatsApp
+- [x] Criar página de aceitação de convite
