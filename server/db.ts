@@ -2,6 +2,7 @@ import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import crypto from "crypto";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -299,4 +300,31 @@ export async function getReportStats() {
     monthlyStats,
     recentReports: allReports.slice(-5).reverse(),
   };
+}
+
+export async function createUser(userData: {
+  email: string;
+  password: string;
+  role: "user" | "admin";
+  setupToken?: string;
+  setupTokenExpires?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Check if user already exists
+  const existing = await db.select().from(users).where(eq(users.email, userData.email)).limit(1);
+  if (existing.length > 0) {
+    throw new Error("User with this email already exists");
+  }
+  
+  const result = await db.insert(users).values({
+    email: userData.email,
+    role: userData.role,
+    name: userData.email.split("@")[0],
+    loginMethod: "manual",
+    openId: `manual-${crypto.randomBytes(16).toString("hex")}`,
+  });
+  
+  return result;
 }
