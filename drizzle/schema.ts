@@ -58,7 +58,7 @@ export const invites = mysqlTable("invites", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   code: varchar("code", { length: 64 }).notNull().unique(),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  used: timestamp("used"),
+  used: int("used").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
 });
