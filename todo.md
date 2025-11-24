@@ -86,3 +86,9 @@
 - [x] Adicionar gráfico de serviços mais solicitados
 - [x] Mostrar total de relatórios criados
 - [x] Mostrar atividades recentes
+
+## Envio de E-mail Real (Nova)
+- [x] Integrar serviço de e-mail da plataforma Manus
+- [x] Enviar e-mail com link de convite ao criar convite
+- [ ] Testar recebimento de e-mail
+- [ ] Validar link de aceitação funciona corretamente

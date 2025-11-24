@@ -1,4 +1,5 @@
 import { notifyOwner } from "./_core/notification";
+import { sendInviteEmail } from "./emailService";
 
 export async function sendInviteNotification(
   email: string,
@@ -10,13 +11,19 @@ export async function sendInviteNotification(
 
   const inviteLink = `${process.env.VITE_APP_URL || "https://soluteg.manus.space"}/accept-invite?code=${inviteCode}`;
   
-  // Enviar notificação para o proprietário com detalhes do convite
+  // Enviar e-mail de convite ao usuário
+  try {
+    emailSent = await sendInviteEmail(email, inviteCode);
+  } catch (error) {
+    console.error("Erro ao enviar e-mail de convite:", error);
+  }
+
+  // Notificar o proprietário
   try {
     await notifyOwner({
       title: "Novo convite criado",
-      content: `Convite enviado para: ${email}\nLink: ${inviteLink}\nCódigo: ${inviteCode}`,
+      content: `Convite enviado para: ${email}\nLink: ${inviteLink}\nCódigo: ${inviteCode}\nE-mail enviado: ${emailSent ? "Sim" : "Não"}`,
     });
-    emailSent = true;
   } catch (error) {
     console.error("Erro ao notificar proprietário:", error);
   }
