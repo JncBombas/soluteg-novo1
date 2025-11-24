@@ -153,9 +153,13 @@ export const appRouter = router({
           role: input.role,
           expiresAt,
         });
-        const inviteLink = generateInviteLink(code);
-        await sendInviteNotification(input.email, code, input.whatsappNumber);
-        return { success: true, code, inviteLink };
+        const result = await sendInviteNotification(input.email, code, input.whatsappNumber);
+        return { 
+          success: true, 
+          code, 
+          inviteLink: result.link,
+          message: `Convite criado com sucesso! Compartilhe este link com o usuário: ${result.link}`
+        };
       }),
 
     delete: protectedProcedure

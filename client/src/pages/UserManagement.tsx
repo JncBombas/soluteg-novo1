@@ -31,7 +31,10 @@ export default function UserManagement() {
 
   const createInviteMutation = trpc.invites.create.useMutation({
     onSuccess: (data) => {
-      toast.success(`Convite criado! Código: ${data.code}`);
+      toast.success(data.message || `Convite criado! Código: ${data.code}`);
+      // Copiar link para clipboard
+      navigator.clipboard.writeText(data.inviteLink);
+      toast.success("Link copiado para a área de transferência!");
       setNewEmail("");
       setNewRole("user");
       utils.invites.list.invalidate();
