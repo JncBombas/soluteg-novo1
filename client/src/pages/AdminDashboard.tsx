@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User } from "lucide-react";
+import { LogOut, Home, User, FileText } from "lucide-react";
 import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
@@ -24,119 +24,145 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={APP_LOGO} alt={APP_TITLE} className="h-10" />
-            <div>
-              <h1 className="font-bold text-gray-900">Painel Administrativo</h1>
-              <p className="text-sm text-gray-500">Bem-vindo à área restrita</p>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header - Responsivo */}
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
+          {/* Logo e Título */}
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-0">
+            <img src={APP_LOGO} alt={APP_TITLE} className="h-8 md:h-10" />
+            <div className="flex-1">
+              <h1 className="font-bold text-lg md:text-xl text-gray-900">Painel Administrativo</h1>
+              <p className="text-xs md:text-sm text-gray-500">Bem-vindo à área restrita</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Botões - Responsivos */}
+          <div className="flex flex-wrap gap-2 md:gap-3 mt-3 md:mt-0 md:justify-end">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setLocation("/admin/profile")}
-              className="gap-2"
+              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
             >
               <User className="w-4 h-4" />
-              Meu Perfil
+              <span className="hidden md:inline">Meu Perfil</span>
+              <span className="md:hidden">Perfil</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setLocation("/")}
-              className="gap-2"
+              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
             >
               <Home className="w-4 h-4" />
-              Página Inicial
+              <span className="hidden md:inline">Página Inicial</span>
+              <span className="md:hidden">Início</span>
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
-              className="gap-2"
+              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
             >
               <LogOut className="w-4 h-4" />
-              Sair
+              <span className="hidden md:inline">Sair</span>
+              <span className="md:hidden">Sair</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Welcome Card */}
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <CardTitle>Bem-vindo ao Painel Administrativo</CardTitle>
-              <CardDescription>
-                Você está logado e tem acesso à área restrita do sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                Este é o painel administrativo da Soluteg. Aqui você pode gerenciar as operações do sistema.
-              </p>
-            </CardContent>
-          </Card>
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 md:py-8">
+        {/* Welcome Card */}
+        <Card className="mb-6">
+          <CardHeader className="pb-3 md:pb-4">
+            <CardTitle className="text-xl md:text-2xl">Bem-vindo ao Painel Administrativo</CardTitle>
+            <CardDescription>
+              Você está logado e tem acesso à área restrita do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm md:text-base text-gray-600">
+              Este é o painel administrativo da Soluteg. Aqui você pode gerenciar as operações do sistema.
+            </p>
+          </CardContent>
+        </Card>
 
-          {/* Stats Cards */}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Sistema Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Sistema</CardTitle>
-              <CardDescription>Status do sistema</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Sistema</CardTitle>
+              <CardDescription className="text-xs">Status do sistema</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                <p className="text-xs md:text-sm text-gray-600">
+                  <span className="inline-block w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full mr-2"></span>
                   Sistema Operacional
                 </p>
-                <p className="text-sm text-gray-600">
-                  <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-                  Banco de Dados Conectado
+                <p className="text-xs md:text-sm text-gray-600">
+                  <span className="inline-block w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full mr-2"></span>
+                  Banco de Dados
                 </p>
               </div>
             </CardContent>
           </Card>
 
+          {/* Acesso Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Acesso</CardTitle>
-              <CardDescription>Informações de acesso</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Acesso</CardTitle>
+              <CardDescription className="text-xs">Informações de acesso</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs md:text-sm text-gray-600">
                   <strong>Tipo:</strong> Administrador
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs md:text-sm text-gray-600">
                   <strong>Status:</strong> Autenticado
                 </p>
               </div>
             </CardContent>
           </Card>
 
+          {/* Ações Card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Ações</CardTitle>
-              <CardDescription>Operações disponíveis</CardDescription>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg">Ações</CardTitle>
+              <CardDescription className="text-xs">Operações disponíveis</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <p className="text-sm text-gray-600">
+                <p className="text-xs md:text-sm text-gray-600">
                   ✓ Gerenciar perfil
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs md:text-sm text-gray-600">
                   ✓ Alterar senha
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Relatórios Card - NOVO */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base md:text-lg text-blue-900">Relatórios</CardTitle>
+              <CardDescription className="text-xs">Inspeção de bombas</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => setLocation("/admin/relatorios")}
+                className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm"
+              >
+                <FileText className="w-4 h-4" />
+                Acessar Relatórios
+              </Button>
             </CardContent>
           </Card>
         </div>
