@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
@@ -347,3 +347,42 @@ export async function updateAdminProfile(id: number, data: { name?: string; phon
   await db.update(admins).set(updateData).where(eq(admins.id, id));
 }
 
+
+// Create inspection report
+export async function createInspectionReport(adminId: number, data: InsertInspectionReport) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(inspectionReports).values({
+    ...data,
+    adminId,
+  });
+  
+  return result;
+}
+
+// Get inspection report by ID
+export async function getInspectionReportById(id: number): Promise<InspectionReport | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(inspectionReports).where(eq(inspectionReports.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// Get all inspection reports for admin
+export async function getInspectionReportsByAdmin(adminId: number): Promise<InspectionReport[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(inspectionReports).where(eq(inspectionReports.adminId, adminId));
+  return result;
+}
+
+// Update inspection report
+export async function updateInspectionReport(id: number, data: Partial<InsertInspectionReport>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(inspectionReports).set(data).where(eq(inspectionReports.id, id));
+}

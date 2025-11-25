@@ -84,3 +84,76 @@ export const admins = mysqlTable("admins", {
 
 export type Admin = typeof admins.$inferSelect;
 export type InsertAdmin = typeof admins.$inferInsert;
+
+/**
+ * Relatórios de inspeção de bombas
+ */
+export const inspectionReports = mysqlTable("inspectionReports", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  clientAddress: text("clientAddress").notNull(),
+  inspectionDate: timestamp("inspectionDate").notNull(),
+  
+  // Bomba de recalque
+  recalqueTubulacao: varchar("recalqueTubulacao", { length: 50 }),
+  recalqueAcionamento: varchar("recalqueAcionamento", { length: 50 }),
+  recalqueBoias: varchar("recalqueBoias", { length: 50 }),
+  recalqueLimpezaPainel: varchar("recalqueLimpezaPainel", { length: 50 }),
+  recalqueLimpezaSala: varchar("recalqueLimpezaSala", { length: 50 }),
+  recalqueTensaoPainel: varchar("recalqueTensaoPainel", { length: 50 }),
+  recalqueCorrenteR: varchar("recalqueCorrenteR", { length: 50 }),
+  recalqueCorrenteS: varchar("recalqueCorrenteS", { length: 50 }),
+  recalqueCorrenteT: varchar("recalqueCorrenteT", { length: 50 }),
+  recalqueRuido: varchar("recalqueRuido", { length: 50 }),
+  
+  // Bomba de dreno
+  drenoTubulacao: varchar("drenoTubulacao", { length: 50 }),
+  drenoAcionamento: varchar("drenoAcionamento", { length: 50 }),
+  drenoBoias: varchar("drenoBoias", { length: 50 }),
+  drenoLimpezaPainel: varchar("drenoLimpezaPainel", { length: 50 }),
+  drenoTensaoPainel: varchar("drenoTensaoPainel", { length: 50 }),
+  drenoCorrenteL1: varchar("drenoCorrenteL1", { length: 50 }),
+  drenoCorrenteL2: varchar("drenoCorrenteL2", { length: 50 }),
+  drenoRuido: varchar("drenoRuido", { length: 50 }),
+  
+  // Bomba piscina
+  piscinaTubulacao: varchar("piscinaTubulacao", { length: 50 }),
+  piscinaAcionamento: varchar("piscinaAcionamento", { length: 50 }),
+  piscinaBoias: varchar("piscinaBoias", { length: 50 }),
+  piscinaLimpezaPainel: varchar("piscinaLimpezaPainel", { length: 50 }),
+  piscinaTensaoPainel: varchar("piscinaTensaoPainel", { length: 50 }),
+  piscinaCorrenteR: varchar("piscinaCorrenteR", { length: 50 }),
+  piscinaCorrenteS: varchar("piscinaCorrenteS", { length: 50 }),
+  piscinaCorrenteT: varchar("piscinaCorrenteT", { length: 50 }),
+  
+  // Bomba incêndio B1
+  incendioB1Tubulacao: varchar("incendioB1Tubulacao", { length: 50 }),
+  incendioB1Acionamento: varchar("incendioB1Acionamento", { length: 50 }),
+  incendioB1LimpezaSala: varchar("incendioB1LimpezaSala", { length: 50 }),
+  incendioB1LimpezaPainel: varchar("incendioB1LimpezaPainel", { length: 50 }),
+  incendioB1TensaoPainel: varchar("incendioB1TensaoPainel", { length: 50 }),
+  incendioB1Corrente: varchar("incendioB1Corrente", { length: 50 }),
+  incendioB1Ruido: varchar("incendioB1Ruido", { length: 50 }),
+  
+  // Bomba incêndio B2
+  incendioB2Tubulacao: varchar("incendioB2Tubulacao", { length: 50 }),
+  incendioB2Acionamento: varchar("incendioB2Acionamento", { length: 50 }),
+  incendioB2LimpezaSala: varchar("incendioB2LimpezaSala", { length: 50 }),
+  incendioB2LimpezaPainel: varchar("incendioB2LimpezaPainel", { length: 50 }),
+  incendioB2TensaoPainel: varchar("incendioB2TensaoPainel", { length: 50 }),
+  incendioB2Corrente: varchar("incendioB2Corrente", { length: 50 }),
+  incendioB2Ruido: varchar("incendioB2Ruido", { length: 50 }),
+  
+  // Observações e assinaturas
+  observations: text("observations"),
+  technicianSignature: text("technicianSignature"), // URL da imagem da assinatura
+  clientSignature: text("clientSignature"), // URL da imagem da assinatura
+  photos: text("photos"), // JSON array com URLs das fotos
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InspectionReport = typeof inspectionReports.$inferSelect;
+export type InsertInspectionReport = typeof inspectionReports.$inferInsert;

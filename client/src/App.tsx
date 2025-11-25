@@ -8,6 +8,7 @@ import Home from "./pages/Home";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProfile from "./pages/AdminProfile";
+import InspectionReports from "./pages/InspectionReports";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
       <Route path={"/admin/profile"} component={AdminProfile} />
+      <Route path="/admin/relatorios" component={InspectionReports} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
