@@ -65,9 +65,12 @@ export default function InspectionReports() {
     const clientId = "111083419158-l9nolq37evli3q0s7e82vkfposaoeh66.apps.googleusercontent.com";
     const redirectUri = `${window.location.origin}/admin/relatorios`;
     const scope = "https://www.googleapis.com/auth/drive.readonly";
+    const state = Math.random().toString(36).substring(7);
+    localStorage.setItem('oauth_state', state);
+    
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri
-    )}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
+    )}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&state=${state}`;
 
     window.location.href = authUrl;
   };
