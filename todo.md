@@ -188,4 +188,5 @@
 - [x] Testar envio de documentos (admin)
 - [x] Testar visualização de documentos (cliente)
 - [x] Testar download de documentos (cliente)
+- [x] Corrigir gerenciamento de documentos - filtro e listagem
 - [ ] Publicar versão final do site

@@ -31,30 +31,26 @@ export default function AdminManageDocuments() {
 
   const adminId = localStorage.getItem("adminId");
 
+  const { data: documentsData, isLoading: isLoadingDocs, isError: isErrorDocs } = trpc.adminDocuments.list.useQuery(
+    { adminId: adminId ? parseInt(adminId) : 0 },
+    { enabled: !!adminId }
+  );
+
   useEffect(() => {
     if (!adminId) {
       setLocation("/admin/login");
       return;
     }
 
-    const fetchDocuments = async () => {
-      try {
-        setLoading(true);
-        const result = await trpc.adminDocuments.list.query({
-          adminId: parseInt(adminId),
-        });
-        setDocuments(result as Document[]);
-        setFilteredDocuments(result as Document[]);
-      } catch (err) {
-        setError("Erro ao carregar documentos");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocuments();
-  }, [adminId, setLocation]);
+    if (documentsData) {
+      setDocuments(documentsData as Document[]);
+      setFilteredDocuments(documentsData as Document[]);
+    }
+    setLoading(isLoadingDocs);
+    if (isErrorDocs) {
+      setError("Erro ao carregar documentos");
+    }
+  }, [adminId, setLocation, documentsData, isLoadingDocs, isErrorDocs]);
 
   useEffect(() => {
     let filtered = documents;
@@ -70,11 +66,13 @@ export default function AdminManageDocuments() {
     setFilteredDocuments(filtered);
   }, [selectedClient, selectedType, documents]);
 
+  const deleteDocMutation = trpc.adminDocuments.delete.useMutation();
+
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja deletar este documento?")) return;
 
     try {
-      await trpc.adminDocuments.delete.mutate({ id });
+      await deleteDocMutation.mutateAsync({ id });
       setDocuments(documents.filter((doc) => doc.id !== id));
       alert("Documento deletado com sucesso!");
     } catch (err) {
@@ -90,30 +88,26 @@ export default function AdminManageDocuments() {
     setEditType(doc.documentType);
   };
 
+  const updateDocMutation = trpc.adminDocuments.update.useMutation();
+
   const handleSaveEdit = async () => {
     if (!editingId) return;
 
     try {
-      await trpc.adminDocuments.update.mutate({
+      await updateDocMutation.mutateAsync({
         id: editingId,
         title: editTitle,
         description: editDescription,
-        documentType: editType as any,
+        documentType: editType as "relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro",
       });
 
       setDocuments(
         documents.map((doc) =>
           doc.id === editingId
-            ? {
-                ...doc,
-                title: editTitle,
-                description: editDescription,
-                documentType: editType,
-              }
+            ? { ...doc, title: editTitle, description: editDescription, documentType: editType }
             : doc
         )
       );
-
       setEditingId(null);
       alert("Documento atualizado com sucesso!");
     } catch (err) {

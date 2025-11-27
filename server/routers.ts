@@ -449,6 +449,34 @@ export const appRouter = router({
         }),
     }),
   }),
+
+  adminDocuments: router({
+    list: publicProcedure
+      .input(z.object({ adminId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getDocumentsByAdminId(input.adminId);
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, title, description, documentType } = input;
+        await db.updateDocument(id, title, description || "", documentType);
+        return { success: true, message: "Documento atualizado com sucesso" };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteDocument(input.id);
+        return { success: true, message: "Documento deletado com sucesso" };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
