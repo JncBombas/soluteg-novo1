@@ -157,3 +157,11 @@
 - [x] Adicionar formulário para editar label customizado
 - [x] Integrar ao sistema de navegação do admin
 - [x] Adicionar botão de acesso na página de perfil do admin
+
+
+## Redesign da Página de Login do Cliente (Nova)
+- [x] Analisar design do site e extrair estilos
+- [x] Redesenhar página de login com estilo do site
+- [x] Adicionar logo JNC
+- [x] Adicionar header com logo e nome da empresa
+- [x] Implementar formulário com estilo profissional
