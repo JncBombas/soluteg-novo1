@@ -134,3 +134,4 @@
 - [x] Adicionar botão "Sair" na página inicial para deslogar
 - [x] Salvar email do admin no localStorage
 - [x] Mostrar email do admin no indicador de login
+- [x] Clicar no indicador de login deve ir ao dashboard (não deslogar)

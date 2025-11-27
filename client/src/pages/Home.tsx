@@ -72,10 +72,13 @@ export default function Home() {
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
             {isAdminLoggedIn ? (
               <div className="ml-2 flex items-center gap-2">
-                <div className="flex items-center gap-1 px-3 py-1 bg-primary/20 rounded text-primary text-xs">
+                <button
+                  onClick={() => setLocation("/admin/dashboard")}
+                  className="flex items-center gap-1 px-3 py-1 bg-primary/20 rounded text-primary text-xs hover:bg-primary/30 transition-colors cursor-pointer"
+                >
                   <User className="w-3 h-3" />
                   {adminEmail}
-                </div>
+                </button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -101,10 +104,13 @@ export default function Home() {
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
             {isAdminLoggedIn ? (
               <div className="flex items-center gap-1">
-                <div className="flex items-center gap-1 px-2 py-1 bg-primary/20 rounded text-primary text-xs">
+                <button
+                  onClick={() => setLocation("/admin/dashboard")}
+                  className="flex items-center gap-1 px-2 py-1 bg-primary/20 rounded text-primary text-xs hover:bg-primary/30 transition-colors cursor-pointer"
+                >
                   <User className="w-3 h-3" />
                   {adminEmail.split("@")[0]}
-                </div>
+                </button>
                 <Button
                   size="sm"
                   variant="outline"
