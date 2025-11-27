@@ -185,4 +185,7 @@
 
 
 ## Publicação Final (Nova)
+- [x] Testar envio de documentos (admin)
+- [x] Testar visualização de documentos (cliente)
+- [x] Testar download de documentos (cliente)
 - [ ] Publicar versão final do site
