@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument, serviceOrders, InsertServiceOrder, ServiceOrder, serviceOrderItems, InsertServiceOrderItem, ServiceOrderItem } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
@@ -537,4 +537,104 @@ export async function updateDocumentFile(id: number, fileUrl: string) {
   if (!db) throw new Error("Database not available");
   
   await db.update(clientDocuments).set({ fileUrl }).where(eq(clientDocuments.id, id));
+}
+
+
+// Service Order queries
+export async function createServiceOrder(order: InsertServiceOrder) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(serviceOrders).values(order);
+  return result;
+}
+
+export async function getServiceOrdersByAdminId(adminId: number): Promise<ServiceOrder[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(serviceOrders).where(eq(serviceOrders.adminId, adminId)).orderBy(desc(serviceOrders.createdAt));
+}
+
+export async function getServiceOrderById(id: number): Promise<ServiceOrder | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(serviceOrders).where(eq(serviceOrders.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateServiceOrder(id: number, data: Partial<InsertServiceOrder>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(serviceOrders).set(data).where(eq(serviceOrders.id, id));
+}
+
+export async function deleteServiceOrder(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete all items first
+  await db.delete(serviceOrderItems).where(eq(serviceOrderItems.serviceOrderId, id));
+  
+  // Then delete order
+  await db.delete(serviceOrders).where(eq(serviceOrders.id, id));
+}
+
+// Service Order Item queries
+export async function createServiceOrderItem(item: InsertServiceOrderItem) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(serviceOrderItems).values(item);
+  return result;
+}
+
+export async function getServiceOrderItems(serviceOrderId: number): Promise<ServiceOrderItem[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(serviceOrderItems).where(eq(serviceOrderItems.serviceOrderId, serviceOrderId)).orderBy(desc(serviceOrderItems.createdAt));
+}
+
+export async function getServiceOrderItemById(id: number): Promise<ServiceOrderItem | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(serviceOrderItems).where(eq(serviceOrderItems.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateServiceOrderItem(id: number, data: Partial<InsertServiceOrderItem>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(serviceOrderItems).set(data).where(eq(serviceOrderItems.id, id));
+}
+
+export async function deleteServiceOrderItem(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(serviceOrderItems).where(eq(serviceOrderItems.id, id));
+}
+
+// Generate next order number
+export async function generateNextOrderNumber(adminId: number): Promise<string> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const lastOrder = await db.select().from(serviceOrders).where(eq(serviceOrders.adminId, adminId)).orderBy(desc(serviceOrders.id)).limit(1);
+  
+  let nextNumber = 1;
+  if (lastOrder.length > 0) {
+    const lastOrderNumber = lastOrder[0].orderNumber;
+    const match = lastOrderNumber.match(/\d+$/);
+    if (match) {
+      nextNumber = parseInt(match[0]) + 1;
+    }
+  }
+  
+  return `OS-${String(nextNumber).padStart(4, '0')}`;
 }

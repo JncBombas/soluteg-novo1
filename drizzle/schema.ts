@@ -201,3 +201,42 @@ export const clientDocuments = mysqlTable("clientDocuments", {
 
 export type ClientDocument = typeof clientDocuments.$inferSelect;
 export type InsertClientDocument = typeof clientDocuments.$inferInsert;
+
+/**
+ * Ordem de Serviço - cadastro de clientes e itens com precificação
+ */
+export const serviceOrders = mysqlTable("serviceOrders", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(), // Admin que criou a ordem
+  orderNumber: varchar("orderNumber", { length: 50 }).notNull().unique(), // Número da ordem (ex: OS-001)
+  clientName: varchar("clientName", { length: 255 }).notNull(), // Nome do cliente (sem perfil)
+  clientEmail: varchar("clientEmail", { length: 320 }),
+  clientPhone: varchar("clientPhone", { length: 20 }),
+  clientCnpjCpf: varchar("clientCnpjCpf", { length: 20 }),
+  clientAddress: text("clientAddress"),
+  description: text("description"), // Descrição da ordem
+  totalPrice: int("totalPrice").notNull().default(0), // Preço total em centavos (para evitar problemas com float)
+  status: mysqlEnum("status", ["draft", "pending", "approved", "completed", "cancelled"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ServiceOrder = typeof serviceOrders.$inferSelect;
+export type InsertServiceOrder = typeof serviceOrders.$inferInsert;
+
+/**
+ * Itens da Ordem de Serviço (materiais, serviços, etc)
+ */
+export const serviceOrderItems = mysqlTable("serviceOrderItems", {
+  id: int("id").autoincrement().primaryKey(),
+  serviceOrderId: int("serviceOrderId").notNull(), // Referência à ordem
+  itemName: varchar("itemName", { length: 255 }).notNull(), // Nome do material/serviço
+  quantity: int("quantity").notNull(), // Quantidade
+  unit: varchar("unit", { length: 50 }).notNull(), // Unidade de medida (un, m, kg, etc)
+  unitPrice: int("unitPrice").notNull(), // Preço unitário em centavos
+  totalPrice: int("totalPrice").notNull(), // Preço total do item (quantidade * unitPrice) em centavos
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ServiceOrderItem = typeof serviceOrderItems.$inferSelect;
+export type InsertServiceOrderItem = typeof serviceOrderItems.$inferInsert;

@@ -448,6 +448,159 @@ export const appRouter = router({
           return { success: true, message: "Arquivo atualizado com sucesso" };
         }),
     }),
+
+    serviceOrders: router({
+      list: publicProcedure
+        .input(z.object({ adminId: z.number() }))
+        .query(async ({ input }) => {
+          return await db.getServiceOrdersByAdminId(input.adminId);
+        }),
+      
+      getById: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          return await db.getServiceOrderById(input.id);
+        }),
+      
+      create: publicProcedure
+        .input(z.object({
+          adminId: z.number(),
+          clientName: z.string().min(1),
+          clientEmail: z.string().email().optional(),
+          clientPhone: z.string().optional(),
+          clientCnpjCpf: z.string().optional(),
+          clientAddress: z.string().optional(),
+          description: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const orderNumber = await db.generateNextOrderNumber(input.adminId);
+          const result = await db.createServiceOrder({
+            adminId: input.adminId,
+            orderNumber,
+            clientName: input.clientName,
+            clientEmail: input.clientEmail,
+            clientPhone: input.clientPhone,
+            clientCnpjCpf: input.clientCnpjCpf,
+            clientAddress: input.clientAddress,
+            description: input.description,
+            totalPrice: 0,
+            status: "draft",
+          });
+          return { success: true, message: "Ordem criada com sucesso", orderNumber };
+        }),
+      
+      update: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          clientName: z.string().optional(),
+          clientEmail: z.string().optional(),
+          clientPhone: z.string().optional(),
+          clientCnpjCpf: z.string().optional(),
+          clientAddress: z.string().optional(),
+          description: z.string().optional(),
+          status: z.string().optional(),
+          totalPrice: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const { id, ...data } = input;
+          await db.updateServiceOrder(id, data as any);
+          return { success: true, message: "Ordem atualizada com sucesso" };
+        }),
+      
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          await db.deleteServiceOrder(input.id);
+          return { success: true, message: "Ordem deletada com sucesso" };
+        }),
+      
+      addItem: publicProcedure
+        .input(z.object({
+          serviceOrderId: z.number(),
+          itemName: z.string().min(1),
+          quantity: z.number().min(1),
+          unit: z.string().min(1),
+          unitPrice: z.number().min(0),
+        }))
+        .mutation(async ({ input }) => {
+          const totalPrice = input.quantity * input.unitPrice;
+          await db.createServiceOrderItem({
+            serviceOrderId: input.serviceOrderId,
+            itemName: input.itemName,
+            quantity: input.quantity,
+            unit: input.unit,
+            unitPrice: Math.round(input.unitPrice * 100), // Converter para centavos
+            totalPrice: Math.round(totalPrice * 100), // Converter para centavos
+          });
+          
+          // Atualizar preço total da ordem
+          const items = await db.getServiceOrderItems(input.serviceOrderId);
+          const newTotal = items.reduce((sum, item) => sum + item.totalPrice, Math.round(totalPrice * 100));
+          await db.updateServiceOrder(input.serviceOrderId, { totalPrice: newTotal });
+          
+          return { success: true, message: "Item adicionado com sucesso" };
+        }),
+      
+      getItems: publicProcedure
+        .input(z.object({ serviceOrderId: z.number() }))
+        .query(async ({ input }) => {
+          return await db.getServiceOrderItems(input.serviceOrderId);
+        }),
+      
+      deleteItem: publicProcedure
+        .input(z.object({ id: z.number(), serviceOrderId: z.number() }))
+        .mutation(async ({ input }) => {
+          const item = await db.getServiceOrderItemById(input.id);
+          if (!item) throw new Error("Item não encontrado");
+          
+          await db.deleteServiceOrderItem(input.id);
+          
+          // Atualizar preço total da ordem
+          const items = await db.getServiceOrderItems(input.serviceOrderId);
+          const newTotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
+          await db.updateServiceOrder(input.serviceOrderId, { totalPrice: newTotal });
+          
+          return { success: true, message: "Item removido com sucesso" };
+        }),
+      
+      updateItem: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          serviceOrderId: z.number(),
+          itemName: z.string().optional(),
+          quantity: z.number().optional(),
+          unit: z.string().optional(),
+          unitPrice: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const { id, serviceOrderId, ...data } = input;
+          
+          // Se quantity ou unitPrice mudou, recalcular totalPrice
+          if (data.quantity !== undefined || data.unitPrice !== undefined) {
+            const item = await db.getServiceOrderItemById(id);
+            if (!item) throw new Error("Item não encontrado");
+            
+            const quantity = data.quantity ?? item.quantity;
+            const unitPrice = data.unitPrice ?? (item.unitPrice / 100);
+            const totalPrice = quantity * unitPrice;
+            
+            await db.updateServiceOrderItem(id, {
+              ...data,
+              unitPrice: data.unitPrice ? Math.round(data.unitPrice * 100) : undefined,
+              totalPrice: Math.round(totalPrice * 100),
+            } as any);
+          } else {
+            await db.updateServiceOrderItem(id, data as any);
+          }
+          
+          // Atualizar preço total da ordem
+          const items = await db.getServiceOrderItems(serviceOrderId);
+          const newTotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
+          await db.updateServiceOrder(serviceOrderId, { totalPrice: newTotal });
+          
+          return { success: true, message: "Item atualizado com sucesso" };
+        }),
+    }),
   }),
 });
 
