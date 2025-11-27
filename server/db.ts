@@ -415,7 +415,8 @@ export async function getClientByUsername(username: string): Promise<Client | un
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const result = await db.select().from(clients).where(eq(clients.username, username)).limit(1);
+  // Procura pelo nome do cliente (case-insensitive)
+  const result = await db.select().from(clients).where(eq(clients.name, username)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 

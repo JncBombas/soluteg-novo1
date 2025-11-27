@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, email, password FROM clients WHERE name LIKE '%Cliente Novo%' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, name, email, password FROM clients WHERE name LIKE '%Cliente Novo%' LIMIT 1;",
+  "rows": [
+    {
+      "id": "2",
+      "name": "Cliente Novo Ltda",
+      "email": "novo@cliente.com",
+      "password": "$2b$10$BtRuQ5XBGVFy2DQPyKSzyO1xZRxbuYPV1B6Mb1YQibSV89XvCoXkK"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tpassword\n2\tCliente Novo Ltda\tnovo@cliente.com\t$2b$10$BtRuQ5XBGVFy2DQPyKSzyO1xZRxbuYPV1B6Mb1YQibSV89XvCoXkK\n",
+  "stderr": "",
+  "execution_time_ms": 120
+}

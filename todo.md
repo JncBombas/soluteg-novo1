@@ -190,3 +190,9 @@
 - [x] Testar download de documentos (cliente)
 - [x] Corrigir gerenciamento de documentos - filtro e listagem
 - [ ] Publicar versão final do site
+
+
+## Bugs - Login do Cliente (Corrigidos)
+- [x] Sistema de login do cliente não funciona com credenciais alteradas
+- [x] Mudar username do cliente de e-mail para nome
+- [x] Testar login com nome como username
