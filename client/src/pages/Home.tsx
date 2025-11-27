@@ -71,6 +71,11 @@ export default function Home() {
             <a href="#predial" className="hover:text-primary transition-colors">Condomínios</a>
             <a href="#paineis" className="hover:text-primary transition-colors">Painéis</a>
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
+            <Link href="/client/login" className="ml-2">
+              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white">
+                Portal do Cliente
+              </Button>
+            </Link>
             {isAdminLoggedIn ? (
               <div className="ml-2 flex items-center gap-2">
                 <button
@@ -97,13 +102,19 @@ export default function Home() {
                   Área Administrativa
                 </Button>
               </Link>
-            )}
+            )
+            }
           </div>
           {/* Tablet Navigation - md to lg */}
           <div className="hidden md:flex lg:hidden items-center gap-2 text-xs">
             <a href="#home" className="hover:text-primary transition-colors">Home</a>
             <a href="#servicos" className="hover:text-primary transition-colors">Serviços</a>
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
+            <Link href="/client/login">
+              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                Cliente
+              </Button>
+            </Link>
             {isAdminLoggedIn ? (
               <div className="flex items-center gap-1">
                 <button
@@ -133,7 +144,12 @@ export default function Home() {
             )}
           </div>
           {/* Mobile Navigation */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-1">
+            <Link href="/client/login">
+              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                Cliente
+              </Button>
+            </Link>
             {isAdminLoggedIn ? (
               <Button
                 size="sm"

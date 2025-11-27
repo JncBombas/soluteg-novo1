@@ -165,3 +165,8 @@
 - [x] Adicionar logo JNC
 - [x] Adicionar header com logo e nome da empresa
 - [x] Implementar formulário com estilo profissional
+
+
+## Botão Portal do Cliente na Home (Nova)
+- [x] Adicionar botão "Portal do Cliente" na navbar da página inicial
+- [x] Adicionar em desktop, tablet e mobile
