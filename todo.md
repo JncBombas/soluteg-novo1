@@ -125,3 +125,12 @@
 - [x] Integrar páginas ao sistema de navegação
 - [x] Adicionar botão de editar na tabela de clientes (admin)
 - [x] Adicionar botão de perfil no portal do cliente
+
+
+## Navegação e Indicador de Login (Nova)
+- [x] Adicionar botão de voltar ao dashboard na página de clientes
+- [x] Adicionar indicador de login na página inicial
+- [x] Manter login ao voltar para home (não deslogar)
+- [x] Adicionar botão "Sair" na página inicial para deslogar
+- [x] Salvar email do admin no localStorage
+- [x] Mostrar email do admin no indicador de login

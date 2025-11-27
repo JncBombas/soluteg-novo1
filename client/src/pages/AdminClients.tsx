@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
@@ -134,6 +134,17 @@ export default function AdminClients() {
 
   return (
     <div className="space-y-6">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => setLocation("/admin/dashboard")}
+          className="gap-2 text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar ao Dashboard
+        </Button>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">

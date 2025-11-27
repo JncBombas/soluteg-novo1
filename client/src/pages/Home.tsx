@@ -1,9 +1,31 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { APP_LOGO } from "@/const";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { LogOut, User } from "lucide-react";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+
+  useEffect(() => {
+    // Verificar se admin está logado
+    const adminId = localStorage.getItem("adminId");
+    const email = localStorage.getItem("adminEmail");
+    if (adminId) {
+      setIsAdminLoggedIn(true);
+      setAdminEmail(email || "Admin");
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminEmail");
+    setIsAdminLoggedIn(false);
+  };
+
   const services = [
     {
       number: "01",
@@ -48,30 +70,78 @@ export default function Home() {
             <a href="#predial" className="hover:text-primary transition-colors">Condomínios</a>
             <a href="#paineis" className="hover:text-primary transition-colors">Painéis</a>
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
-            <Link href="/admin/login" className="ml-2">
-              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white">
-                Área Administrativa
-              </Button>
-            </Link>
+            {isAdminLoggedIn ? (
+              <div className="ml-2 flex items-center gap-2">
+                <div className="flex items-center gap-1 px-3 py-1 bg-primary/20 rounded text-primary text-xs">
+                  <User className="w-3 h-3" />
+                  {adminEmail}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="border-primary text-primary hover:bg-red-500 hover:text-white hover:border-red-500 gap-1"
+                >
+                  <LogOut className="w-3 h-3" />
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <Link href="/admin/login" className="ml-2">
+                <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white">
+                  Área Administrativa
+                </Button>
+              </Link>
+            )}
           </div>
           {/* Tablet Navigation - md to lg */}
           <div className="hidden md:flex lg:hidden items-center gap-2 text-xs">
             <a href="#home" className="hover:text-primary transition-colors">Home</a>
             <a href="#servicos" className="hover:text-primary transition-colors">Serviços</a>
             <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
-            <Link href="/admin/login">
-              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
-                Admin
-              </Button>
-            </Link>
+            {isAdminLoggedIn ? (
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 px-2 py-1 bg-primary/20 rounded text-primary text-xs">
+                  <User className="w-3 h-3" />
+                  {adminEmail.split("@")[0]}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="border-primary text-primary hover:bg-red-500 hover:text-white hover:border-red-500 text-xs gap-1"
+                >
+                  <LogOut className="w-3 h-3" />
+                  Sair
+                </Button>
+              </div>
+            ) : (
+              <Link href="/admin/login">
+                <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                  Admin
+                </Button>
+              </Link>
+            )}
           </div>
           {/* Mobile Navigation */}
           <div className="md:hidden">
-            <Link href="/admin/login">
-              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
-                Admin
+            {isAdminLoggedIn ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleLogout}
+                className="border-primary text-primary hover:bg-red-500 hover:text-white hover:border-red-500 text-xs gap-1"
+              >
+                <LogOut className="w-3 h-3" />
+                Sair
               </Button>
-            </Link>
+            ) : (
+              <Link href="/admin/login">
+                <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                  Admin
+                </Button>
+              </Link>
+            )}
           </div>
         </nav>
       </header>
