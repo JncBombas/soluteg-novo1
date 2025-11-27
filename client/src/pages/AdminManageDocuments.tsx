@@ -10,8 +10,8 @@ interface Document {
   clientId: number;
   clientName: string;
   title: string;
-  description: string | null;
-  documentType: "relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro";
+  description: string;
+  documentType: string;
   fileUrl: string;
   createdAt: Date;
 }
@@ -25,11 +25,13 @@ export default function AdminManageDocuments() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editType, setEditType] = useState<"relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro">("relatorio_servico");
+  const [editType, setEditType] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const adminId = localStorage.getItem("adminId");
 
-  const { data: documentsData, isLoading, isError } = trpc.adminDocuments.list.useQuery(
+  const { data: documentsData, isLoading: isLoadingDocs, isError: isErrorDocs } = trpc.adminDocuments.list.useQuery(
     { adminId: adminId ? parseInt(adminId) : 0 },
     { enabled: !!adminId }
   );
@@ -40,11 +42,15 @@ export default function AdminManageDocuments() {
       return;
     }
 
-    if (documentsData && Array.isArray(documentsData)) {
-      setDocuments(documentsData);
-      setFilteredDocuments(documentsData);
+    if (documentsData) {
+      setDocuments(documentsData as Document[]);
+      setFilteredDocuments(documentsData as Document[]);
     }
-  }, [adminId, setLocation, documentsData]);
+    setLoading(isLoadingDocs);
+    if (isErrorDocs) {
+      setError("Erro ao carregar documentos");
+    }
+  }, [adminId, setLocation, documentsData, isLoadingDocs, isErrorDocs]);
 
   useEffect(() => {
     let filtered = documents;
@@ -61,7 +67,6 @@ export default function AdminManageDocuments() {
   }, [selectedClient, selectedType, documents]);
 
   const deleteDocMutation = trpc.adminDocuments.delete.useMutation();
-  const updateDocMutation = trpc.adminDocuments.update.useMutation();
 
   const handleDelete = async (id: number) => {
     if (!confirm("Tem certeza que deseja deletar este documento?")) return;
@@ -79,9 +84,11 @@ export default function AdminManageDocuments() {
   const handleEdit = (doc: Document) => {
     setEditingId(doc.id);
     setEditTitle(doc.title);
-    setEditDescription(doc.description || "");
+    setEditDescription(doc.description);
     setEditType(doc.documentType);
   };
+
+  const updateDocMutation = trpc.adminDocuments.update.useMutation();
 
   const handleSaveEdit = async () => {
     if (!editingId) return;
@@ -91,7 +98,7 @@ export default function AdminManageDocuments() {
         id: editingId,
         title: editTitle,
         description: editDescription,
-        documentType: editType,
+        documentType: editType as "relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro",
       });
 
       setDocuments(
@@ -123,7 +130,7 @@ export default function AdminManageDocuments() {
     new Map(documents.map((doc) => [doc.clientId, doc.clientName])).entries()
   );
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
@@ -150,10 +157,10 @@ export default function AdminManageDocuments() {
           <h1 className="text-3xl font-bold text-gray-900">Gestão de Documentos</h1>
         </div>
 
-        {isError && (
+        {error && (
           <Card className="mb-6 border-red-200 bg-red-50">
             <CardContent className="pt-6">
-              <p className="text-red-700">Erro ao carregar documentos</p>
+              <p className="text-red-700">{error}</p>
             </CardContent>
           </Card>
         )}
@@ -257,7 +264,7 @@ export default function AdminManageDocuments() {
                           {editingId === doc.id ? (
                             <select
                               value={editType}
-                              onChange={(e) => setEditType(e.target.value as any)}
+                              onChange={(e) => setEditType(e.target.value)}
                               className="w-full px-2 py-1 border border-gray-300 rounded"
                             >
                               <option value="relatorio_servico">Relatório de Serviço</option>
