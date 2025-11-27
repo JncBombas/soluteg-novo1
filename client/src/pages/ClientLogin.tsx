@@ -38,7 +38,10 @@ export default function ClientLogin() {
       localStorage.setItem("clientId", data.clientId.toString());
       localStorage.setItem("clientName", data.clientName);
       toast.success("Login realizado com sucesso!");
-      setLocation("/client/portal");
+      // Aguardar um pouco para garantir que o localStorage foi atualizado
+      setTimeout(() => {
+        setLocation("/client/portal");
+      }, 500);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Erro ao conectar com o servidor";
       setError(errorMsg);

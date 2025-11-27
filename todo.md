@@ -204,3 +204,7 @@
 - [x] Fazer logout e retornar para tela inicial deslogado
 - [x] Alterar senha do cliente pelo perfil do admin (senhaAdmin123)
 - [x] Testar nova senha alterada pelo admin
+
+
+## Bugs - Redirecionamento do Cliente (Corrigido)
+- [x] Login do cliente não redireciona para página do portal após fazer login
