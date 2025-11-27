@@ -170,3 +170,15 @@
 ## Botão Portal do Cliente na Home (Nova)
 - [x] Adicionar botão "Portal do Cliente" na navbar da página inicial
 - [x] Adicionar em desktop, tablet e mobile
+
+
+## Gestão de Documentos (Nova)
+- [x] Adicionar queries para listar e gerenciar documentos
+- [x] Criar página AdminManageDocuments
+- [x] Implementar tabela com listagem de documentos
+- [x] Implementar filtros por cliente e tipo
+- [x] Implementar funcionalidade de editar documento
+- [x] Implementar funcionalidade de deletar documento
+- [x] Implementar funcionalidade de substituir documento (upload novo)
+- [x] Integrar ao sistema de navegação
+- [x] Adicionar botão no dashboard

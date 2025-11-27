@@ -204,6 +204,23 @@ export default function AdminDashboard() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Gerenciar Documentos Card */}
+            <Card className="border-purple-200 bg-purple-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg text-purple-900">Gerenciar Documentos</CardTitle>
+                <CardDescription className="text-xs">Editar, deletar e substituir documentos</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setLocation("/admin/manage-documents")}
+                  className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs md:text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  Gerenciar Documentos
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

@@ -490,3 +490,51 @@ export async function updateAdminCustomLabel(id: number, customLabel: string) {
   
   await db.update(admins).set({ customLabel }).where(eq(admins.id, id));
 }
+
+
+// Get all documents for admin
+export async function getDocumentsByAdminId(adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const docs = await db
+    .select({
+      id: clientDocuments.id,
+      clientId: clientDocuments.clientId,
+      clientName: clients.name,
+      title: clientDocuments.title,
+      description: clientDocuments.description,
+      documentType: clientDocuments.documentType,
+      fileUrl: clientDocuments.fileUrl,
+      createdAt: clientDocuments.createdAt,
+    })
+    .from(clientDocuments)
+    .innerJoin(clients, eq(clientDocuments.clientId, clients.id))
+    .where(eq(clients.adminId, adminId));
+  
+  return docs;
+}
+
+// Update document
+export async function updateDocument(id: number, title: string, description: string, documentType: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(clientDocuments).set({ title, description, documentType: documentType as any }).where(eq(clientDocuments.id, id));
+}
+
+// Delete document
+export async function deleteDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
+}
+
+// Update document file
+export async function updateDocumentFile(id: number, fileUrl: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(clientDocuments).set({ fileUrl }).where(eq(clientDocuments.id, id));
+}
