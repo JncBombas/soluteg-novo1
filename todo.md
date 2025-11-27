@@ -196,3 +196,11 @@
 - [x] Sistema de login do cliente não funciona com credenciais alteradas
 - [x] Mudar username do cliente de e-mail para nome
 - [x] Testar login com nome como username
+
+
+## Testes - Alteração de Senha (Completos)
+- [x] Fazer login em cliente e alterar senha no perfil (novaSenha123)
+- [x] Testar nova senha do cliente
+- [x] Fazer logout e retornar para tela inicial deslogado
+- [x] Alterar senha do cliente pelo perfil do admin (senhaAdmin123)
+- [x] Testar nova senha alterada pelo admin
