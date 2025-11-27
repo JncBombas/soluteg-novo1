@@ -12,7 +12,9 @@ import InspectionReports from "./pages/InspectionReports";
 import ClientLogin from "./pages/ClientLogin";
 import ClientPortal from "./pages/ClientPortal";
 import AdminClients from "./pages/AdminClients";
+import AdminEditClient from "./pages/AdminEditClient";
 import AdminDocuments from "./pages/AdminDocuments";
+import ClientProfile from "./pages/ClientProfile";
 
 function Router() {
   return (
@@ -23,9 +25,11 @@ function Router() {
       <Route path={"/admin/profile"} component={AdminProfile} />
       <Route path="/admin/relatorios" component={InspectionReports} />
       <Route path="/admin/clientes" component={AdminClients} />
+      <Route path="/admin/clientes/editar/:id" component={AdminEditClient} />
       <Route path="/admin/documentos" component={AdminDocuments} />
       <Route path="/client/login" component={ClientLogin} />
       <Route path="/client/portal" component={ClientPortal} />
+      <Route path="/client/profile" component={ClientProfile} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

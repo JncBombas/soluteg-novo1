@@ -474,3 +474,10 @@ export async function deleteClientDocument(id: number) {
   
   await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
 }
+
+export async function updateClientPassword(id: number, password: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(clients).set({ password }).where(eq(clients.id, id));
+}

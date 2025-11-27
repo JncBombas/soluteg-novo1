@@ -6,7 +6,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
-import { authenticateAdmin, hashPassword } from "./adminAuth";
+import { authenticateAdmin, hashPassword, comparePassword } from "./adminAuth";
 
 
 export const appRouter = router({
@@ -239,11 +239,23 @@ export const appRouter = router({
         email: z.string().email().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
+        cnpjCpf: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...updateData } = input;
         await db.updateClient(id, updateData);
         return { success: true, message: "Cliente atualizado com sucesso" };
+      }),
+
+    updatePassword: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        newPassword: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const hashedPassword = await hashPassword(input.newPassword);
+        await db.updateClientPassword(input.id, hashedPassword);
+        return { success: true, message: "Senha atualizada com sucesso" };
       }),
 
     delete: publicProcedure
@@ -257,6 +269,12 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getClientById(input.id);
+      }),
+
+    getByUsername: publicProcedure
+      .input(z.object({ username: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getClientByUsername(input.username);
       }),
   }),
 
@@ -295,6 +313,61 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         return await db.getDocumentById(input.id);
+      }),
+  }),
+
+  clientProfile: router({
+    getProfile: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        const client = await db.getClientById(input.clientId);
+        if (!client) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cliente nao encontrado" });
+        }
+        return {
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          phone: client.phone,
+          cnpjCpf: client.cnpjCpf,
+          address: client.address,
+        };
+      }),
+
+    updateProfile: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        name: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { clientId, ...updateData } = input;
+        await db.updateClient(clientId, updateData);
+        return { success: true, message: "Perfil atualizado com sucesso" };
+      }),
+
+    changePassword: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        currentPassword: z.string(),
+        newPassword: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const client = await db.getClientById(input.clientId);
+        if (!client) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Cliente nao encontrado" });
+        }
+
+        const isPasswordValid = await comparePassword(input.currentPassword, client.password);
+        if (!isPasswordValid) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual invalida" });
+        }
+
+        const hashedPassword = await hashPassword(input.newPassword);
+        await db.updateClientPassword(input.clientId, hashedPassword);
+        return { success: true, message: "Senha alterada com sucesso" };
       }),
   }),
 

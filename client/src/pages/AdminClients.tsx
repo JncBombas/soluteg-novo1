@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle } from "lucide-react";
+import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 
@@ -19,6 +20,7 @@ interface Client {
 }
 
 export default function AdminClients() {
+  const [, setLocation] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,6 +276,14 @@ export default function AdminClients() {
                       <TableCell className="text-sm">{client.email}</TableCell>
                       <TableCell className="text-sm">{client.phone || "-"}</TableCell>
                       <TableCell className="text-right space-x-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setLocation(`/admin/clientes/editar/${client.id}`)}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

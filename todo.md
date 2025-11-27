@@ -114,3 +114,14 @@
 - [x] Testar fluxo completo de criar usuário em tablet
 - [x] Adicionar botões de gerenciamento de clientes no dashboard
 - [x] Testar responsividade em mobile e tablet
+
+
+## Edição de Dados e Troca de Senha (Nova)
+- [x] Adicionar queries para editar cliente
+- [x] Adicionar queries para trocar senha do cliente
+- [x] Criar página de edição de cliente (admin)
+- [x] Criar página de perfil do cliente
+- [x] Implementar troca de senha (cliente)
+- [x] Integrar páginas ao sistema de navegação
+- [x] Adicionar botão de editar na tabela de clientes (admin)
+- [x] Adicionar botão de perfil no portal do cliente

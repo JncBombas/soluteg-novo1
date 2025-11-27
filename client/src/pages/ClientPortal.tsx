@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Trash2, Loader2 } from "lucide-react";
+import { LogOut, Download, FileText, Trash2, Loader2, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 interface Document {
@@ -153,14 +153,24 @@ export default function ClientPortal() {
             <h1 className="text-2xl font-bold text-slate-900">Portal do Cliente</h1>
             <p className="text-slate-600">Bem-vindo, {clientName}</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={handleLogout}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sair
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/client/profile")}
+              className="gap-2"
+            >
+              <User className="w-4 h-4" />
+              Perfil
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Sair
+            </Button>
+          </div>
         </div>
       </div>
 
