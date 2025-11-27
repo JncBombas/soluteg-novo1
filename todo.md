@@ -105,3 +105,12 @@
 - [x] Corrigir salvamento de adminId no localStorage
 - [x] Testar responsividade em desktop, mobile e tablet
 - [x] Testar todos os botões e funcionalidades
+
+
+## Testes em Tablet (Nova)
+- [x] Testar navegação em modo tablet
+- [x] Identificar e corrigir texto embaralhado na navbar
+- [x] Verificar botões de acesso admin em tablet
+- [x] Testar fluxo completo de criar usuário em tablet
+- [x] Adicionar botões de gerenciamento de clientes no dashboard
+- [x] Testar responsividade em mobile e tablet

@@ -175,3 +175,16 @@
     }
   }
 }
+
+/* Navbar fix for tablet - hide desktop nav and show tablet nav */
+@media (max-width: 1023px) {
+  .hidden.lg\:flex {
+    display: none !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hidden.md\:flex.lg\:hidden {
+    display: flex !important;
+  }
+}

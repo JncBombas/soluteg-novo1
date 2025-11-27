@@ -33,13 +33,14 @@ export default function Home() {
       <header className="bg-black text-white py-4 sticky top-0 z-50">
         <nav className="container flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={APP_LOGO} alt="JNC Logo" className="h-12" />
-            <div className="text-sm">
-              <div className="font-semibold">JNC Comércio e Serviços</div>
+            <img src={APP_LOGO} alt="JNC Logo" className="h-10" />
+            <div className="text-xs">
+              <div className="font-semibold">JNC Comércio</div>
               <div className="text-xs text-gray-400">(Soluteg)</div>
             </div>
           </div>
-          <div className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation - lg and above */}
+          <div className="hidden lg:flex items-center gap-4 text-sm">
             <a href="#home" className="hover:text-primary transition-colors">Home</a>
             <a href="#quem-somos" className="hover:text-primary transition-colors">Quem Somos</a>
             <a href="#servicos" className="hover:text-primary transition-colors">Serviços</a>
@@ -53,6 +54,18 @@ export default function Home() {
               </Button>
             </Link>
           </div>
+          {/* Tablet Navigation - md to lg */}
+          <div className="hidden md:flex lg:hidden items-center gap-2 text-xs">
+            <a href="#home" className="hover:text-primary transition-colors">Home</a>
+            <a href="#servicos" className="hover:text-primary transition-colors">Serviços</a>
+            <a href="#contato" className="hover:text-primary transition-colors">Contato</a>
+            <Link href="/admin/login">
+              <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">
+                Admin
+              </Button>
+            </Link>
+          </div>
+          {/* Mobile Navigation */}
           <div className="md:hidden">
             <Link href="/admin/login">
               <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-white text-xs">

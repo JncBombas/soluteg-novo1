@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText } from "lucide-react";
+import { LogOut, Home, User, FileText, Users } from "lucide-react";
 import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
@@ -165,6 +165,46 @@ export default function AdminDashboard() {
               </Button>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Portal do Cliente Section */}
+        <div className="mt-8">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">Portal do Cliente</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Gerenciar Clientes Card */}
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg text-orange-900">Gerenciar Clientes</CardTitle>
+                <CardDescription className="text-xs">Criar e gerenciar clientes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setLocation("/admin/clientes")}
+                  className="w-full gap-2 bg-orange-600 hover:bg-orange-700 text-white text-xs md:text-sm"
+                >
+                  <Users className="w-4 h-4" />
+                  Acessar Clientes
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Enviar Documentos Card */}
+            <Card className="border-green-200 bg-green-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg text-green-900">Enviar Documentos</CardTitle>
+                <CardDescription className="text-xs">Upload de arquivos para clientes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setLocation("/admin/documentos")}
+                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white text-xs md:text-sm"
+                >
+                  <FileText className="w-4 h-4" />
+                  Enviar Documentos
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>
