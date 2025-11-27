@@ -157,3 +157,46 @@ export const inspectionReports = mysqlTable("inspectionReports", {
 
 export type InspectionReport = typeof inspectionReports.$inferSelect;
 export type InsertInspectionReport = typeof inspectionReports.$inferInsert;
+
+/**
+ * Clientes do portal - cada cliente tem login/senha próprio
+ */
+export const clients = mysqlTable("clients", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(), // Admin que criou o cliente
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  username: varchar("username", { length: 100 }).notNull().unique(), // Login do cliente
+  password: varchar("password", { length: 255 }).notNull(), // Senha criptografada
+  cnpjCpf: varchar("cnpjCpf", { length: 20 }),
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+  active: int("active").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastLogin: timestamp("lastLogin"),
+});
+
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = typeof clients.$inferInsert;
+
+/**
+ * Documentos dos clientes (relatórios, notas fiscais, etc)
+ */
+export const clientDocuments = mysqlTable("clientDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  adminId: int("adminId").notNull(), // Admin que fez upload
+  title: varchar("title", { length: 255 }).notNull(), // Nome do documento
+  description: text("description"), // Descrição opcional
+  documentType: mysqlEnum("documentType", ["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]).notNull(),
+  fileUrl: text("fileUrl").notNull(), // URL do arquivo no S3
+  fileKey: text("fileKey").notNull(), // Chave do arquivo no S3
+  fileSize: int("fileSize"), // Tamanho em bytes
+  mimeType: varchar("mimeType", { length: 50 }),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ClientDocument = typeof clientDocuments.$inferSelect;
+export type InsertClientDocument = typeof clientDocuments.$inferInsert;

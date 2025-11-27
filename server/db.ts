@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
@@ -385,4 +385,92 @@ export async function updateInspectionReport(id: number, data: Partial<InsertIns
   if (!db) throw new Error("Database not available");
   
   await db.update(inspectionReports).set(data).where(eq(inspectionReports.id, id));
+}
+
+// Client queries
+export async function createClient(client: InsertClient) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(clients).values(client);
+  return result;
+}
+
+export async function getClientsByAdminId(adminId: number): Promise<Client[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(clients).where(eq(clients.adminId, adminId)).orderBy(desc(clients.createdAt));
+}
+
+export async function getClientById(id: number): Promise<Client | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getClientByUsername(username: string): Promise<Client | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(clients).where(eq(clients.username, username)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateClient(id: number, data: Partial<InsertClient>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(clients).set(data).where(eq(clients.id, id));
+}
+
+export async function deleteClient(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Delete all documents first
+  await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
+  
+  // Then delete client
+  await db.delete(clients).where(eq(clients.id, id));
+}
+
+export async function updateClientLastLogin(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(clients).set({ lastLogin: new Date() }).where(eq(clients.id, id));
+}
+
+// Client document queries
+export async function createClientDocument(document: InsertClientDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(clientDocuments).values(document);
+  return result;
+}
+
+export async function getDocumentsByClientId(clientId: number): Promise<ClientDocument[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db.select().from(clientDocuments).where(eq(clientDocuments.clientId, clientId)).orderBy(desc(clientDocuments.uploadedAt));
+}
+
+export async function getDocumentById(id: number): Promise<ClientDocument | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(clientDocuments).where(eq(clientDocuments.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteClientDocument(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(clientDocuments).where(eq(clientDocuments.id, id));
 }

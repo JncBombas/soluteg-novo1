@@ -92,3 +92,13 @@
 - [x] Enviar e-mail com link de convite ao criar convite
 - [ ] Testar recebimento de e-mail
 - [ ] Validar link de aceitação funciona corretamente
+
+## Portal do Cliente (Nova)
+- [x] Criar schema de banco de dados para clientes e documentos
+- [x] Implementar gerenciamento de clientes (admin) - criar/editar/deletar
+- [x] Implementar página de login do cliente
+- [x] Implementar página privada do cliente com visualização de documentos
+- [x] Implementar listagem e download de documentos
+- [x] Implementar página de upload de documentos (admin)
+- [x] Criar endpoints da API para clientes e documentos
+- [ ] Testar fluxo completo de cliente (criar cliente, fazer login, visualizar docs)

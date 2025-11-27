@@ -201,6 +201,103 @@ export const appRouter = router({
       }),
   }),
 
+  clients: router({
+    list: publicProcedure
+      .input(z.object({ adminId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getClientsByAdminId(input.adminId);
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        adminId: z.number(),
+        name: z.string().min(1),
+        email: z.string().email(),
+        username: z.string().min(3).max(100),
+        password: z.string().min(6),
+        cnpjCpf: z.string().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { password, ...clientData } = input;
+        const hashedPassword = await hashPassword(password);
+        
+        const result = await db.createClient({
+          ...clientData,
+          password: hashedPassword,
+          active: 1,
+        });
+        
+        return { success: true, message: "Cliente criado com sucesso" };
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        address: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...updateData } = input;
+        await db.updateClient(id, updateData);
+        return { success: true, message: "Cliente atualizado com sucesso" };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteClient(input.id);
+        return { success: true, message: "Cliente deletado com sucesso" };
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getClientById(input.id);
+      }),
+  }),
+
+  documents: router({
+    list: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getDocumentsByClientId(input.clientId);
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        adminId: z.number(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]),
+        fileUrl: z.string().url(),
+        fileKey: z.string(),
+        fileSize: z.number().optional(),
+        mimeType: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await db.createClientDocument(input);
+        return { success: true, message: "Documento enviado com sucesso" };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteClientDocument(input.id);
+        return { success: true, message: "Documento deletado com sucesso" };
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getDocumentById(input.id);
+      }),
+  }),
+
   adminProfile: router({
     getProfile: publicProcedure
       .input(z.object({ adminId: z.number() }))

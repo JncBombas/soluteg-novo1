@@ -13,6 +13,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
+// Alias para comparePassword
+export async function comparePassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
 export function generateToken(adminId: number): string {
   return jwt.sign(
     { adminId, type: 'admin' },
