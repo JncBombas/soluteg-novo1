@@ -30,14 +30,14 @@ export default function ClientPortal() {
     const name = localStorage.getItem("clientName");
 
     if (!token || !id) {
-      setLocation("/client/login");
+      window.location.href = "/client/login";
       return;
     }
 
     setClientId(parseInt(id));
     setClientName(name || "Cliente");
     loadDocuments(parseInt(id));
-  }, [setLocation]);
+  }, []);
 
   const loadDocuments = async (id: number) => {
     try {
@@ -58,7 +58,11 @@ export default function ClientPortal() {
     localStorage.removeItem("clientToken");
     localStorage.removeItem("clientId");
     localStorage.removeItem("clientName");
-    setLocation("/client/login");
+    window.location.href = "/";
+  };
+
+  const handleGoBack = () => {
+    window.location.href = "/";
   };
 
   const handleDeleteDocument = async (docId: number) => {
@@ -154,6 +158,13 @@ export default function ClientPortal() {
             <p className="text-slate-600">Bem-vindo, {clientName}</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleGoBack}
+              className="gap-2"
+            >
+              ← Voltar
+            </Button>
             <Button
               variant="outline"
               onClick={() => setLocation("/client/profile")}

@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, name, username, email, password, active FROM clients;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, name, username, email, password, active FROM clients;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Cliente Novo",
+      "username": "empresa_teste",
+      "email": "contato@empresateste.com",
+      "password": "$2b$10$7.BUeK60myYyr9v9Bdns9uSohufeax9lmPJSS5/4/g/n9rVztNS8m",
+      "active": "1"
+    },
+    {
+      "id": "2",
+      "name": "Cliente Novo",
+      "username": "cliente_novo",
+      "email": "novo@cliente.com",
+      "password": "$2b$10$AMJ9I/Ys.K0w8QKO5cudiOYmnu/Wm/Z6Sg3mk5M3RO4u3yydZCzyO",
+      "active": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tusername\temail\tpassword\tactive\n1\tCliente Novo\tempresa_teste\tcontato@empresateste.com\t$2b$10$7.BUeK60myYyr9v9Bdns9uSohufeax9lmPJSS5/4/g/n9rVztNS8m\t1\n2\tCliente Novo\tcliente_novo\tnovo@cliente.com\t$2b$10$AMJ9I/Ys.K0w8QKO5cudiOYmnu/Wm/Z6Sg3mk5M3RO4u3yydZCzyO\t1\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}

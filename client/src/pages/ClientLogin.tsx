@@ -36,9 +36,13 @@ export default function ClientLogin() {
 
       const data = await response.json();
       localStorage.setItem("clientId", data.clientId.toString());
-      localStorage.setItem("clientName", data.clientName);
+      localStorage.setItem("clientName", data.name);
+      localStorage.setItem("clientToken", data.token);
       toast.success("Login realizado com sucesso!");
-      setLocation("/client/portal");
+      // Usar window.location.href para garantir navegação completa
+      setTimeout(() => {
+        window.location.href = "/client/portal";
+      }, 500);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Erro ao conectar com o servidor";
       setError(errorMsg);
