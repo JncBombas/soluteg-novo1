@@ -182,3 +182,7 @@
 - [x] Implementar funcionalidade de substituir documento (upload novo)
 - [x] Integrar ao sistema de navegação
 - [x] Adicionar botão no dashboard
+
+
+## Publicação Final (Nova)
+- [ ] Publicar versão final do site
