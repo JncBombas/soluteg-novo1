@@ -101,4 +101,7 @@
 - [x] Implementar listagem e download de documentos
 - [x] Implementar página de upload de documentos (admin)
 - [x] Criar endpoints da API para clientes e documentos
-- [ ] Testar fluxo completo de cliente (criar cliente, fazer login, visualizar docs)
+- [x] Testar fluxo completo de cliente (criar cliente, fazer login, visualizar docs)
+- [x] Corrigir salvamento de adminId no localStorage
+- [x] Testar responsividade em desktop, mobile e tablet
+- [x] Testar todos os botões e funcionalidades

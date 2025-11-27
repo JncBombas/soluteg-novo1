@@ -15,7 +15,10 @@ export default function AdminLogin() {
   const [isLoading, setIsLoading] = useState(false);
 
   const loginMutation = trpc.adminAuth.login.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      localStorage.setItem("adminId", data.admin.id.toString());
+      localStorage.setItem("adminEmail", data.admin.email);
+      localStorage.setItem("adminName", data.admin.name || "");
       toast.success("Login realizado com sucesso!");
       setLocation("/admin/dashboard");
     },
