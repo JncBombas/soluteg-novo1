@@ -196,3 +196,7 @@
 - [x] Sistema de login do cliente não funciona com credenciais alteradas
 - [x] Mudar username do cliente de e-mail para nome
 - [x] Testar login com nome como username
+
+## Bugs - Login do Cliente com Novo Nome (Corrigido)
+- [x] Login do cliente funciona com novo nome "Cliente Novo"
+- [x] Redirecionamento para página do portal está funcionando perfeitamente
