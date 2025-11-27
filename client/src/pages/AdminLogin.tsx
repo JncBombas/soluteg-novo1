@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,18 +7,41 @@ import { trpc } from "@/lib/trpc";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { APP_LOGO, APP_TITLE } from "@/const";
+import { CheckCircle2 } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Carregar username salvo ao abrir a página
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("adminLoginUsername");
+    const wasRemembered = localStorage.getItem("adminRememberLogin") === "true";
+    
+    if (savedUsername && wasRemembered) {
+      setUsername(savedUsername);
+      setRememberLogin(true);
+    }
+  }, []);
 
   const loginMutation = trpc.adminAuth.login.useMutation({
     onSuccess: (data) => {
       localStorage.setItem("adminId", data.admin.id.toString());
       localStorage.setItem("adminEmail", data.admin.email);
       localStorage.setItem("adminName", data.admin.name || "");
+      
+      // Salvar username se "Lembrar login" estiver marcado
+      if (rememberLogin) {
+        localStorage.setItem("adminLoginUsername", username);
+        localStorage.setItem("adminRememberLogin", "true");
+      } else {
+        localStorage.removeItem("adminLoginUsername");
+        localStorage.removeItem("adminRememberLogin");
+      }
+      
       toast.success("Login realizado com sucesso!");
       setLocation("/admin/dashboard");
     },
@@ -30,14 +53,15 @@ export default function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!username || !password) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
 
     setIsLoading(true);
     try {
-      await loginMutation.mutateAsync({ email, password });
+      // Usar username como email para login
+      await loginMutation.mutateAsync({ email: username, password });
     } finally {
       setIsLoading(false);
     }
@@ -56,21 +80,22 @@ export default function AdminLogin() {
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>
-              Faça login com suas credenciais de administrador
+              Faça login com seu usuário e senha
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="username">Usuário</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="seu_usuario"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   disabled={isLoading}
                   required
+                  autoComplete="username"
                 />
               </div>
 
@@ -84,7 +109,22 @@ export default function AdminLogin() {
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading}
                   required
+                  autoComplete="current-password"
                 />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  checked={rememberLogin}
+                  onChange={(e) => setRememberLogin(e.target.checked)}
+                  disabled={isLoading}
+                  className="w-4 h-4 rounded cursor-pointer"
+                />
+                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">
+                  Lembrar meu usuário
+                </Label>
               </div>
 
               <Button
@@ -100,7 +140,6 @@ export default function AdminLogin() {
               <p className="text-sm text-gray-600 text-center">
                 Não tem acesso? Contate o administrador do sistema.
               </p>
-
             </div>
           </CardContent>
         </Card>

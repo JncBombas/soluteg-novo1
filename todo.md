@@ -135,3 +135,10 @@
 - [x] Salvar email do admin no localStorage
 - [x] Mostrar email do admin no indicador de login
 - [x] Clicar no indicador de login deve ir ao dashboard (não deslogar)
+
+
+## Login Admin - Melhorias (Nova)
+- [x] Mudar login de e-mail para username/login
+- [x] Adicionar checkbox "Lembrar login"
+- [x] Salvar login no localStorage quando checkbox ativado
+- [x] Carregar login salvo ao abrir página de login
