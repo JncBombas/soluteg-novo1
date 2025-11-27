@@ -14,9 +14,10 @@ export default function Home() {
     // Verificar se admin está logado
     const adminId = localStorage.getItem("adminId");
     const email = localStorage.getItem("adminEmail");
+    const customLabel = localStorage.getItem("adminCustomLabel");
     if (adminId) {
       setIsAdminLoggedIn(true);
-      setAdminEmail(email || "Admin");
+      setAdminEmail(customLabel || email || "Admin");
     }
   }, []);
 
@@ -75,6 +76,7 @@ export default function Home() {
                 <button
                   onClick={() => setLocation("/admin/dashboard")}
                   className="flex items-center gap-1 px-3 py-1 bg-primary/20 rounded text-primary text-xs hover:bg-primary/30 transition-colors cursor-pointer"
+                  title="Clique para ir ao dashboard"
                 >
                   <User className="w-3 h-3" />
                   {adminEmail}
@@ -107,6 +109,7 @@ export default function Home() {
                 <button
                   onClick={() => setLocation("/admin/dashboard")}
                   className="flex items-center gap-1 px-2 py-1 bg-primary/20 rounded text-primary text-xs hover:bg-primary/30 transition-colors cursor-pointer"
+                  title="Clique para ir ao dashboard"
                 >
                   <User className="w-3 h-3" />
                   {adminEmail.split("@")[0]}

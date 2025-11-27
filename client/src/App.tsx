@@ -14,6 +14,7 @@ import ClientPortal from "./pages/ClientPortal";
 import AdminClients from "./pages/AdminClients";
 import AdminEditClient from "./pages/AdminEditClient";
 import AdminDocuments from "./pages/AdminDocuments";
+import AdminEditCustomLabel from "./pages/AdminEditCustomLabel";
 import ClientProfile from "./pages/ClientProfile";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/admin/clientes" component={AdminClients} />
       <Route path="/admin/clientes/editar/:id" component={AdminEditClient} />
       <Route path="/admin/documentos" component={AdminDocuments} />
+      <Route path="/admin/edit-custom-label" component={AdminEditCustomLabel} />
       <Route path="/client/login" component={ClientLogin} />
       <Route path="/client/portal" component={ClientPortal} />
       <Route path="/client/profile" component={ClientProfile} />

@@ -32,6 +32,7 @@ export default function AdminLogin() {
       localStorage.setItem("adminId", data.admin.id.toString());
       localStorage.setItem("adminEmail", data.admin.email);
       localStorage.setItem("adminName", data.admin.name || "");
+      localStorage.setItem("adminCustomLabel", data.admin.customLabel || "");
       
       // Salvar username se "Lembrar login" estiver marcado
       if (rememberLogin) {

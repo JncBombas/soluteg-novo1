@@ -481,3 +481,12 @@ export async function updateClientPassword(id: number, password: string) {
   
   await db.update(clients).set({ password }).where(eq(clients.id, id));
 }
+
+
+// Update admin custom label
+export async function updateAdminCustomLabel(id: number, customLabel: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(admins).set({ customLabel }).where(eq(admins.id, id));
+}

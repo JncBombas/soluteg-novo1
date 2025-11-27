@@ -59,6 +59,7 @@ export async function authenticateAdmin(email: string, password: string) {
       id: admin.id,
       email: admin.email,
       name: admin.name,
+      customLabel: admin.customLabel,
     },
     token,
   };

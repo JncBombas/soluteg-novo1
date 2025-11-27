@@ -199,6 +199,16 @@ export const appRouter = router({
         await db.updateAdminPassword(input.adminId, hashedPassword);
         return { success: true, message: "Senha alterada com sucesso" };
       }),
+
+    updateCustomLabel: publicProcedure
+      .input(z.object({
+        adminId: z.number(),
+        customLabel: z.string().min(1).max(255),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateAdminCustomLabel(input.adminId, input.customLabel);
+        return { success: true, message: "Label customizado atualizado com sucesso" };
+      }),
   }),
 
   clients: router({

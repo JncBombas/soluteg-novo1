@@ -169,6 +169,24 @@ export default function AdminProfile() {
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Custom Label Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Label Customizado</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Defina como você quer ser identificado na página inicial
+              </p>
+              <Button
+                onClick={() => setLocation("/admin/edit-custom-label")}
+                className="w-full"
+              >
+                Editar Label
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Profile Photo Section */}
           <Card>
             <CardHeader>

@@ -142,3 +142,18 @@
 - [x] Adicionar checkbox "Lembrar login"
 - [x] Salvar login no localStorage quando checkbox ativado
 - [x] Carregar login salvo ao abrir página de login
+
+
+## Indicador de Login Customizado (Nova)
+- [x] Adicionar campo customLabel no banco de dados para admin
+- [x] Criar procedure para atualizar customLabel
+- [x] Exibir label customizado no indicador de login da Home
+- [x] Salvar label customizado no localStorage
+- [x] Carregar label customizado ao fazer login
+
+
+## Página de Edição de Label Customizado (Nova)
+- [x] Criar página AdminEditCustomLabel
+- [x] Adicionar formulário para editar label customizado
+- [x] Integrar ao sistema de navegação do admin
+- [x] Adicionar botão de acesso na página de perfil do admin

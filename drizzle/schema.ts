@@ -76,6 +76,7 @@ export const admins = mysqlTable("admins", {
   name: varchar("name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   profilePhoto: text("profilePhoto"),
+  customLabel: text("customLabel"),
   active: int("active").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
