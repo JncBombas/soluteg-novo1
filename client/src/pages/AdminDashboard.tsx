@@ -221,23 +221,6 @@ export default function AdminDashboard() {
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Ordem de Servico Card */}
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base md:text-lg text-red-900">Ordem de Servico</CardTitle>
-                <CardDescription className="text-xs">Criar orcamentos e ordens</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setLocation("/admin/service-orders")}
-                  className="w-full gap-2 bg-red-600 hover:bg-red-700 text-white text-xs md:text-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  Ordem de Servico
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </main>

@@ -17,7 +17,6 @@ import AdminDocuments from "./pages/AdminDocuments";
 import AdminEditCustomLabel from "./pages/AdminEditCustomLabel";
 import ClientProfile from "./pages/ClientProfile";
 import AdminManageDocuments from "./pages/AdminManageDocuments";
-import AdminServiceOrders from "./pages/AdminServiceOrders";
 
 function Router() {
   return (
@@ -32,7 +31,6 @@ function Router() {
       <Route path="/admin/documentos" component={AdminDocuments} />
       <Route path="/admin/edit-custom-label" component={AdminEditCustomLabel} />
       <Route path="/admin/manage-documents" component={AdminManageDocuments} />
-      <Route path="/admin/service-orders" component={AdminServiceOrders} />
       <Route path="/client/login" component={ClientLogin} />
       <Route path="/client/portal" component={ClientPortal} />
       <Route path="/client/profile" component={ClientProfile} />
