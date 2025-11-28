@@ -201,3 +201,27 @@ export const clientDocuments = mysqlTable("clientDocuments", {
 
 export type ClientDocument = typeof clientDocuments.$inferSelect;
 export type InsertClientDocument = typeof clientDocuments.$inferInsert;
+
+/**
+ * Ordens de Serviço (OS)
+ */
+export const workOrders = mysqlTable("workOrders", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(), // Admin que criou a OS
+  clientId: int("clientId").notNull(), // Cliente relacionado
+  osNumber: varchar("osNumber", { length: 50 }).notNull().unique(), // Número da OS (ex: OS-2025-001)
+  title: varchar("title", { length: 255 }).notNull(), // Título/Descrição breve
+  description: text("description"), // Descrição detalhada do serviço
+  serviceType: varchar("serviceType", { length: 100 }), // Tipo de serviço (manutenção, reparo, etc)
+  status: mysqlEnum("status", ["aberta", "em_andamento", "concluida", "cancelada"]).default("aberta").notNull(),
+  priority: mysqlEnum("priority", ["baixa", "media", "alta"]).default("media").notNull(),
+  scheduledDate: timestamp("scheduledDate"), // Data agendada
+  completedDate: timestamp("completedDate"), // Data de conclusão
+  estimatedHours: int("estimatedHours"), // Horas estimadas
+  actualHours: int("actualHours"), // Horas reais gastas
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WorkOrder = typeof workOrders.$inferSelect;
+export type InsertWorkOrder = typeof workOrders.$inferInsert;

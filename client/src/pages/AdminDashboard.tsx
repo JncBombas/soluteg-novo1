@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench } from "lucide-react";
 import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
@@ -218,6 +218,23 @@ export default function AdminDashboard() {
                 >
                   <FileText className="w-4 h-4" />
                   Gerenciar Documentos
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Ordens de Serviço Card */}
+            <Card className="border-indigo-200 bg-indigo-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base md:text-lg text-indigo-900">Ordens de Serviço</CardTitle>
+                <CardDescription className="text-xs">Criar e gerenciar ordens de serviço</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  onClick={() => setLocation("/admin/work-orders")}
+                  className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm"
+                >
+                  <Wrench className="w-4 h-4" />
+                  Ordens de Serviço
                 </Button>
               </CardContent>
             </Card>

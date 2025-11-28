@@ -85,6 +85,13 @@
       "when": 1764282511480,
       "tag": "0011_worthless_liz_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1764361432817,
+      "tag": "0012_exotic_shatterstar",
+      "breakpoints": true
     }
   ]
 }

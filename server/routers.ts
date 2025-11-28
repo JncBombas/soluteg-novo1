@@ -477,6 +477,67 @@ export const appRouter = router({
         return { success: true, message: "Documento deletado com sucesso" };
       }),
   }),
+
+  workOrders: router({
+    list: publicProcedure
+      .input(z.object({ adminId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkOrdersByAdminId(input.adminId);
+      }),
+
+    getById: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWorkOrderById(input.id);
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        adminId: z.number(),
+        clientId: z.number(),
+        title: z.string().min(1),
+        description: z.string().optional(),
+        serviceType: z.string().optional(),
+        priority: z.enum(["baixa", "media", "alta"]).default("media"),
+        scheduledDate: z.date().optional(),
+        estimatedHours: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const osNumber = await db.getNextOSNumber();
+        await db.createWorkOrder({
+          ...input,
+          osNumber,
+          status: "aberta",
+        });
+        return { success: true, message: "OS criada com sucesso", osNumber };
+      }),
+
+    update: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        serviceType: z.string().optional(),
+        status: z.enum(["aberta", "em_andamento", "concluida", "cancelada"]).optional(),
+        priority: z.enum(["baixa", "media", "alta"]).optional(),
+        scheduledDate: z.date().optional(),
+        completedDate: z.date().optional(),
+        estimatedHours: z.number().optional(),
+        actualHours: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateWorkOrder(id, data);
+        return { success: true, message: "OS atualizada com sucesso" };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteWorkOrder(input.id);
+        return { success: true, message: "OS deletada com sucesso" };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

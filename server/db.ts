@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument, workOrders, InsertWorkOrder, WorkOrder } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
@@ -538,4 +538,103 @@ export async function updateDocumentFile(id: number, fileUrl: string) {
   if (!db) throw new Error("Database not available");
   
   await db.update(clientDocuments).set({ fileUrl }).where(eq(clientDocuments.id, id));
+}
+
+
+// Work Order (OS) queries
+export async function createWorkOrder(workOrder: InsertWorkOrder) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(workOrders).values(workOrder);
+  return result;
+}
+
+export async function getWorkOrdersByAdminId(adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const orders = await db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      clientName: clients.name,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      scheduledDate: workOrders.scheduledDate,
+      createdAt: workOrders.createdAt,
+    })
+    .from(workOrders)
+    .innerJoin(clients, eq(workOrders.clientId, clients.id))
+    .where(eq(workOrders.adminId, adminId))
+    .orderBy(desc(workOrders.createdAt));
+  
+  return orders;
+}
+
+export async function getWorkOrderById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      description: workOrders.description,
+      serviceType: workOrders.serviceType,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      scheduledDate: workOrders.scheduledDate,
+      completedDate: workOrders.completedDate,
+      estimatedHours: workOrders.estimatedHours,
+      actualHours: workOrders.actualHours,
+      clientId: workOrders.clientId,
+      clientName: clients.name,
+      clientEmail: clients.email,
+      clientPhone: clients.phone,
+      createdAt: workOrders.createdAt,
+      updatedAt: workOrders.updatedAt,
+    })
+    .from(workOrders)
+    .innerJoin(clients, eq(workOrders.clientId, clients.id))
+    .where(eq(workOrders.id, id))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateWorkOrder(id: number, data: Partial<InsertWorkOrder>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(workOrders).set(data).where(eq(workOrders.id, id));
+}
+
+export async function deleteWorkOrder(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(workOrders).where(eq(workOrders.id, id));
+}
+
+export async function getNextOSNumber() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const lastOS = await db
+    .select({ osNumber: workOrders.osNumber })
+    .from(workOrders)
+    .orderBy(desc(workOrders.createdAt))
+    .limit(1);
+  
+  let nextNumber = 1;
+  if (lastOS.length > 0) {
+    const lastNumber = parseInt(lastOS[0].osNumber.split("-")[2] || "0");
+    nextNumber = lastNumber + 1;
+  }
+  
+  const year = new Date().getFullYear();
+  return `OS-${year}-${String(nextNumber).padStart(3, "0")}`;
 }
