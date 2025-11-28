@@ -137,8 +137,19 @@ export default function AdminCreateWorkOrder() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Criar Ordem de Serviço</h1>
-          <p className="text-gray-600">Preencha os dados para criar uma nova OS</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Criar Ordem de Serviço</h1>
+              <p className="text-gray-600">Preencha os dados para criar uma nova OS</p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/admin/work-orders")}
+              className="flex items-center gap-2"
+            >
+              ← Voltar
+            </Button>
+          </div>
         </div>
 
         {/* Main Card */}
