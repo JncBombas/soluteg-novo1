@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Trash2, Loader2, User } from "lucide-react";
+import { LogOut, Download, FileText, Loader2, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 interface Document {
@@ -122,14 +122,6 @@ export default function ClientPortal() {
             >
               <Download className="w-4 h-4" />
               <span className="hidden sm:inline">Baixar</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handleDeleteDocument(doc.id)}
-              className="text-red-500 hover:text-red-700"
-            >
-              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
