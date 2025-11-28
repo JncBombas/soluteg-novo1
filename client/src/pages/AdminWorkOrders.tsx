@@ -172,11 +172,12 @@ export default function AdminWorkOrders() {
           </div>
         )}
 
-        {/* Back Button */}
+        {/* Back Button - Always visible */}
         <div className="mt-8">
           <Button
             variant="outline"
             onClick={() => navigate("/admin/dashboard")}
+            className="flex items-center gap-2"
           >
             ← Voltar ao Dashboard
           </Button>
