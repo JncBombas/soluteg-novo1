@@ -213,7 +213,7 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <Button
-                  onClick={() => setLocation("/admin/manage-documents")}
+                  onClick={() => setLocation("/admin/documentos")}
                   className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs md:text-sm"
                 >
                   <FileText className="w-4 h-4" />
