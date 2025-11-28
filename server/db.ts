@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql, like, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument, workOrders, InsertWorkOrder, WorkOrder } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -637,4 +637,103 @@ export async function getNextOSNumber() {
   
   const year = new Date().getFullYear();
   return `OS-${year}-${String(nextNumber).padStart(3, "0")}`;
+}
+
+// Document filtering functions
+export async function getDocumentsByClientIdWithFilters(filters: {
+  clientId: number;
+  search?: string;
+  documentType?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Build conditions array
+  const conditions = [eq(clientDocuments.clientId, filters.clientId)];
+
+  if (filters.search) {
+    conditions.push(like(clientDocuments.title, `%${filters.search}%`));
+  }
+
+  if (filters.documentType && filters.documentType !== "all") {
+    conditions.push(eq(clientDocuments.documentType, filters.documentType as any));
+  }
+
+  if (filters.startDate) {
+    conditions.push(gte(clientDocuments.uploadedAt, new Date(filters.startDate)));
+  }
+
+  if (filters.endDate) {
+    conditions.push(lte(clientDocuments.uploadedAt, new Date(filters.endDate)));
+  }
+
+  const results = await db
+    .select()
+    .from(clientDocuments)
+    .where(and(...conditions))
+    .orderBy(desc(clientDocuments.uploadedAt));
+
+  return results;
+}
+
+export async function getAllDocumentsWithFilters(filters: {
+  adminId: number;
+  search?: string;
+  clientId?: number;
+  documentType?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Build conditions array
+  const conditions: any[] = [];
+
+  if (filters.clientId) {
+    conditions.push(eq(clientDocuments.clientId, filters.clientId));
+  }
+
+  if (filters.search) {
+    conditions.push(like(clientDocuments.title, `%${filters.search}%`));
+  }
+
+  if (filters.documentType && filters.documentType !== "all") {
+    conditions.push(eq(clientDocuments.documentType, filters.documentType as any));
+  }
+
+  if (filters.startDate) {
+    conditions.push(gte(clientDocuments.uploadedAt, new Date(filters.startDate)));
+  }
+
+  if (filters.endDate) {
+    conditions.push(lte(clientDocuments.uploadedAt, new Date(filters.endDate)));
+  }
+
+  let query = db
+    .select({
+      id: clientDocuments.id,
+      title: clientDocuments.title,
+      description: clientDocuments.description,
+      documentType: clientDocuments.documentType,
+      fileUrl: clientDocuments.fileUrl,
+      fileKey: clientDocuments.fileKey,
+      fileSize: clientDocuments.fileSize,
+      mimeType: clientDocuments.mimeType,
+      uploadedAt: clientDocuments.uploadedAt,
+      clientId: clientDocuments.clientId,
+      clientName: clients.name,
+      clientEmail: clients.email,
+    })
+    .from(clientDocuments)
+    .innerJoin(clients, eq(clientDocuments.clientId, clients.id));
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  const results = await query.orderBy(desc(clientDocuments.uploadedAt));
+  return results;
 }

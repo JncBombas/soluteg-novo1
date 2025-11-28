@@ -290,9 +290,28 @@ export const appRouter = router({
 
   documents: router({
     list: publicProcedure
-      .input(z.object({ clientId: z.number() }))
+      .input(z.object({ 
+        clientId: z.number(),
+        search: z.string().optional(),
+        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro", "all"]).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
       .query(async ({ input }) => {
-        return await db.getDocumentsByClientId(input.clientId);
+        return await db.getDocumentsByClientIdWithFilters(input);
+      }),
+
+    listAll: publicProcedure
+      .input(z.object({ 
+        adminId: z.number(),
+        search: z.string().optional(),
+        clientId: z.number().optional(),
+        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro", "all"]).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        return await db.getAllDocumentsWithFilters(input);
       }),
 
     create: publicProcedure
