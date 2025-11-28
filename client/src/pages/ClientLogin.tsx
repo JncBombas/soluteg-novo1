@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LogIn, AlertCircle } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { toast } from "sonner";
@@ -12,8 +13,20 @@ export default function ClientLogin() {
   const [, setLocation] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Carregar credenciais salvas ao montar o componente
+  useEffect(() => {
+    const savedUsername = localStorage.getItem("rememberedUsername");
+    const savedPassword = localStorage.getItem("rememberedPassword");
+    if (savedUsername && savedPassword) {
+      setUsername(savedUsername);
+      setPassword(savedPassword);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +51,16 @@ export default function ClientLogin() {
       localStorage.setItem("clientId", data.clientId.toString());
       localStorage.setItem("clientName", data.name);
       localStorage.setItem("clientToken", data.token);
+      
+      // Salvar ou limpar credenciais conforme o checkbox
+      if (rememberMe) {
+        localStorage.setItem("rememberedUsername", username);
+        localStorage.setItem("rememberedPassword", password);
+      } else {
+        localStorage.removeItem("rememberedUsername");
+        localStorage.removeItem("rememberedPassword");
+      }
+      
       toast.success("Login realizado com sucesso!");
       // Usar window.location.href para garantir navegação completa
       setTimeout(() => {
@@ -124,6 +147,20 @@ export default function ClientLogin() {
                     className="bg-slate-700/50 border-gray-600 text-white placeholder:text-gray-500 focus:border-orange-500 focus:ring-orange-500"
                     required
                   />
+                </div>
+
+                {/* Checkbox Lembrar Login */}
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="remember"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    disabled={isLoading}
+                    className="border-gray-600 text-orange-500"
+                  />
+                  <Label htmlFor="remember" className="text-gray-300 font-normal cursor-pointer">
+                    Lembrar login e senha
+                  </Label>
                 </div>
 
                 {/* Botão de Login */}
