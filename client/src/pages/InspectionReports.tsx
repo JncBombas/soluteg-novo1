@@ -18,6 +18,12 @@ export default function InspectionReports() {
     window.open(formUrl, "_blank");
   };
 
+  const handleOpenVisita2Form = () => {
+    const formUrl =
+      "https://docs.google.com/forms/d/e/1FAIpQLSdXDg93hUQUfDEs6l9_jDeIatqiQX2TaJs0FlGMVdeWRjQR2A/viewform?usp=header";
+    window.open(formUrl, "_blank");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -30,7 +36,7 @@ export default function InspectionReports() {
         </div>
 
         {/* Cards dos Formulários */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
           {/* Card Cadastro de Cliente */}
           <Card className="p-8 hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between mb-6">
@@ -67,6 +73,27 @@ export default function InspectionReports() {
             <Button
               onClick={handleOpenVisitaForm}
               className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg"
+            >
+              <ExternalLink className="w-5 h-5 mr-2" />
+              Abrir Formulário
+            </Button>
+          </Card>
+
+          {/* Card Visita de Inspeção 2 */}
+          <Card className="p-8 hover:shadow-lg transition-shadow">
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold mb-3">Formulário de Visita 2</h2>
+                <p className="text-gray-600 text-sm">
+                  Registre inspeções periódicas de bombas e equipamentos. 
+                  Preencha os dados técnicos e envie o formulário.
+                </p>
+              </div>
+              <FileText className="w-8 h-8 text-orange-500 flex-shrink-0 ml-4" />
+            </div>
+            <Button
+              onClick={handleOpenVisita2Form}
+              className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-lg"
             >
               <ExternalLink className="w-5 h-5 mr-2" />
               Abrir Formulário
