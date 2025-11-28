@@ -14,6 +14,7 @@ import ClientPortal from "./pages/ClientPortal";
 import AdminClients from "./pages/AdminClients";
 import AdminEditClient from "./pages/AdminEditClient";
 import AdminDocuments from "./pages/AdminDocuments";
+import AdminManageDocuments from "./pages/AdminManageDocuments";
 import AdminEditCustomLabel from "./pages/AdminEditCustomLabel";
 import ClientProfile from "./pages/ClientProfile";
 import AdminWorkOrders from "./pages/AdminWorkOrders";
@@ -30,7 +31,8 @@ function Router() {
       <Route path="/admin/relatorios" component={InspectionReports} />
       <Route path="/admin/clientes" component={AdminClients} />
       <Route path="/admin/clientes/editar/:id" component={AdminEditClient} />
-      <Route path="/admin/documentos" component={AdminDocuments} />
+      <Route path="/admin/documentos/enviar" component={AdminDocuments} />
+      <Route path="/admin/documentos" component={AdminManageDocuments} />
       <Route path="/admin/edit-custom-label" component={AdminEditCustomLabel} />
       <Route path="/admin/work-orders" component={AdminWorkOrders} />
       <Route path="/admin/work-orders/create" component={AdminCreateWorkOrder} />

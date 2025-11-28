@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, User, Search, Filter } from "lucide-react";
+import { ArrowLeft, Search, Filter, Download, Trash2, FileText, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface Document {
   id: number;
@@ -15,51 +15,61 @@ interface Document {
   documentType: "relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro";
   fileUrl: string;
   uploadedAt: Date;
+  clientId: number;
+  clientName: string;
+  clientEmail: string;
 }
 
-export default function ClientPortal() {
+export default function AdminManageDocuments() {
   const [, setLocation] = useLocation();
-  const [clientId, setClientId] = useState<number | null>(null);
-  const [clientName, setClientName] = useState("");
+  const [adminId, setAdminId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [clientFilter, setClientFilter] = useState<string>("all");
   const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("all");
 
   useEffect(() => {
-    // Verificar se cliente está logado
-    const token = localStorage.getItem("clientToken");
-    const id = localStorage.getItem("clientId");
-    const name = localStorage.getItem("clientName");
-
-    if (!token || !id) {
-      window.location.href = "/client/login";
-      return;
+    const id = localStorage.getItem("adminId");
+    if (id) {
+      setAdminId(parseInt(id));
+    } else {
+      setLocation("/admin/login");
     }
-
-    setClientId(parseInt(id));
-    setClientName(name || "Cliente");
   }, []);
 
-  // Query com filtros
-  const { data: documents = [], isLoading, refetch } = trpc.documents.list.useQuery(
+  // Query de clientes para o filtro
+  const { data: clients = [] } = trpc.clients.list.useQuery(
+    { adminId: adminId || 0 },
+    { enabled: !!adminId }
+  );
+
+  // Query de documentos com filtros
+  const { data: documents = [], isLoading, refetch } = trpc.documents.listAll.useQuery(
     {
-      clientId: clientId || 0,
+      adminId: adminId || 0,
       search: searchTerm || undefined,
+      clientId: clientFilter !== "all" ? parseInt(clientFilter) : undefined,
       documentType: documentTypeFilter !== "all" ? (documentTypeFilter as any) : undefined,
     },
     {
-      enabled: !!clientId,
+      enabled: !!adminId,
     }
   );
 
-  const handleLogout = () => {
-    localStorage.removeItem("clientToken");
-    localStorage.removeItem("clientId");
-    localStorage.removeItem("clientName");
-    window.location.href = "/";
-  };
+  // Mutation para deletar documento
+  const deleteDocumentMutation = trpc.documents.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Documento deletado com sucesso");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar documento: ${error.message}`);
+    },
+  });
 
-  const handleVoltar = () => {
-    window.location.href = "/";
+  const handleDelete = async (docId: number) => {
+    if (confirm("Tem certeza que deseja deletar este documento?")) {
+      deleteDocumentMutation.mutate({ id: docId });
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -87,9 +97,17 @@ export default function ClientPortal() {
                 {doc.description}
               </p>
             )}
-            <p className="text-xs text-slate-500">
-              {new Date(doc.uploadedAt).toLocaleDateString("pt-BR")}
-            </p>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
+              <span className="bg-slate-100 px-2 py-1 rounded">
+                Cliente: {doc.clientName}
+              </span>
+              <span className="bg-slate-100 px-2 py-1 rounded">
+                {getTypeLabel(doc.documentType)}
+              </span>
+              <span className="bg-slate-100 px-2 py-1 rounded">
+                {new Date(doc.uploadedAt).toLocaleDateString("pt-BR")}
+              </span>
+            </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button
@@ -99,7 +117,14 @@ export default function ClientPortal() {
               className="gap-1"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Baixar</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleDelete(doc.id)}
+              className="gap-1 text-red-600 hover:text-red-700"
+            >
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </div>
@@ -112,7 +137,7 @@ export default function ClientPortal() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-          <p className="text-slate-600">Carregando seus documentos...</p>
+          <p className="text-slate-600">Carregando documentos...</p>
         </div>
       </div>
     );
@@ -122,25 +147,20 @@ export default function ClientPortal() {
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
       <div className="bg-white border-b">
-        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Portal do Cliente</h1>
-            <p className="text-slate-600">Bem-vindo, {clientName}</p>
+            <h1 className="text-2xl font-bold text-slate-900">Gerenciar Documentos</h1>
+            <p className="text-slate-600">Visualize, filtre e gerencie documentos dos clientes</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleVoltar}>
-              Voltar
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => setLocation("/admin/dashboard")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="container max-w-6xl mx-auto px-4 py-8">
+      <div className="container max-w-7xl mx-auto px-4 py-8">
         {/* Filtros */}
         <Card className="mb-6">
           <CardHeader>
@@ -148,10 +168,10 @@ export default function ClientPortal() {
               <Filter className="w-5 h-5" />
               Filtros
             </CardTitle>
-            <CardDescription>Busque e filtre seus documentos</CardDescription>
+            <CardDescription>Busque e filtre documentos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Busca por nome */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Buscar por nome</label>
@@ -164,6 +184,24 @@ export default function ClientPortal() {
                     className="pl-10"
                   />
                 </div>
+              </div>
+
+              {/* Filtro por cliente */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cliente</label>
+                <Select value={clientFilter} onValueChange={setClientFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Clientes</SelectItem>
+                    {clients.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id.toString()}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Filtro por tipo */}
@@ -194,10 +232,17 @@ export default function ClientPortal() {
         {/* Lista de Documentos */}
         <Card>
           <CardHeader>
-            <CardTitle>Seus Documentos</CardTitle>
-            <CardDescription>
-              Acesse e faça download dos seus documentos
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Documentos</CardTitle>
+                <CardDescription>
+                  Gerencie todos os documentos dos clientes
+                </CardDescription>
+              </div>
+              <Button onClick={() => setLocation("/admin/documentos/enviar")}>
+                Enviar Novo Documento
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {documents.length === 0 ? (
@@ -205,9 +250,9 @@ export default function ClientPortal() {
                 <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
                 <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
                 <p className="text-sm text-slate-500">
-                  {searchTerm || documentTypeFilter !== "all"
+                  {searchTerm || clientFilter !== "all" || documentTypeFilter !== "all"
                     ? "Tente ajustar os filtros de busca"
-                    : "Seus documentos aparecerão aqui quando forem enviados"}
+                    : "Envie documentos para os clientes para começar"}
                 </p>
               </div>
             ) : (
