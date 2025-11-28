@@ -654,7 +654,7 @@ export async function getDocumentsByClientIdWithFilters(filters: {
   const conditions = [eq(clientDocuments.clientId, filters.clientId)];
 
   if (filters.search) {
-    conditions.push(like(clientDocuments.title, `%${filters.search}%`));
+    conditions.push(sql`LOWER(${clientDocuments.title}) LIKE LOWER(${`%${filters.search}%`})`);
   }
 
   if (filters.documentType && filters.documentType !== "all") {
@@ -697,7 +697,7 @@ export async function getAllDocumentsWithFilters(filters: {
   }
 
   if (filters.search) {
-    conditions.push(like(clientDocuments.title, `%${filters.search}%`));
+    conditions.push(sql`LOWER(${clientDocuments.title}) LIKE LOWER(${`%${filters.search}%`})`);
   }
 
   if (filters.documentType && filters.documentType !== "all") {

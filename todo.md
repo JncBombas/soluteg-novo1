@@ -200,3 +200,11 @@
 ## Bugs - Login do Cliente com Novo Nome (Corrigido)
 - [x] Login do cliente funciona com novo nome "Cliente Novo"
 - [x] Redirecionamento para página do portal está funcionando perfeitamente
+
+
+## Melhorias nos Filtros de Documentos (Nova)
+- [x] Implementar busca case-insensitive no backend (LOWER() no SQL)
+- [x] Adicionar botão "Filtrar" no portal do cliente
+- [x] Adicionar botão "Filtrar" na área administrativa
+- [x] Remover busca automática ao digitar (onChange)
+- [x] Testar filtros com maiúsculas e minúsculas

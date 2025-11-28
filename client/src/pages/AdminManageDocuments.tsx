@@ -26,6 +26,9 @@ export default function AdminManageDocuments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("all");
+  const [activeSearch, setActiveSearch] = useState("");
+  const [activeClientFilter, setActiveClientFilter] = useState<string>("all");
+  const [activeTypeFilter, setActiveTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
@@ -42,18 +45,24 @@ export default function AdminManageDocuments() {
     { enabled: !!adminId }
   );
 
-  // Query de documentos com filtros
+  // Query de documentos com filtros ativos
   const { data: documents = [], isLoading, refetch } = trpc.documents.listAll.useQuery(
     {
       adminId: adminId || 0,
-      search: searchTerm || undefined,
-      clientId: clientFilter !== "all" ? parseInt(clientFilter) : undefined,
-      documentType: documentTypeFilter !== "all" ? (documentTypeFilter as any) : undefined,
+      search: activeSearch || undefined,
+      clientId: activeClientFilter !== "all" ? parseInt(activeClientFilter) : undefined,
+      documentType: activeTypeFilter !== "all" ? (activeTypeFilter as any) : undefined,
     },
     {
       enabled: !!adminId,
     }
   );
+
+  const handleFilter = () => {
+    setActiveSearch(searchTerm);
+    setActiveClientFilter(clientFilter);
+    setActiveTypeFilter(documentTypeFilter);
+  };
 
   // Mutation para deletar documento
   const deleteDocumentMutation = trpc.documents.delete.useMutation({
@@ -171,54 +180,65 @@ export default function AdminManageDocuments() {
             <CardDescription>Busque e filtre documentos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Busca por nome */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Buscar por nome</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    placeholder="Digite o nome do documento..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Busca por nome */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Buscar por nome</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      placeholder="Digite o nome do documento..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleFilter()}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Filtro por cliente */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Cliente</label>
+                  <Select value={clientFilter} onValueChange={setClientFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Clientes</SelectItem>
+                      {clients.map((client: any) => (
+                        <SelectItem key={client.id} value={client.id.toString()}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Filtro por tipo */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tipo de documento</label>
+                  <Select value={documentTypeFilter} onValueChange={setDocumentTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Tipos</SelectItem>
+                      <SelectItem value="relatorio_servico">Relatórios de Serviço</SelectItem>
+                      <SelectItem value="relatorio_visita">Relatórios de Visita</SelectItem>
+                      <SelectItem value="nota_fiscal">Notas Fiscais</SelectItem>
+                      <SelectItem value="outro">Outros Documentos</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Filtro por cliente */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Cliente</label>
-                <Select value={clientFilter} onValueChange={setClientFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Clientes</SelectItem>
-                    {clients.map((client: any) => (
-                      <SelectItem key={client.id} value={client.id.toString()}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Filtro por tipo */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo de documento</label>
-                <Select value={documentTypeFilter} onValueChange={setDocumentTypeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Tipos</SelectItem>
-                    <SelectItem value="relatorio_servico">Relatórios de Serviço</SelectItem>
-                    <SelectItem value="relatorio_visita">Relatórios de Visita</SelectItem>
-                    <SelectItem value="nota_fiscal">Notas Fiscais</SelectItem>
-                    <SelectItem value="outro">Outros Documentos</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Botão de Filtrar */}
+              <div className="flex justify-end">
+                <Button onClick={handleFilter} className="bg-orange-500 hover:bg-orange-600">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filtrar
+                </Button>
               </div>
             </div>
 
