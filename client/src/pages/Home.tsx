@@ -300,11 +300,6 @@ export default function Home() {
                 WhatsApp
               </Button>
             </a>
-            <a href="https://docs.google.com/forms/d/e/1FAIpQLSdXDg93hUQUfDEs6l9_jDeIatqiQX2TaJs0FlGMVdeWRjQR2A/viewform?usp=header" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-primary w-full">
-                Formulário
-              </Button>
-            </a>
           </div>
         </div>
       </section>
