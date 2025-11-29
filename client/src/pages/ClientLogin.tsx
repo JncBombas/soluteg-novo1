@@ -48,9 +48,18 @@ export default function ClientLogin() {
       }
 
       const data = await response.json();
+      
+      // Verificar se o cliente tem acesso ao portal
+      if (data.type === "sem_portal") {
+        setError("Este cliente não tem acesso ao portal");
+        toast.error("Este cliente não tem acesso ao portal");
+        return;
+      }
+      
       localStorage.setItem("clientId", data.clientId.toString());
       localStorage.setItem("clientName", data.name);
       localStorage.setItem("clientToken", data.token);
+      localStorage.setItem("clientType", data.type);
       
       // Salvar ou limpar credenciais conforme o checkbox
       if (rememberMe) {

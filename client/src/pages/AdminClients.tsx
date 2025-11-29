@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { trpc } from "@/lib/trpc";
 
@@ -16,6 +17,7 @@ interface Client {
   username: string;
   cnpjCpf?: string;
   phone?: string;
+  type?: "com_portal" | "sem_portal";
   createdAt: Date;
 }
 
@@ -33,6 +35,7 @@ export default function AdminClients() {
     cnpjCpf: "",
     phone: "",
     address: "",
+    type: "com_portal" as "com_portal" | "sem_portal",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -96,6 +99,7 @@ export default function AdminClients() {
         cnpjCpf: "",
         phone: "",
         address: "",
+        type: "com_portal",
       });
       setIsOpen(false);
       loadClients(adminId);
@@ -239,6 +243,19 @@ export default function AdminClients() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo de Cliente</label>
+                <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="com_portal">Com Portal (Acesso ao painel)</SelectItem>
+                    <SelectItem value="sem_portal">Sem Portal (Apenas cadastro)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
                 Criar Cliente
               </Button>
@@ -275,6 +292,7 @@ export default function AdminClients() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Usuário</TableHead>
                     <TableHead>E-mail</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -285,6 +303,15 @@ export default function AdminClients() {
                       <TableCell className="font-medium">{client.name}</TableCell>
                       <TableCell className="font-mono text-sm">{client.username}</TableCell>
                       <TableCell className="text-sm">{client.email}</TableCell>
+                      <TableCell className="text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          client.type === "com_portal"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {client.type === "com_portal" ? "Com Portal" : "Sem Portal"}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-sm">{client.phone || "-"}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button

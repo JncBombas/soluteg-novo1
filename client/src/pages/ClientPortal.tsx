@@ -5,7 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, User, Search, Filter } from "lucide-react";
+import { LogOut, Download, FileText, Loader2, User, Search, Filter, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 interface Document {
@@ -25,6 +29,13 @@ export default function ClientPortal() {
   const [documentTypeFilter, setDocumentTypeFilter] = useState<string>("all");
   const [activeSearch, setActiveSearch] = useState("");
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>("all");
+  const [isOpenDialogOpen, setIsOpenDialogOpen] = useState(false);
+  const [osFormData, setOsFormData] = useState({
+    title: "",
+    description: "",
+    serviceType: "",
+  });
+  const [osLoading, setOsLoading] = useState(false);
 
   useEffect(() => {
     // Verificar se cliente está logado
@@ -67,6 +78,43 @@ export default function ClientPortal() {
 
   const handleVoltar = () => {
     window.location.href = "/";
+  };
+
+  const handleCreateWorkOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!osFormData.title.trim()) {
+      toast.error("Titulo da OS eh obrigatorio");
+      return;
+    }
+    
+    setOsLoading(true);
+    try {
+      const response = await fetch("/api/work-orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId,
+          title: osFormData.title,
+          description: osFormData.description,
+          serviceType: osFormData.serviceType,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Erro ao criar OS");
+      }
+
+      toast.success("Ordem de Servico criada com sucesso!");
+      setOsFormData({ title: "", description: "", serviceType: "" });
+      setIsOpenDialogOpen(false);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "Erro ao criar OS";
+      toast.error(errorMsg);
+    } finally {
+      setOsLoading(false);
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -135,6 +183,53 @@ export default function ClientPortal() {
             <p className="text-slate-600">Bem-vindo, {clientName}</p>
           </div>
           <div className="flex gap-2">
+            <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 bg-orange-500 hover:bg-orange-600">
+                  <Plus className="w-4 h-4" />
+                  Abrir OS
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Abrir Ordem de Servico</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados para abrir uma nova ordem de servico
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateWorkOrder} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Titulo da OS *</label>
+                    <Input
+                      placeholder="Ex: Manutencao de bomba"
+                      value={osFormData.title}
+                      onChange={(e) => setOsFormData({ ...osFormData, title: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tipo de Servico</label>
+                    <Input
+                      placeholder="Ex: Manutencao preventiva"
+                      value={osFormData.serviceType}
+                      onChange={(e) => setOsFormData({ ...osFormData, serviceType: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Descricao</label>
+                    <Textarea
+                      placeholder="Descreva o problema ou servico necessario..."
+                      value={osFormData.description}
+                      onChange={(e) => setOsFormData({ ...osFormData, description: e.target.value })}
+                      rows={4}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={osLoading}>
+                    {osLoading ? "Criando..." : "Abrir OS"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" onClick={handleVoltar}>
               Voltar
             </Button>

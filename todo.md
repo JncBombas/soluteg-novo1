@@ -208,3 +208,14 @@
 - [x] Adicionar botão "Filtrar" na área administrativa
 - [x] Remover busca automática ao digitar (onChange)
 - [x] Testar filtros com maiúsculas e minúsculas
+
+
+## Sistema de Dois Tipos de Clientes (Nova)
+- [x] Adicionar campo 'type' na tabela de clientes (com_portal / sem_portal)
+- [x] Adicionar select de tipo na página de gerenciamento de clientes
+- [x] Implementar validação de acesso ao portal baseada no tipo
+- [x] Bloquear acesso ao portal para clientes sem_portal
+- [x] Adicionar opção de abrir OS no portal para clientes com_portal
+- [ ] Permitir admin abrir OS para ambos os tipos
+- [ ] Testar acesso ao portal com ambos os tipos
+- [ ] Testar abertura de OS pelo portal

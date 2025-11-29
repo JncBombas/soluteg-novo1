@@ -172,6 +172,7 @@ export const clients = mysqlTable("clients", {
   cnpjCpf: varchar("cnpjCpf", { length: 20 }),
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
+  type: mysqlEnum("type", ["com_portal", "sem_portal"]).default("com_portal").notNull(), // com_portal: acesso ao painel | sem_portal: apenas cadastro
   active: int("active").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
