@@ -156,6 +156,73 @@ async function startServer() {
     }
   });
   
+  // Get work order by ID
+  app.get("/api/work-orders/:id", async (req, res) => {
+    try {
+      const { getWorkOrderById } = await import("../db");
+      const workOrder = await getWorkOrderById(parseInt(req.params.id));
+      
+      if (!workOrder) {
+        return res.status(404).json({ message: "Ordem de servico nao encontrada" });
+      }
+      
+      res.json(workOrder);
+    } catch (error) {
+      console.error("Get work order error:", error);
+      res.status(500).json({ message: "Erro ao carregar ordem de servico" });
+    }
+  });
+  
+  // Update work order
+  app.put("/api/work-orders/:id", async (req, res) => {
+    try {
+      const { title, description, serviceType, status, priority, estimatedHours, actualHours } = req.body;
+      const { updateWorkOrder } = await import("../db");
+      
+      await updateWorkOrder(parseInt(req.params.id), {
+        title,
+        description,
+        serviceType,
+        status,
+        priority,
+        estimatedHours: estimatedHours ? parseInt(estimatedHours) : null,
+        actualHours: actualHours ? parseInt(actualHours) : null,
+        updatedAt: new Date(),
+      });
+      
+      res.json({ success: true, message: "Ordem de servico atualizada com sucesso" });
+    } catch (error) {
+      console.error("Update work order error:", error);
+      res.status(500).json({ message: "Erro ao atualizar ordem de servico" });
+    }
+  });
+  
+  // Create work order (for clients)
+  app.post("/api/work-orders", async (req, res) => {
+    try {
+      const { clientId, title, description, serviceType } = req.body;
+      const { createWorkOrder, getNextOSNumber } = await import("../db");
+      
+      const osNumber = await getNextOSNumber();
+      
+      const result = await createWorkOrder({
+        adminId: 1,
+        clientId,
+        osNumber,
+        title,
+        description,
+        serviceType,
+        status: "aberta",
+        priority: "media",
+      });
+      
+      res.json({ success: true, message: "Ordem de servico criada com sucesso", osNumber });
+    } catch (error) {
+      console.error("Create work order error:", error);
+      res.status(500).json({ message: "Erro ao criar ordem de servico" });
+    }
+  });
+  
   // Upload document for client
   app.post("/api/admin-documents/upload", async (req, res) => {
     try {

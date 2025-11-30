@@ -224,3 +224,10 @@
 ## Bugs Encontrados (Nova)
 - [x] Botões "Ver" e "Editar" de OS retornam 404 - páginas não existem
 - [x] Logout do admin não funciona - continua logado após clicar em "Sair" no dashboard
+
+
+## Endpoints de API para Ordens de Servico (Nova)
+- [x] Criar endpoint GET /api/work-orders/:id
+- [x] Criar endpoint PUT /api/work-orders/:id
+- [x] Criar endpoint POST /api/work-orders (para clientes)
+- [x] Testar ambos os endpoints
