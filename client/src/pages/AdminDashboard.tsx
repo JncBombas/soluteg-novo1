@@ -20,6 +20,11 @@ export default function AdminDashboard() {
   });
 
   const handleLogout = async () => {
+    // Limpar dados do admin do localStorage
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminEmail");
+    localStorage.removeItem("adminName");
     await logoutMutation.mutateAsync();
   };
 

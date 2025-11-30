@@ -219,3 +219,8 @@
 - [ ] Permitir admin abrir OS para ambos os tipos
 - [ ] Testar acesso ao portal com ambos os tipos
 - [ ] Testar abertura de OS pelo portal
+
+
+## Bugs Encontrados (Nova)
+- [x] Botões "Ver" e "Editar" de OS retornam 404 - páginas não existem
+- [x] Logout do admin não funciona - continua logado após clicar em "Sair" no dashboard
