@@ -231,3 +231,14 @@
 - [x] Criar endpoint PUT /api/work-orders/:id
 - [x] Criar endpoint POST /api/work-orders (para clientes)
 - [x] Testar ambos os endpoints
+
+
+## Redesign Página Inicial para Condomínios (Nova)
+- [x] Redesenhar hero section com foco em condomínios
+- [x] Criar seção de problemas e soluções
+- [x] Criar seção de serviços detalhada com ícones
+- [x] Adicionar seção de confiança (anos de experiência, clientes)
+- [x] Criar seção de FAQ
+- [x] Adicionar CTAs estratégicos (WhatsApp, telefone, formulário)
+- [x] Testar responsividade mobile
+- [x] Testar navegação e interação
