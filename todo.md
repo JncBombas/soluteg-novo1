@@ -248,3 +248,9 @@
 - [x] Restaurar abas de documentos (vistoria, visita, nota fiscal, servico, rel. servico, rel. visita)
 - [x] Adicionar filtro de busca independente em cada aba
 - [x] Testar filtros funcionando corretamente em cada aba
+
+
+## Bug: Filtro de Abas Nao Funciona Corretamente (Urgente)
+- [x] Corrigir logica para mostrar apenas documentos do tipo correto em cada aba
+- [x] Remover secao de filtros globais de cima
+- [x] Testar se documentos aparecem apenas na aba correta

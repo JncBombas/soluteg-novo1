@@ -89,9 +89,21 @@ export default function ClientPortal() {
 
   const getTabDocuments = (tabType: string) => {
     const search = tabSearches[tabType];
+    const typeMap: Record<string, string[]> = {
+      vistoria: ["vistoria"],
+      visita: ["visita"],
+      nota_fiscal: ["nota_fiscal"],
+      servico: ["servico"],
+      rel_servico: ["relatorio_servico"],
+      rel_visita: ["relatorio_visita"]
+    };
+    
+    const allowedTypes = typeMap[tabType] || [];
+    
     return documents.filter(doc => {
+      const matchesType = allowedTypes.includes(doc.documentType);
       const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
-      return matchesSearch;
+      return matchesType && matchesSearch;
     });
   };
 
@@ -269,67 +281,6 @@ export default function ClientPortal() {
 
       {/* Main Content */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtros
-            </CardTitle>
-            <CardDescription>Busque e filtre seus documentos</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Busca por nome */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Buscar por nome</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      placeholder="Digite o nome do documento..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleFilter()}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                {/* Filtro por tipo */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Tipo de documento</label>
-                  <Select value={documentTypeFilter} onValueChange={setDocumentTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os Tipos</SelectItem>
-                      <SelectItem value="relatorio_servico">Relatórios de Serviço</SelectItem>
-                      <SelectItem value="relatorio_visita">Relatórios de Visita</SelectItem>
-                      <SelectItem value="nota_fiscal">Notas Fiscais</SelectItem>
-                      <SelectItem value="outro">Outros Documentos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Botão de Filtrar */}
-              <div className="flex justify-end">
-                <Button onClick={handleFilter} className="bg-orange-500 hover:bg-orange-600">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtrar
-                </Button>
-              </div>
-            </div>
-
-            {/* Indicador de resultados */}
-            <div className="mt-4 text-sm text-slate-600">
-              {documents.length} documento(s) encontrado(s)
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Abas de Documentos */}
         <Card>
           <CardHeader>
