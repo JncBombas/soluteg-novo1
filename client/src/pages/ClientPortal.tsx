@@ -36,6 +36,15 @@ export default function ClientPortal() {
     serviceType: "",
   });
   const [osLoading, setOsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("vistoria");
+  const [tabSearches, setTabSearches] = useState<Record<string, string>>({
+    vistoria: "",
+    visita: "",
+    nota_fiscal: "",
+    servico: "",
+    rel_servico: "",
+    rel_visita: ""
+  });
 
   useEffect(() => {
     // Verificar se cliente está logado
@@ -67,6 +76,23 @@ export default function ClientPortal() {
   const handleFilter = () => {
     setActiveSearch(searchTerm);
     setActiveTypeFilter(documentTypeFilter);
+  };
+
+  const handleTabSearch = (tabName: string, value: string) => {
+    setTabSearches({ ...tabSearches, [tabName]: value });
+  };
+
+  const handleTabFilter = (tabName: string) => {
+    setActiveSearch(tabSearches[tabName]);
+    setActiveTypeFilter(tabName);
+  };
+
+  const getTabDocuments = (tabType: string) => {
+    const search = tabSearches[tabType];
+    return documents.filter(doc => {
+      const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
+      return matchesSearch;
+    });
   };
 
   const handleLogout = () => {
@@ -304,32 +330,223 @@ export default function ClientPortal() {
           </CardContent>
         </Card>
 
-        {/* Lista de Documentos */}
+        {/* Abas de Documentos */}
         <Card>
           <CardHeader>
             <CardTitle>Seus Documentos</CardTitle>
             <CardDescription>
-              Acesse e faça download dos seus documentos
+              Acesse e faca download dos seus documentos por categoria
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {documents.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
-                <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
-                <p className="text-sm text-slate-500">
-                  {searchTerm || documentTypeFilter !== "all"
-                    ? "Tente ajustar os filtros de busca"
-                    : "Seus documentos aparecerão aqui quando forem enviados"}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4">
-                {documents.map((doc) => (
-                  <DocumentCard key={doc.id} doc={doc} />
-                ))}
-              </div>
-            )}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
+                <TabsTrigger value="vistoria" className="text-xs md:text-sm">Vistoria</TabsTrigger>
+                <TabsTrigger value="visita" className="text-xs md:text-sm">Visita</TabsTrigger>
+                <TabsTrigger value="nota_fiscal" className="text-xs md:text-sm">NF</TabsTrigger>
+                <TabsTrigger value="servico" className="text-xs md:text-sm">Servico</TabsTrigger>
+                <TabsTrigger value="rel_servico" className="text-xs md:text-sm">Rel. Serv</TabsTrigger>
+                <TabsTrigger value="rel_visita" className="text-xs md:text-sm">Rel. Vis</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="vistoria" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar documentos de vistoria</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.vistoria}
+                        onChange={(e) => handleTabSearch("vistoria", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("vistoria")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("vistoria")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("vistoria").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("vistoria").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="visita" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar documentos de visita</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.visita}
+                        onChange={(e) => handleTabSearch("visita", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("visita")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("visita")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("visita").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("visita").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="nota_fiscal" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar notas fiscais</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.nota_fiscal}
+                        onChange={(e) => handleTabSearch("nota_fiscal", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("nota_fiscal")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("nota_fiscal")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("nota_fiscal").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("nota_fiscal").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="servico" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar documentos de servico</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.servico}
+                        onChange={(e) => handleTabSearch("servico", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("servico")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("servico")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("servico").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("servico").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="rel_servico" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar relatorios de servico</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.rel_servico}
+                        onChange={(e) => handleTabSearch("rel_servico", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("rel_servico")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("rel_servico")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("rel_servico").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("rel_servico").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="rel_visita" className="space-y-4">
+                <div className="space-y-3 p-4 bg-slate-50 rounded-lg">
+                  <label className="text-sm font-medium">Buscar relatorios de visita</label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        placeholder="Digite o nome do documento..."
+                        value={tabSearches.rel_visita}
+                        onChange={(e) => handleTabSearch("rel_visita", e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleTabFilter("rel_visita")}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Button onClick={() => handleTabFilter("rel_visita")} className="bg-orange-500 hover:bg-orange-600">
+                      <Filter className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+                {getTabDocuments("rel_visita").length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto text-slate-300 mb-4" />
+                    <p className="text-slate-600 mb-2">Nenhum documento encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {getTabDocuments("rel_visita").map((doc) => (
+                      <DocumentCard key={doc.id} doc={doc} />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>

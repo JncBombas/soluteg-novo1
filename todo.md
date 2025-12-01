@@ -242,3 +242,9 @@
 - [x] Adicionar CTAs estratégicos (WhatsApp, telefone, formulário)
 - [x] Testar responsividade mobile
 - [x] Testar navegação e interação
+
+
+## Bug: Abas de Documentos Removidas (Urgente)
+- [x] Restaurar abas de documentos (vistoria, visita, nota fiscal, servico, rel. servico, rel. visita)
+- [x] Adicionar filtro de busca independente em cada aba
+- [x] Testar filtros funcionando corretamente em cada aba
