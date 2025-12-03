@@ -293,7 +293,7 @@ export const appRouter = router({
       .input(z.object({ 
         clientId: z.number(),
         search: z.string().optional(),
-        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro", "all"]).optional(),
+        documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita", "all"]).optional(),
         startDate: z.string().optional(),
         endDate: z.string().optional(),
       }))
@@ -320,7 +320,7 @@ export const appRouter = router({
         adminId: z.number(),
         title: z.string().min(1),
         description: z.string().optional(),
-        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]),
+        documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita"]),
         fileUrl: z.string().url(),
         fileKey: z.string(),
         fileSize: z.number().optional(),
@@ -442,7 +442,7 @@ export const appRouter = router({
           id: z.number(),
           title: z.string().min(1),
           description: z.string().optional(),
-          documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]),
+          documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita"]),
         }))
         .mutation(async ({ input }) => {
           const { id, title, description, documentType } = input;
@@ -481,7 +481,7 @@ export const appRouter = router({
         id: z.number(),
         title: z.string().min(1),
         description: z.string().optional(),
-        documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]),
+        documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita"]),
       }))
       .mutation(async ({ input }) => {
         const { id, title, description, documentType } = input;

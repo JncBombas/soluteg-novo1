@@ -1,0 +1,1 @@
+ALTER TABLE `clientDocuments` MODIFY COLUMN `documentType` enum('vistoria','visita','nota_fiscal','servico','relatorio_servico','relatorio_visita') NOT NULL;

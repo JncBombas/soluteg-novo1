@@ -737,3 +737,20 @@ export async function getAllDocumentsWithFilters(filters: {
   const results = await query.orderBy(desc(clientDocuments.uploadedAt));
   return results;
 }
+
+export async function getAllDocumentsByAdminId(adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const results = await db
+    .select({
+      id: clientDocuments.id,
+      title: clientDocuments.title,
+      clientId: clientDocuments.clientId,
+      adminId: clientDocuments.adminId,
+    })
+    .from(clientDocuments)
+    .where(eq(clientDocuments.adminId, adminId));
+
+  return results;
+}

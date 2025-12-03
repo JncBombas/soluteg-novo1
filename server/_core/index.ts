@@ -254,6 +254,34 @@ async function startServer() {
     }
   });
   
+  // Get admin metrics
+  app.get("/api/admin-metrics", async (req, res) => {
+    try {
+      const adminId = req.query.adminId as string;
+      if (!adminId) {
+        return res.status(400).json({ message: "adminId eh obrigatorio" });
+      }
+      
+      const { getClientsByAdminId, getWorkOrdersByAdminId, getAllDocumentsByAdminId } = await import("../db");
+      const clients = await getClientsByAdminId(parseInt(adminId));
+      const workOrders = await getWorkOrdersByAdminId(parseInt(adminId));
+      const documents = await getAllDocumentsByAdminId(parseInt(adminId));
+      
+      const activeClients = clients.filter(c => c.active === 1).length;
+      const openWorkOrders = workOrders.filter(wo => wo.status === "aberta" || wo.status === "em_andamento").length;
+      
+      res.json({
+        totalClients: clients.length,
+        activeClients,
+        openWorkOrders,
+        totalDocuments: documents.length,
+      });
+    } catch (error) {
+      console.error("Get metrics error:", error);
+      res.status(500).json({ message: "Erro ao carregar metricas" });
+    }
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",

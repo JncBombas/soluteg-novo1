@@ -16,7 +16,7 @@ interface Document {
   id: number;
   title: string;
   description?: string | null;
-  documentType: "relatorio_servico" | "relatorio_visita" | "nota_fiscal" | "outro";
+  documentType: "vistoria" | "visita" | "nota_fiscal" | "servico" | "relatorio_servico" | "relatorio_visita";
   fileUrl: string;
   uploadedAt: Date;
 }

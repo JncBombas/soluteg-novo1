@@ -191,7 +191,7 @@ export const clientDocuments = mysqlTable("clientDocuments", {
   adminId: int("adminId").notNull(), // Admin que fez upload
   title: varchar("title", { length: 255 }).notNull(), // Nome do documento
   description: text("description"), // Descrição opcional
-  documentType: mysqlEnum("documentType", ["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro"]).notNull(),
+  documentType: mysqlEnum("documentType", ["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita"]).notNull(),
   fileUrl: text("fileUrl").notNull(), // URL do arquivo no S3
   fileKey: text("fileKey").notNull(), // Chave do arquivo no S3
   fileSize: int("fileSize"), // Tamanho em bytes

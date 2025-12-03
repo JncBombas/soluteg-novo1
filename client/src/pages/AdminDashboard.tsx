@@ -1,13 +1,41 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp } from "lucide-react";
 import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
+  const [adminId, setAdminId] = useState<number | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalClients: 0,
+    openWorkOrders: 0,
+    totalDocuments: 0,
+    activeClients: 0,
+  });
+
+  useEffect(() => {
+    const id = localStorage.getItem("adminId");
+    if (id) {
+      setAdminId(parseInt(id));
+      loadMetrics(parseInt(id));
+    }
+  }, []);
+
+  const loadMetrics = async (id: number) => {
+    try {
+      const response = await fetch(`/api/admin-metrics?adminId=${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMetrics(data);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar metricas:", error);
+    }
+  };
 
   const logoutMutation = trpc.adminAuth.logout.useMutation({
     onSuccess: () => {
@@ -81,6 +109,65 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 md:py-8">
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Total Clientes */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-900">Total de Clientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-blue-600">{metrics.totalClients}</span>
+                <Users className="w-5 h-5 text-blue-500" />
+              </div>
+              <p className="text-xs text-blue-600 mt-1">{metrics.activeClients} ativos</p>
+            </CardContent>
+          </Card>
+
+          {/* Ordens Abertas */}
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-orange-900">Ordens Abertas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-orange-600">{metrics.openWorkOrders}</span>
+                <Wrench className="w-5 h-5 text-orange-500" />
+              </div>
+              <p className="text-xs text-orange-600 mt-1">Aguardando conclusão</p>
+            </CardContent>
+          </Card>
+
+          {/* Total Documentos */}
+          <Card className="border-green-200 bg-green-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-green-900">Total de Documentos</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-green-600">{metrics.totalDocuments}</span>
+                <FileText className="w-5 h-5 text-green-500" />
+              </div>
+              <p className="text-xs text-green-600 mt-1">Enviados aos clientes</p>
+            </CardContent>
+          </Card>
+
+          {/* Taxa de Atividade */}
+          <Card className="border-purple-200 bg-purple-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-purple-900">Taxa de Atividade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-purple-600">{metrics.totalClients > 0 ? Math.round((metrics.activeClients / metrics.totalClients) * 100) : 0}%</span>
+                <TrendingUp className="w-5 h-5 text-purple-500" />
+              </div>
+              <p className="text-xs text-purple-600 mt-1">Clientes ativos</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Welcome Card */}
         <Card className="mb-6">
           <CardHeader className="pb-3 md:pb-4">

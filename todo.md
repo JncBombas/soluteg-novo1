@@ -254,3 +254,12 @@
 - [x] Corrigir logica para mostrar apenas documentos do tipo correto em cada aba
 - [x] Remover secao de filtros globais de cima
 - [x] Testar se documentos aparecem apenas na aba correta
+
+
+## Dashboard Metrics & Documento Desaparecido (Nova)
+- [x] Investigar se documento do Parque dos Coqueiros foi deletado ou está oculto (estava no banco, tipos de documento estavam errados)
+- [x] Implementar métricas no dashboard (total clientes, OS abertas, documentos)
+- [x] Adicionar cards de estatísticas com ícones
+- [x] Adicionar tipos de documento faltantes ao schema (vistoria, visita, servico, etc)
+- [x] Criar endpoint /api/admin-metrics
+- [x] Testar métricas com dados reais
