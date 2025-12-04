@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft, AlertTriangle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 
 interface Client {
@@ -39,6 +40,8 @@ export default function AdminClients() {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
   useEffect(() => {
     // Pegar adminId do localStorage (setado no login)
@@ -108,17 +111,26 @@ export default function AdminClients() {
     }
   };
 
-  const handleDeleteClient = async (clientId: number) => {
-    if (!confirm("Tem certeza que deseja deletar este cliente?")) return;
+  const handleDeleteClient = async (client: Client) => {
+    setClientToDelete(client);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clientToDelete) return;
 
     try {
-      const response = await fetch(`/api/admin-clients/${clientId}`, {
+      const response = await fetch(`/api/admin-clients/${clientToDelete.id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        setClients(clients.filter((c) => c.id !== clientId));
+        setClients(clients.filter((c) => c.id !== clientToDelete.id));
         setSuccess("Cliente deletado com sucesso!");
+        setDeleteConfirmOpen(false);
+        setClientToDelete(null);
+      } else {
+        setError("Erro ao deletar cliente");
       }
     } catch (error) {
       setError("Erro ao deletar cliente");
@@ -325,7 +337,7 @@ export default function AdminClients() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleDeleteClient(client.id)}
+                          onClick={() => handleDeleteClient(client)}
                           className="text-red-500 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -339,6 +351,30 @@ export default function AdminClients() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Confirmação de Deleção */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirmar Deleção
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar o cliente <strong>{clientToDelete?.name}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
+            ⚠️ Todos os documentos e ordens de serviço associados também serão deletados.
+          </div>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Deletar Cliente
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

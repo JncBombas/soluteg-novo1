@@ -39,7 +39,14 @@ async function startServer() {
   // Client login API
   app.post("/api/client-login", async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { clientLoginSchema } = await import("../validation");
+      const validation = clientLoginSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
+      }
+      
+      const { username, password } = validation.data;
       const { getClientByUsername, updateClientLastLogin } = await import("../db");
       const { comparePassword } = await import("../adminAuth");
       
@@ -120,7 +127,14 @@ async function startServer() {
   // Create admin client
   app.post("/api/admin-clients", async (req, res) => {
     try {
-      const { adminId, name, email, username, password, cnpjCpf, phone, address } = req.body;
+      const { createClientSchema } = await import("../validation");
+      const validation = createClientSchema.safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
+      }
+      
+      const { adminId, name, email, username, password, cnpjCpf, phone, address, type } = validation.data;
       const { createClient } = await import("../db");
       const { hashPassword } = await import("../adminAuth");
       
@@ -176,6 +190,22 @@ async function startServer() {
   // Update work order
   app.put("/api/work-orders/:id", async (req, res) => {
     try {
+      // Validacao basica
+      if (!req.params.id || isNaN(parseInt(req.params.id))) {
+        return res.status(400).json({ message: "ID da ordem de servico invalido" });
+      }
+      
+      const validStatuses = ["aberta", "em_andamento", "concluida", "cancelada"];
+      const validPriorities = ["baixa", "media", "alta"];
+      
+      if (req.body.status && !validStatuses.includes(req.body.status)) {
+        return res.status(400).json({ message: "Status invalido" });
+      }
+      
+      if (req.body.priority && !validPriorities.includes(req.body.priority)) {
+        return res.status(400).json({ message: "Prioridade invalida" });
+      }
+      
       const { title, description, serviceType, status, priority, estimatedHours, actualHours } = req.body;
       const { updateWorkOrder } = await import("../db");
       
@@ -200,7 +230,16 @@ async function startServer() {
   // Create work order (for clients)
   app.post("/api/work-orders", async (req, res) => {
     try {
+      // Validacao basica
       const { clientId, title, description, serviceType } = req.body;
+      
+      if (!clientId || !title) {
+        return res.status(400).json({ message: "Campos obrigatorios faltando" });
+      }
+      
+      if (isNaN(parseInt(clientId))) {
+        return res.status(400).json({ message: "ID do cliente invalido" });
+      }
       const { createWorkOrder, getNextOSNumber } = await import("../db");
       
       const osNumber = await getNextOSNumber();
@@ -226,7 +265,18 @@ async function startServer() {
   // Upload document for client
   app.post("/api/admin-documents/upload", async (req, res) => {
     try {
+      // Validacao basica dos campos obrigatorios
       const { clientId, adminId, title, description, documentType, fileBase64, fileName, mimeType } = req.body;
+      
+      if (!clientId || !adminId || !title || !documentType || !fileBase64 || !fileName) {
+        return res.status(400).json({ message: "Campos obrigatorios faltando" });
+      }
+      
+      // Validar tipo de documento
+      const validTypes = ["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita", "outro"];
+      if (!validTypes.includes(documentType)) {
+        return res.status(400).json({ message: "Tipo de documento invalido" });
+      }
       const { createClientDocument } = await import("../db");
       const { storagePut } = await import("../storage");
       

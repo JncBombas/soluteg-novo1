@@ -4,12 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { APP_LOGO, APP_TITLE } from "@/const";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     openWorkOrders: 0,
@@ -62,11 +64,30 @@ export default function AdminDashboard() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           {/* Logo e Título */}
-          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-0">
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
             <img src={APP_LOGO} alt={APP_TITLE} className="h-8 md:h-10" />
             <div className="flex-1">
               <h1 className="font-bold text-lg md:text-xl text-gray-900">Painel Administrativo</h1>
               <p className="text-xs md:text-sm text-gray-500">Bem-vindo à área restrita</p>
+            </div>
+          </div>
+
+          {/* Busca Global */}
+          <div className="mb-3 md:mb-0 md:flex-1 md:mx-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar clientes, documentos, OS..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && searchQuery.trim()) {
+                    setLocation(`/admin/search?q=${encodeURIComponent(searchQuery)}`);
+                  }
+                }}
+                className="pl-10 text-sm"
+              />
             </div>
           </div>
 

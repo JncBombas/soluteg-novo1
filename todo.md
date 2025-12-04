@@ -263,3 +263,16 @@
 - [x] Adicionar tipos de documento faltantes ao schema (vistoria, visita, servico, etc)
 - [x] Criar endpoint /api/admin-metrics
 - [x] Testar métricas com dados reais
+
+
+## Melhorias Críticas de Segurança e UX (Nova)
+- [x] Implementar busca global no header do admin
+- [x] Adicionar confirmação antes de deletar clientes
+- [x] Adicionar confirmação antes de deletar documentos
+- [x] Adicionar confirmação antes de deletar OS
+- [x] Validar dados com Zod em /api/client-login
+- [x] Validar dados com Zod em /api/admin-clients
+- [x] Validar dados com Zod em /api/admin-clients/:id
+- [x] Validar dados com Zod em /api/admin-clients/:id (DELETE)
+- [x] Validar dados com Zod em endpoints de documentos
+- [x] Validar dados com Zod em endpoints de work orders
