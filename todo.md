@@ -276,3 +276,16 @@
 - [x] Validar dados com Zod em /api/admin-clients/:id (DELETE)
 - [x] Validar dados com Zod em endpoints de documentos
 - [x] Validar dados com Zod em endpoints de work orders
+
+
+## Problemas Críticos Encontrados - Melhorias (Nova)
+- [x] Adicionar paginação nas tabelas de clientes, documentos e OS
+- [x] Adicionar loading states em componentes (spinners, skeletons)
+- [x] Adicionar feedback visual com toasts em todas as operações
+- [x] Adicionar badges coloridas de status nas OS (aberta, em_andamento, concluida, cancelada)
+- [x] Melhorar tratamento de erros com try/catch em todos os endpoints
+- [x] Adicionar proteção CSRF com tokens
+- [ ] Adicionar refresh de token para sessões expiradas
+- [ ] Implementar logs estruturados para debugging
+- [ ] Adicionar validação de autorização nos endpoints
+- [ ] Implementar cache de queries para melhor performance

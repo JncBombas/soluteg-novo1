@@ -42,6 +42,11 @@ export default function AdminClients() {
   const [success, setSuccess] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const totalPages = Math.ceil(clients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedClients = clients.slice(startIndex, startIndex + itemsPerPage);
 
   useEffect(() => {
     // Pegar adminId do localStorage (setado no login)
@@ -310,7 +315,7 @@ export default function AdminClients() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clients.map((client) => (
+                  {paginatedClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.name}</TableCell>
                       <TableCell className="font-mono text-sm">{client.username}</TableCell>
@@ -347,6 +352,45 @@ export default function AdminClients() {
                   ))}
                 </TableBody>
               </Table>
+              {/* Controles de Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-slate-600">
+                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, clients.length)} de {clients.length} clientes
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-2">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          size="sm"
+                          variant={currentPage === page ? "default" : "outline"}
+                          onClick={() => setCurrentPage(page)}
+                          className={currentPage === page ? "bg-orange-500 hover:bg-orange-600" : ""}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próximo
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
