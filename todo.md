@@ -289,3 +289,9 @@
 - [ ] Implementar logs estruturados para debugging
 - [ ] Adicionar validação de autorização nos endpoints
 - [ ] Implementar cache de queries para melhor performance
+
+
+## Alteracao de Validacao de Cliente (Nova)
+- [x] Tornar email opcional no cadastro de cliente
+- [x] Tornar telefone obrigatorio no cadastro de cliente
+- [x] Tornar CNPJ obrigatorio no cadastro de cliente

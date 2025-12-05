@@ -211,13 +211,12 @@ export default function AdminClients() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">E-mail</label>
+                <label className="text-sm font-medium">E-mail (opcional)</label>
                 <Input
                   type="email"
                   placeholder="cliente@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
                 />
               </div>
 
@@ -243,20 +242,22 @@ export default function AdminClients() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">CNPJ/CPF (opcional)</label>
+                <label className="text-sm font-medium">CNPJ/CPF</label>
                 <Input
                   placeholder="00.000.000/0000-00"
                   value={formData.cnpjCpf}
                   onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Telefone (opcional)</label>
+                <label className="text-sm font-medium">Telefone</label>
                 <Input
                   placeholder="(11) 98765-4321"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  required
                 />
               </div>
 

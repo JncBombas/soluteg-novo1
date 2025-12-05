@@ -4,11 +4,11 @@ import { z } from "zod";
 export const createClientSchema = z.object({
   adminId: z.number().int().positive(),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  email: z.string().email("Email inválido"),
+  email: z.string().email("Email inválido").optional(),
   username: z.string().min(3, "Username deve ter pelo menos 3 caracteres"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  cnpjCpf: z.string().optional(),
-  phone: z.string().optional(),
+  cnpjCpf: z.string().min(11, "CNPJ/CPF é obrigatório"),
+  phone: z.string().min(10, "Telefone é obrigatório"),
   address: z.string().optional(),
   type: z.enum(["com_portal", "sem_portal"]).default("com_portal"),
 });
@@ -17,8 +17,8 @@ export const updateClientSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),
   username: z.string().min(3).optional(),
-  cnpjCpf: z.string().optional(),
-  phone: z.string().optional(),
+  cnpjCpf: z.string().min(11).optional(),
+  phone: z.string().min(10).optional(),
   address: z.string().optional(),
   type: z.enum(["com_portal", "sem_portal"]).optional(),
 });
