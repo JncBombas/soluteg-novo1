@@ -324,14 +324,14 @@ export default function Home() {
           <h2 className="text-4xl font-bold text-center mb-4">Entre em Contato</h2>
           <p className="text-center text-lg mb-12 text-orange-100">Solicite um orçamento ou tire suas dúvidas com nossa equipe</p>
           
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <Card className="bg-white/10 border-white/20 text-center">
               <CardContent className="p-8">
                 <Phone className="w-12 h-12 mx-auto mb-4 text-white" />
                 <h3 className="text-xl font-semibold mb-2">Telefone</h3>
                 <p className="text-orange-100 mb-4">Ligue para nós</p>
-                <a href="tel:+55XXXXXXXXXX" className="text-white font-semibold hover:text-orange-100">
-                  (XX) XXXX-XXXX
+                <a href="tel:+5513981301010" className="text-white font-semibold hover:text-orange-100">
+                  13 98130-1010
                 </a>
               </CardContent>
             </Card>
@@ -341,7 +341,7 @@ export default function Home() {
                 <MessageCircle className="w-12 h-12 mx-auto mb-4 text-white" />
                 <h3 className="text-xl font-semibold mb-2">WhatsApp</h3>
                 <p className="text-orange-100 mb-4">Envie uma mensagem</p>
-                <a href="https://wa.me/55XXXXXXXXXX" target="_blank" rel="noopener noreferrer" className="text-white font-semibold hover:text-orange-100">
+                <a href="https://wa.me/message/UIVQB7X2QY2NN1" target="_blank" rel="noopener noreferrer" className="text-white font-semibold hover:text-orange-100">
                   Abrir WhatsApp
                 </a>
               </CardContent>
@@ -350,10 +350,14 @@ export default function Home() {
             <Card className="bg-white/10 border-white/20 text-center">
               <CardContent className="p-8">
                 <Mail className="w-12 h-12 mx-auto mb-4 text-white" />
-                <h3 className="text-xl font-semibold mb-2">Email</h3>
-                <p className="text-orange-100 mb-4">Envie um email</p>
-                <a href="mailto:contato@soluteg.com.br" className="text-white font-semibold hover:text-orange-100">
+                <h3 className="text-xl font-semibold mb-2">Contato</h3>
+                <p className="text-orange-100 mb-2 text-sm">Geral:</p>
+                <a href="mailto:contato@soluteg.com.br" className="text-white font-semibold hover:text-orange-100 block mb-3">
                   contato@soluteg.com.br
+                </a>
+                <p className="text-orange-100 mb-2 text-sm">Financeiro:</p>
+                <a href="mailto:financeiro@soluteg.com.br" className="text-white font-semibold hover:text-orange-100">
+                  financeiro@soluteg.com.br
                 </a>
               </CardContent>
             </Card>

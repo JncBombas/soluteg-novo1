@@ -303,3 +303,9 @@
 - [x] Adicionar rotas para os formulários
 - [x] Adicionar botões na página de Relatórios
 - [x] Testar formulários e navegação
+
+## Atualização de Informações de Contato (Nova)
+- [x] Atualizar telefone para 13 98130-1010
+- [x] Atualizar WhatsApp para https://wa.me/message/UIVQB7X2QY2NN1
+- [x] Adicionar email financeiro@soluteg.com.br
+- [x] Testar todos os links de contato
