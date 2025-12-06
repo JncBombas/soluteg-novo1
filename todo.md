@@ -295,3 +295,11 @@
 - [x] Tornar email opcional no cadastro de cliente
 - [x] Tornar telefone obrigatorio no cadastro de cliente
 - [x] Tornar CNPJ obrigatorio no cadastro de cliente
+
+
+## Formulários de Relatórios Internos (Nova)
+- [x] Investigar página de Relatórios e links do Google Forms
+- [x] Criar componentes de formulários de relatórios
+- [x] Adicionar rotas para os formulários
+- [x] Adicionar botões na página de Relatórios
+- [x] Testar formulários e navegação

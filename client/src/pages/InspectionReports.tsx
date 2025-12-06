@@ -49,13 +49,22 @@ export default function InspectionReports() {
               </div>
               <Users className="w-8 h-8 text-blue-500 flex-shrink-0 ml-4" />
             </div>
-            <Button
-              onClick={handleOpenCadastroForm}
-              className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
-            >
-              <ExternalLink className="w-5 h-5 mr-2" />
-              Abrir Formulário
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/relatorios/cadastro-cliente")}
+                className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg"
+              >
+                Formulário Interno
+              </Button>
+              <Button
+                onClick={handleOpenCadastroForm}
+                variant="outline"
+                className="w-full h-12 text-lg"
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Google Forms
+              </Button>
+            </div>
           </Card>
 
           {/* Card Visita de Inspeção */}
@@ -70,13 +79,22 @@ export default function InspectionReports() {
               </div>
               <FileText className="w-8 h-8 text-green-500 flex-shrink-0 ml-4" />
             </div>
-            <Button
-              onClick={handleOpenVisitaForm}
-              className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg"
-            >
-              <ExternalLink className="w-5 h-5 mr-2" />
-              Abrir Formulário
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/relatorios/visita-inspecao")}
+                className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg"
+              >
+                Formulário Interno
+              </Button>
+              <Button
+                onClick={handleOpenVisitaForm}
+                variant="outline"
+                className="w-full h-12 text-lg"
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Google Forms
+              </Button>
+            </div>
           </Card>
 
           {/* Card Visita de Inspeção 2 */}
@@ -91,13 +109,22 @@ export default function InspectionReports() {
               </div>
               <FileText className="w-8 h-8 text-orange-500 flex-shrink-0 ml-4" />
             </div>
-            <Button
-              onClick={handleOpenVisita2Form}
-              className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-lg"
-            >
-              <ExternalLink className="w-5 h-5 mr-2" />
-              Abrir Formulário
-            </Button>
+            <div className="space-y-3">
+              <Button
+                onClick={() => navigate("/relatorios/visita-inspecao-2")}
+                className="w-full bg-orange-600 hover:bg-orange-700 h-12 text-lg"
+              >
+                Formulário Interno
+              </Button>
+              <Button
+                onClick={handleOpenVisita2Form}
+                variant="outline"
+                className="w-full h-12 text-lg"
+              >
+                <ExternalLink className="w-5 h-5 mr-2" />
+                Google Forms
+              </Button>
+            </div>
           </Card>
         </div>
 

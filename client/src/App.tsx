@@ -21,6 +21,9 @@ import AdminWorkOrders from "./pages/AdminWorkOrders";
 import AdminCreateWorkOrder from "./pages/AdminCreateWorkOrder";
 import AdminViewWorkOrder from "./pages/AdminViewWorkOrder";
 import AdminEditWorkOrder from "./pages/AdminEditWorkOrder";
+import ReportClientRegistration from "./pages/ReportClientRegistration";
+import ReportInspectionVisit from "./pages/ReportInspectionVisit";
+import ReportInspectionVisit2 from "./pages/ReportInspectionVisit2";
 
 
 function Router() {
@@ -29,7 +32,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/admin/login"} component={AdminLogin} />
       <Route path={"/admin/dashboard"} component={AdminDashboard} />
-      <Route path={"/admin/profile"} component={AdminProfile} />
+        <Route path="/admin/profile" component={AdminProfile} />
       <Route path="/admin/relatorios" component={InspectionReports} />
       <Route path="/admin/clientes" component={AdminClients} />
       <Route path="/admin/clientes/editar/:id" component={AdminEditClient} />
@@ -40,6 +43,9 @@ function Router() {
       <Route path="/admin/work-orders/create" component={AdminCreateWorkOrder} />
       <Route path="/admin/work-orders/:id" component={AdminViewWorkOrder} />
       <Route path="/admin/work-orders/:id/edit" component={AdminEditWorkOrder} />
+      <Route path="/relatorios/cadastro-cliente" component={ReportClientRegistration} />
+      <Route path="/relatorios/visita-inspecao" component={ReportInspectionVisit} />
+      <Route path="/relatorios/visita-inspecao-2" component={ReportInspectionVisit2} />
 
       <Route path="/client/login" component={ClientLogin} />
       <Route path="/client/portal" component={ClientPortal} />
