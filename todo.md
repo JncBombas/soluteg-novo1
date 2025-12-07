@@ -316,3 +316,10 @@
 - [x] Implementar validação de CNPJ/CPF
 - [x] Implementar validação de Telefone
 - [x] Testar máscaras e validação no cadastro de cliente
+
+## Página de Edição de Cliente (Nova)
+- [x] Criar página EditClient.tsx
+- [x] Implementar carregamento de dados do cliente
+- [x] Implementar formulário com máscaras e validação
+- [x] Implementar função de atualização de cliente
+- [x] Testar página de edição
