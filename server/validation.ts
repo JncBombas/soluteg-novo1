@@ -89,7 +89,7 @@ export const clientLoginSchema = z.object({
 });
 
 export const adminLoginSchema = z.object({
-  email: z.string().email("Email inválido"),
+  username: z.string().min(1, "Username é obrigatório"),
   password: z.string().min(1, "Senha é obrigatória"),
 });
 

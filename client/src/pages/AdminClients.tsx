@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
+import { maskCnpjCpf, maskPhone, isValidCnpjCpf, isValidPhone } from "@/lib/masks";
 
 interface Client {
   id: number;
@@ -242,23 +243,35 @@ export default function AdminClients() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">CNPJ/CPF</label>
+                <label className="text-sm font-medium">CNPJ/CPF *</label>
                 <Input
                   placeholder="00.000.000/0000-00"
                   value={formData.cnpjCpf}
-                  onChange={(e) => setFormData({ ...formData, cnpjCpf: e.target.value })}
+                  onChange={(e) => {
+                    const masked = maskCnpjCpf(e.target.value);
+                    setFormData({ ...formData, cnpjCpf: masked });
+                  }}
                   required
                 />
+                {formData.cnpjCpf && !isValidCnpjCpf(formData.cnpjCpf) && (
+                  <p className="text-xs text-red-500">CNPJ/CPF inválido</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Telefone</label>
+                <label className="text-sm font-medium">Telefone *</label>
                 <Input
                   placeholder="(11) 98765-4321"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => {
+                    const masked = maskPhone(e.target.value);
+                    setFormData({ ...formData, phone: masked });
+                  }}
                   required
                 />
+                {formData.phone && !isValidPhone(formData.phone) && (
+                  <p className="text-xs text-red-500">Telefone inválido</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -274,7 +287,11 @@ export default function AdminClients() {
                 </Select>
               </div>
 
-              <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600">
+              <Button 
+                type="submit" 
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={!isValidCnpjCpf(formData.cnpjCpf) || !isValidPhone(formData.phone)}
+              >
                 Criar Cliente
               </Button>
             </form>

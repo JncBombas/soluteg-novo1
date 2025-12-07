@@ -309,3 +309,10 @@
 - [x] Atualizar WhatsApp para https://wa.me/message/UIVQB7X2QY2NN1
 - [x] Adicionar email financeiro@soluteg.com.br
 - [x] Testar todos os links de contato
+
+## Máscaras e Validação de CNPJ/CPF e Telefone (Nova)
+- [x] Adicionar máscara de entrada para CNPJ/CPF
+- [x] Adicionar máscara de entrada para Telefone
+- [x] Implementar validação de CNPJ/CPF
+- [x] Implementar validação de Telefone
+- [x] Testar máscaras e validação no cadastro de cliente
