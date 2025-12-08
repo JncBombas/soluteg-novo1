@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, Download, Trash2, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Filter, Download, Trash2, FileText, Loader2, CheckCircle, Eye, Receipt, Wrench, BarChart3, ClipboardList } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -64,6 +64,21 @@ export default function AdminManageDocuments() {
     setActiveTypeFilter(documentTypeFilter);
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setClientFilter("all");
+    setDocumentTypeFilter("all");
+    setActiveSearch("");
+    setActiveClientFilter("all");
+    setActiveTypeFilter("all");
+  };
+
+  const sortedDocuments = [...documents].sort((a, b) => {
+    return new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime();
+  });
+
+  const hasActiveFilters = activeSearch || activeClientFilter !== "all" || activeTypeFilter !== "all";
+
   // Mutation para deletar documento
   const deleteDocumentMutation = trpc.documents.delete.useMutation({
     onSuccess: () => {
@@ -84,21 +99,38 @@ export default function AdminManageDocuments() {
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       all: "Todos os Tipos",
-      relatorio_servico: "Relatórios de Serviço",
-      relatorio_visita: "Relatórios de Visita",
+      vistoria: "Vistoria",
+      visita: "Visita",
+      relatorio_servico: "Relatorios de Servico",
+      relatorio_visita: "Relatorios de Visita",
       nota_fiscal: "Notas Fiscais",
+      servico: "Servico",
       outro: "Outros Documentos",
     };
     return labels[type] || type;
   };
 
-  const DocumentCard = ({ doc }: { doc: Document }) => (
+  const getDocumentIcon = (type: string) => {
+    const iconMap: Record<string, { icon: React.ReactNode; color: string }> = {
+      vistoria: { icon: <Eye className="w-5 h-5" />, color: "text-blue-500" },
+      visita: { icon: <CheckCircle className="w-5 h-5" />, color: "text-green-500" },
+      relatorio_servico: { icon: <BarChart3 className="w-5 h-5" />, color: "text-purple-500" },
+      relatorio_visita: { icon: <ClipboardList className="w-5 h-5" />, color: "text-indigo-500" },
+      nota_fiscal: { icon: <Receipt className="w-5 h-5" />, color: "text-orange-500" },
+      servico: { icon: <Wrench className="w-5 h-5" />, color: "text-red-500" },
+    };
+    return iconMap[type] || { icon: <FileText className="w-5 h-5" />, color: "text-slate-500" };
+  };
+
+  const DocumentCard = ({ doc }: { doc: Document }) => {
+    const { icon, color } = getDocumentIcon(doc.documentType);
+    return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4 text-orange-500 flex-shrink-0" />
+              <div className={`${color} flex-shrink-0`}>{icon}</div>
               <h3 className="font-semibold truncate">{doc.title}</h3>
             </div>
             {doc.description && (
@@ -140,6 +172,7 @@ export default function AdminManageDocuments() {
       </CardContent>
     </Card>
   );
+  };
 
   if (isLoading) {
     return (
@@ -233,8 +266,13 @@ export default function AdminManageDocuments() {
                 </div>
               </div>
 
-              {/* Botão de Filtrar */}
-              <div className="flex justify-end">
+              {/* Botões de Ação */}
+              <div className="flex justify-end gap-2">
+                {hasActiveFilters && (
+                  <Button onClick={handleClearFilters} variant="outline">
+                    Limpar Filtros
+                  </Button>
+                )}
                 <Button onClick={handleFilter} className="bg-orange-500 hover:bg-orange-600">
                   <Filter className="w-4 h-4 mr-2" />
                   Filtrar
@@ -245,6 +283,11 @@ export default function AdminManageDocuments() {
             {/* Indicador de resultados */}
             <div className="mt-4 text-sm text-slate-600">
               {documents.length} documento(s) encontrado(s)
+              {hasActiveFilters && (
+                <span className="ml-2 text-orange-600 font-medium">
+                  (com filtros aplicados)
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -277,7 +320,7 @@ export default function AdminManageDocuments() {
               </div>
             ) : (
               <div className="grid gap-4">
-                {documents.map((doc) => (
+                {sortedDocuments.map((doc) => (
                   <DocumentCard key={doc.id} doc={doc} />
                 ))}
               </div>

@@ -323,3 +323,9 @@
 - [x] Implementar formulário com máscaras e validação
 - [x] Implementar função de atualização de cliente
 - [x] Testar página de edição
+
+## Melhoria de Filtro de Documentos (Nova)
+- [x] Melhorar filtro com busca por nome/tipo
+- [x] Adicionar ícones por tipo de documento
+- [x] Implementar ordenação por data
+- [x] Testar filtro e ícones
