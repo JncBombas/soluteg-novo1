@@ -166,7 +166,7 @@ export const clients = mysqlTable("clients", {
   id: int("id").autoincrement().primaryKey(),
   adminId: int("adminId").notNull(), // Admin que criou o cliente
   name: varchar("name", { length: 255 }).notNull(),
-  email: varchar("email", { length: 320 }).notNull(),
+  email: varchar("email", { length: 320 }),
   username: varchar("username", { length: 100 }).notNull().unique(), // Login do cliente
   password: varchar("password", { length: 255 }).notNull(), // Senha criptografada
   cnpjCpf: varchar("cnpjCpf", { length: 20 }),
@@ -204,25 +204,81 @@ export type ClientDocument = typeof clientDocuments.$inferSelect;
 export type InsertClientDocument = typeof clientDocuments.$inferInsert;
 
 /**
- * Ordens de Serviço (OS)
+ * Ordens de Serviço (OS) - Sistema completo
  */
 export const workOrders = mysqlTable("workOrders", {
   id: int("id").autoincrement().primaryKey(),
-  adminId: int("adminId").notNull(), // Admin que criou a OS
-  clientId: int("clientId").notNull(), // Cliente relacionado
-  osNumber: varchar("osNumber", { length: 50 }).notNull().unique(), // Número da OS (ex: OS-2025-001)
-  title: varchar("title", { length: 255 }).notNull(), // Título/Descrição breve
-  description: text("description"), // Descrição detalhada do serviço
-  serviceType: varchar("serviceType", { length: 100 }), // Tipo de serviço (manutenção, reparo, etc)
-  status: mysqlEnum("status", ["aberta", "em_andamento", "concluida", "cancelada"]).default("aberta").notNull(),
-  priority: mysqlEnum("priority", ["baixa", "media", "alta"]).default("media").notNull(),
-  scheduledDate: timestamp("scheduledDate"), // Data agendada
-  completedDate: timestamp("completedDate"), // Data de conclusão
-  estimatedHours: int("estimatedHours"), // Horas estimadas
-  actualHours: int("actualHours"), // Horas reais gastas
+  adminId: int("adminId").notNull(),
+  clientId: int("clientId").notNull(),
+  osNumber: varchar("osNumber", { length: 50 }).notNull().unique(),
+  
+  // Tipo e categoria
+  type: mysqlEnum("type", ["rotina", "emergencial", "orcamento"]).notNull(),
+  priority: mysqlEnum("priority", ["normal", "alta", "critica"]).default("normal").notNull(),
+  
+  // Informações básicas
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  serviceType: varchar("serviceType", { length: 100 }),
+  
+  // Status (varia por tipo)
+  status: mysqlEnum("status", [
+    "aberta",
+    "aguardando_aprovacao",
+    "aprovada",
+    "rejeitada",
+    "em_andamento",
+    "concluida",
+    "aguardando_pagamento",
+    "cancelada"
+  ]).default("aberta").notNull(),
+  
+  // Datas e tempo
+  scheduledDate: timestamp("scheduledDate"),
+  startedAt: timestamp("startedAt"),
+  completedAt: timestamp("completedAt"),
+  estimatedHours: int("estimatedHours"),
+  actualHours: int("actualHours"),
+  
+  // Orçamento
+  estimatedValue: int("estimatedValue"),
+  finalValue: int("finalValue"),
+  approvedBy: varchar("approvedBy", { length: 100 }),
+  approvedAt: timestamp("approvedAt"),
+  
+  // Recorrência (para OS de rotina)
+  isRecurring: int("isRecurring").default(0).notNull(),
+  recurrenceType: mysqlEnum("recurrenceType", ["mensal_fixo", "mensal_inicio"]),
+  recurrenceDay: int("recurrenceDay"),
+  recurrenceCanceled: int("recurrenceCanceled").default(0).notNull(),
+  parentOsId: int("parentOsId"),
+  
+  // Observações e anexos
+  internalNotes: text("internalNotes"),
+  clientNotes: text("clientNotes"),
+  cancellationReason: text("cancellationReason"),
+  attachments: text("attachments"),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type WorkOrder = typeof workOrders.$inferSelect;
 export type InsertWorkOrder = typeof workOrders.$inferInsert;
+
+/**
+ * Histórico de mudanças de status das OS
+ */
+export const workOrderHistory = mysqlTable("workOrderHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  changedBy: varchar("changedBy", { length: 100 }).notNull(),
+  changedByType: mysqlEnum("changedByType", ["admin", "client"]).notNull(),
+  previousStatus: varchar("previousStatus", { length: 50 }),
+  newStatus: varchar("newStatus", { length: 50 }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WorkOrderHistory = typeof workOrderHistory.$inferSelect;
+export type InsertWorkOrderHistory = typeof workOrderHistory.$inferInsert;

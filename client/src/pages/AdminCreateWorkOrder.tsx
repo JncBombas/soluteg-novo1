@@ -30,7 +30,8 @@ export default function AdminCreateWorkOrder() {
     title: "",
     description: "",
     serviceType: "",
-    priority: "media" as const,
+    type: "emergencial" as const,
+    priority: "normal" as const,
     scheduledDate: "",
     estimatedHours: "",
   });
@@ -116,6 +117,7 @@ export default function AdminCreateWorkOrder() {
       const result = await createWorkOrderMutation.mutateAsync({
         adminId,
         clientId: selectedClientId,
+        type: formData.type,
         title: formData.title,
         description: formData.description || undefined,
         serviceType: formData.serviceType || undefined,
@@ -334,9 +336,9 @@ export default function AdminCreateWorkOrder() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="baixa">Baixa</option>
-                    <option value="media">Média</option>
+                    <option value="normal">Normal</option>
                     <option value="alta">Alta</option>
+                    <option value="critica">Crítica</option>
                   </select>
                 </div>
               </div>

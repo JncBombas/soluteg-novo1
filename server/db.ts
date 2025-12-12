@@ -587,7 +587,7 @@ export async function getWorkOrderById(id: number) {
       status: workOrders.status,
       priority: workOrders.priority,
       scheduledDate: workOrders.scheduledDate,
-      completedDate: workOrders.completedDate,
+      completedAt: workOrders.completedAt,
       estimatedHours: workOrders.estimatedHours,
       actualHours: workOrders.actualHours,
       clientId: workOrders.clientId,

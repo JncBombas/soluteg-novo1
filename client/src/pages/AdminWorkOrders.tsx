@@ -45,11 +45,11 @@ export default function AdminWorkOrders() {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "baixa":
+      case "normal":
         return "text-green-600";
-      case "media":
-        return "text-yellow-600";
       case "alta":
+        return "text-yellow-600";
+      case "critica":
         return "text-red-600";
       default:
         return "text-gray-600";
@@ -68,9 +68,9 @@ export default function AdminWorkOrders() {
 
   const getPriorityLabel = (priority: string) => {
     const labels: Record<string, string> = {
-      baixa: "Baixa",
-      media: "Média",
+      normal: "Normal",
       alta: "Alta",
+      critica: "Crítica",
     };
     return labels[priority] || priority;
   };
@@ -135,7 +135,7 @@ export default function AdminWorkOrders() {
                     </div>
                     <p className="text-gray-700 mb-2">{order.title}</p>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>Cliente: <strong>{order.clientName}</strong></span>
+                      <span>Cliente ID: <strong>{order.clientId}</strong></span>
                       {order.scheduledDate && (
                         <span>
                           Data: <strong>{new Date(order.scheduledDate).toLocaleDateString("pt-BR")}</strong>

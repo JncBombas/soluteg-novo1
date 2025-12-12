@@ -142,7 +142,7 @@ async function startServer() {
       await createClient({
         adminId,
         name,
-        email,
+        email: email || undefined,
         username,
         password: hashedPassword,
         cnpjCpf,
@@ -196,7 +196,7 @@ async function startServer() {
       }
       
       const validStatuses = ["aberta", "em_andamento", "concluida", "cancelada"];
-      const validPriorities = ["baixa", "media", "alta"];
+      const validPriorities = ["normal", "alta", "critica"];
       
       if (req.body.status && !validStatuses.includes(req.body.status)) {
         return res.status(400).json({ message: "Status invalido" });
@@ -248,11 +248,12 @@ async function startServer() {
         adminId: 1,
         clientId,
         osNumber,
+        type: "emergencial",
         title,
         description,
         serviceType,
         status: "aberta",
-        priority: "media",
+        priority: "normal",
       });
       
       res.json({ success: true, message: "Ordem de servico criada com sucesso", osNumber });

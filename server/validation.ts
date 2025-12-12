@@ -4,7 +4,7 @@ import { z } from "zod";
 export const createClientSchema = z.object({
   adminId: z.number().int().positive(),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
-  email: z.string().email("Email inválido").optional(),
+  email: z.string().email("Email inválido").or(z.literal("")).optional(),
   username: z.string().min(3, "Username deve ter pelo menos 3 caracteres"),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   cnpjCpf: z.string().min(11, "CNPJ/CPF é obrigatório"),

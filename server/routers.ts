@@ -498,63 +498,137 @@ export const appRouter = router({
   }),
 
   workOrders: router({
+    // Listar OS com filtros
     list: publicProcedure
-      .input(z.object({ adminId: z.number() }))
+      .input(z.object({
+        clientId: z.number().optional(),
+        adminId: z.number().optional(),
+        type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
+        status: z.string().optional(),
+      }))
       .query(async ({ input }) => {
-        return await db.getWorkOrdersByAdminId(input.adminId);
+        const workOrdersDb = await import("./workOrdersDb");
+        return await workOrdersDb.listWorkOrders(input);
       }),
 
+    // Buscar OS por ID
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
-        return await db.getWorkOrderById(input.id);
+        const workOrdersDb = await import("./workOrdersDb");
+        return await workOrdersDb.getWorkOrderById(input.id);
       }),
 
+    // Criar nova OS
     create: publicProcedure
       .input(z.object({
         adminId: z.number(),
         clientId: z.number(),
+        type: z.enum(["rotina", "emergencial", "orcamento"]),
+        priority: z.enum(["normal", "alta", "critica"]).default("normal"),
         title: z.string().min(1),
         description: z.string().optional(),
         serviceType: z.string().optional(),
-        priority: z.enum(["baixa", "media", "alta"]).default("media"),
         scheduledDate: z.date().optional(),
         estimatedHours: z.number().optional(),
+        estimatedValue: z.number().optional(),
+        isRecurring: z.number().default(0),
+        recurrenceType: z.enum(["mensal_fixo", "mensal_inicio"]).optional(),
+        recurrenceDay: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const osNumber = await db.getNextOSNumber();
-        await db.createWorkOrder({
-          ...input,
-          osNumber,
-          status: "aberta",
-        });
-        return { success: true, message: "OS criada com sucesso", osNumber };
+        const workOrdersDb = await import("./workOrdersDb");
+        const result = await workOrdersDb.createWorkOrder(input);
+        return { success: true, message: "OS criada com sucesso", ...result };
       }),
 
+    // Atualizar OS
     update: publicProcedure
       .input(z.object({
         id: z.number(),
         title: z.string().optional(),
         description: z.string().optional(),
         serviceType: z.string().optional(),
-        status: z.enum(["aberta", "em_andamento", "concluida", "cancelada"]).optional(),
-        priority: z.enum(["baixa", "media", "alta"]).optional(),
+        status: z.enum([
+          "aberta",
+          "aguardando_aprovacao",
+          "aprovada",
+          "rejeitada",
+          "em_andamento",
+          "concluida",
+          "aguardando_pagamento",
+          "cancelada"
+        ]).optional(),
+        priority: z.enum(["normal", "alta", "critica"]).optional(),
         scheduledDate: z.date().optional(),
-        completedDate: z.date().optional(),
+        startedAt: z.date().optional(),
+        completedAt: z.date().optional(),
         estimatedHours: z.number().optional(),
         actualHours: z.number().optional(),
+        estimatedValue: z.number().optional(),
+        finalValue: z.number().optional(),
+        internalNotes: z.string().optional(),
+        clientNotes: z.string().optional(),
+        cancellationReason: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
         const { id, ...data } = input;
-        await db.updateWorkOrder(id, data);
+        await workOrdersDb.updateWorkOrder(id, data);
         return { success: true, message: "OS atualizada com sucesso" };
       }),
 
+    // Atualizar status com histórico
+    updateStatus: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        newStatus: z.string(),
+        changedBy: z.string(),
+        changedByType: z.enum(["admin", "client"]),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        await workOrdersDb.updateWorkOrderStatus(
+          input.id,
+          input.newStatus,
+          input.changedBy,
+          input.changedByType,
+          input.notes
+        );
+        return { success: true, message: "Status atualizado com sucesso" };
+      }),
+
+    // Buscar histórico de uma OS
+    getHistory: publicProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        return await workOrdersDb.getWorkOrderHistory(input.workOrderId);
+      }),
+
+    // Deletar OS
     delete: publicProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        await db.deleteWorkOrder(input.id);
+        const workOrdersDb = await import("./workOrdersDb");
+        await workOrdersDb.deleteWorkOrder(input.id);
         return { success: true, message: "OS deletada com sucesso" };
+      }),
+
+    // Cancelar recorrência
+    cancelRecurrence: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        cancelFuture: z.boolean(),
+      }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        if (input.cancelFuture) {
+          await workOrdersDb.updateWorkOrder(input.id, { recurrenceCanceled: 1 });
+        }
+        await workOrdersDb.updateWorkOrder(input.id, { status: "cancelada" as any });
+        return { success: true, message: "Recorrência cancelada com sucesso" };
       }),
   }),
 });

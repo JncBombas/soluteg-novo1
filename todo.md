@@ -329,3 +329,16 @@
 - [x] Adicionar ícones por tipo de documento
 - [x] Implementar ordenação por data
 - [x] Testar filtro e ícones
+
+## Sistema Completo de Ordens de Serviço (Nova)
+- [x] Criar/atualizar schema de banco de dados para OS
+- [x] Implementar tRPC procedures para CRUD de OS
+- [x] Implementar histórico de mudanças de status
+- [ ] Implementar lógica de recorrência automática
+- [ ] Criar painel admin de gerenciamento de OS
+- [ ] Criar formulários de criação/edição de OS
+- [ ] Implementar interface do cliente para criar OS
+- [ ] Implementar interface do cliente para aprovar orçamentos
+- [ ] Adicionar upload de anexos
+- [ ] Criar relatórios de OS
+- [ ] Testar todas as funcionalidades
