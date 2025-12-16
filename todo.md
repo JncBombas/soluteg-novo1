@@ -334,11 +334,28 @@
 - [x] Criar/atualizar schema de banco de dados para OS
 - [x] Implementar tRPC procedures para CRUD de OS
 - [x] Implementar histórico de mudanças de status
-- [ ] Implementar lógica de recorrência automática
-- [ ] Criar painel admin de gerenciamento de OS
-- [ ] Criar formulários de criação/edição de OS
-- [ ] Implementar interface do cliente para criar OS
-- [ ] Implementar interface do cliente para aprovar orçamentos
+- [x] Criar painel admin de gerenciamento de OS
+- [x] Criar formulários de criação de OS com recorrência
+- [x] Implementar interface do cliente para criar OS
+- [x] Melhorar botões de solicitação (Atendimento/Orçamento)
+- [ ] Implementar job automático de recorrência (requer cron scheduler)
+- [ ] Criar página de edição de OS
 - [ ] Adicionar upload de anexos
 - [ ] Criar relatórios de OS
-- [ ] Testar todas as funcionalidades
+
+## Correções no Portal do Cliente (Nova)
+- [x] Verificar tipos de documentos (já existem todos os 6 tipos no schema)
+- [x] Melhorar botão "Abrir OS" com dois botões separados
+- [x] Adicionar botão "Solicitar Atendimento" (emergencial - vermelho)
+- [x] Adicionar botão "Solicitar Orçamento" (laranja)
+- [x] Atualizar diálogo com título e descrição dinâmicos
+- [x] Enviar tipo correto na criação de OS
+
+## Painel Admin de Gerenciamento de OS (Nova)
+- [x] Criar página de listagem de OS com filtros (tipo, status, cliente)
+- [x] Criar página de visualização detalhada de OS
+- [x] Criar página de criação de OS (com suporte a recorrência)
+- [ ] Criar página de edição de OS
+- [x] Adicionar ações de mudança de status
+- [x] Adicionar visualização de histórico de mudanças
+- [x] Adicionar cancelamento de recorrência

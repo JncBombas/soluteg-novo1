@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, User, Search, Filter, Plus } from "lucide-react";
+import { LogOut, Download, FileText, Loader2, User, Search, Filter, Plus, AlertCircle, FileQuestion } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,6 +30,7 @@ export default function ClientPortal() {
   const [activeSearch, setActiveSearch] = useState("");
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>("all");
   const [isOpenDialogOpen, setIsOpenDialogOpen] = useState(false);
+  const [osType, setOsType] = useState<"emergencial" | "orcamento">("emergencial");
   const [osFormData, setOsFormData] = useState({
     title: "",
     description: "",
@@ -133,6 +134,7 @@ export default function ClientPortal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId,
+          type: osType,
           title: osFormData.title,
           description: osFormData.description,
           serviceType: osFormData.serviceType,
@@ -144,7 +146,10 @@ export default function ClientPortal() {
         throw new Error(data.message || "Erro ao criar OS");
       }
 
-      toast.success("Ordem de Servico criada com sucesso!");
+      const successMsg = osType === "emergencial" 
+        ? "Solicitação de atendimento enviada com sucesso!" 
+        : "Solicitação de orçamento enviada com sucesso!";
+      toast.success(successMsg);
       setOsFormData({ title: "", description: "", serviceType: "" });
       setIsOpenDialogOpen(false);
     } catch (error) {
@@ -222,17 +227,31 @@ export default function ClientPortal() {
           </div>
           <div className="flex gap-2">
             <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 bg-orange-500 hover:bg-orange-600">
-                  <Plus className="w-4 h-4" />
-                  Abrir OS
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => { setOsType("emergencial"); setIsOpenDialogOpen(true); }}
+                  className="gap-2 bg-red-500 hover:bg-red-600"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  Solicitar Atendimento
                 </Button>
-              </DialogTrigger>
+                <Button 
+                  onClick={() => { setOsType("orcamento"); setIsOpenDialogOpen(true); }}
+                  className="gap-2 bg-orange-500 hover:bg-orange-600"
+                >
+                  <FileQuestion className="w-4 h-4" />
+                  Solicitar Orçamento
+                </Button>
+              </div>
               <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Abrir Ordem de Servico</DialogTitle>
+                  <DialogTitle>
+                    {osType === "emergencial" ? "Solicitar Atendimento" : "Solicitar Orçamento"}
+                  </DialogTitle>
                   <DialogDescription>
-                    Preencha os dados para abrir uma nova ordem de servico
+                    {osType === "emergencial" 
+                      ? "Descreva o problema para atendimento emergencial" 
+                      : "Descreva o serviço desejado para receber um orçamento"}
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleCreateWorkOrder} className="space-y-4">

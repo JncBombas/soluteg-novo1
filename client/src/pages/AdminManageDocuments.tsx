@@ -17,7 +17,7 @@ interface Document {
   uploadedAt: Date;
   clientId: number;
   clientName: string;
-  clientEmail: string;
+  clientEmail: string | null;
 }
 
 export default function AdminManageDocuments() {
