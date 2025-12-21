@@ -35,6 +35,7 @@ export default function ClientPortal() {
     title: "",
     description: "",
     serviceType: "",
+    priority: "normal" as "critica" | "alta" | "normal",
   });
   const [osLoading, setOsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("vistoria");
@@ -138,6 +139,7 @@ export default function ClientPortal() {
           title: osFormData.title,
           description: osFormData.description,
           serviceType: osFormData.serviceType,
+          priority: osFormData.priority,
         }),
       });
 
@@ -150,7 +152,7 @@ export default function ClientPortal() {
         ? "Solicitação de atendimento enviada com sucesso!" 
         : "Solicitação de orçamento enviada com sucesso!";
       toast.success(successMsg);
-      setOsFormData({ title: "", description: "", serviceType: "" });
+      setOsFormData({ title: "", description: "", serviceType: "", priority: "normal" });
       setIsOpenDialogOpen(false);
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Erro ao criar OS";
@@ -225,22 +227,26 @@ export default function ClientPortal() {
             <h1 className="text-2xl font-bold text-slate-900">Portal do Cliente</h1>
             <p className="text-slate-600">Bem-vindo, {clientName}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button 
                   onClick={() => { setOsType("emergencial"); setIsOpenDialogOpen(true); }}
-                  className="gap-2 bg-red-500 hover:bg-red-600"
+                  className="gap-2 bg-red-500 hover:bg-red-600 text-sm sm:text-base"
+                  size="sm"
                 >
                   <AlertCircle className="w-4 h-4" />
-                  Solicitar Atendimento
+                  <span className="hidden sm:inline">Solicitar Atendimento</span>
+                  <span className="sm:hidden">Atendimento</span>
                 </Button>
                 <Button 
                   onClick={() => { setOsType("orcamento"); setIsOpenDialogOpen(true); }}
-                  className="gap-2 bg-orange-500 hover:bg-orange-600"
+                  className="gap-2 bg-orange-500 hover:bg-orange-600 text-sm sm:text-base"
+                  size="sm"
                 >
                   <FileQuestion className="w-4 h-4" />
-                  Solicitar Orçamento
+                  <span className="hidden sm:inline">Solicitar Orçamento</span>
+                  <span className="sm:hidden">Orçamento</span>
                 </Button>
               </div>
               <DialogContent className="max-w-md">
@@ -273,6 +279,24 @@ export default function ClientPortal() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <label className="text-sm font-medium">Prioridade *</label>
+                    <Select
+                      value={osFormData.priority}
+                      onValueChange={(value: "critica" | "alta" | "normal") => 
+                        setOsFormData({ ...osFormData, priority: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="alta">Alta</SelectItem>
+                        <SelectItem value="critica">Crítica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-sm font-medium">Descricao</label>
                     <Textarea
                       placeholder="Descreva o problema ou servico necessario..."
@@ -287,10 +311,10 @@ export default function ClientPortal() {
                 </form>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleVoltar}>
+            <Button variant="outline" onClick={handleVoltar} size="sm" className="text-sm">
               Voltar
             </Button>
-            <Button variant="outline" onClick={handleLogout}>
+            <Button variant="outline" onClick={handleLogout} size="sm" className="text-sm">
               <LogOut className="w-4 h-4 mr-2" />
               Sair
             </Button>

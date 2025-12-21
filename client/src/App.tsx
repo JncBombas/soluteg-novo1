@@ -19,7 +19,7 @@ import AdminManageDocuments from "./pages/AdminManageDocuments";
 import AdminEditCustomLabel from "./pages/AdminEditCustomLabel";
 import ClientProfile from "./pages/ClientProfile";
 import AdminWorkOrders from "./pages/AdminWorkOrders";
-import AdminCreateWorkOrder from "./pages/AdminCreateWorkOrder";
+import AdminCreateWorkOrderNew from "./pages/AdminCreateWorkOrderNew";
 import AdminViewWorkOrder from "./pages/AdminViewWorkOrder";
 import AdminEditWorkOrder from "./pages/AdminEditWorkOrder";
 import ReportClientRegistration from "./pages/ReportClientRegistration";
@@ -41,7 +41,7 @@ function Router() {
       <Route path="/admin/documentos" component={AdminManageDocuments} />
       <Route path="/admin/edit-custom-label" component={AdminEditCustomLabel} />
       <Route path="/admin/work-orders" component={AdminWorkOrders} />
-      <Route path="/admin/work-orders/create" component={AdminCreateWorkOrder} />
+      <Route path="/admin/work-orders/create" component={AdminCreateWorkOrderNew} />
       <Route path="/admin/work-orders/:id" component={AdminViewWorkOrder} />
       <Route path="/admin/work-orders/:id/edit" component={AdminEditWorkOrder} />
       <Route path="/relatorios/cadastro-cliente" component={ReportClientRegistration} />
