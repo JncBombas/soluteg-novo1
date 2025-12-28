@@ -821,6 +821,58 @@ export const appRouter = router({
         }),
     }),
 
+    // ==================== METRICS ====================
+    metrics: router({      getStats: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getWorkOrderStats();
+      }),
+
+      getByStatus: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getWorkOrdersByStatus();
+      }),
+
+      getByType: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getWorkOrdersByType();
+      }),
+
+      getAverageCompletionTime: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getAverageCompletionTime();
+      }),
+
+      getFinancialStats: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getFinancialStats();
+      }),
+
+      getByMonth: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getWorkOrdersByMonth();
+      }),
+
+      getCompletionRate: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getCompletionRate();
+      }),
+
+      getDelayed: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getDelayedWorkOrders();
+      }),
+
+      getTopClients: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getTopClientsByWorkOrders();
+      }),
+
+      getMaterialsCostByWorkOrder: publicProcedure.query(async () => {
+        const metrics = await import("./workOrdersMetrics");
+        return await metrics.getMaterialsCostByWorkOrder();
+      }),
+    }),
+
     // ==================== TIME TRACKING ====================
     timeTracking: router({
       list: publicProcedure

@@ -403,3 +403,15 @@
 - [ ] Testes de integração
 - [ ] Otimizações de performance
 - [ ] Ajustes de UI/UX
+
+## Fase 4: Dashboard e Relatórios de OS (Concluída)
+- [x] Criar procedures tRPC para métricas e estatísticas (10 endpoints)
+- [x] Implementar dashboard de OS com cards de métricas
+- [x] Adicionar gráficos de OS por status (PieChart)
+- [x] Adicionar gráfico de OS por tipo (BarChart)
+- [x] Adicionar gráfico de tempo médio de conclusão
+- [x] Adicionar gráfico de custos de materiais
+- [x] Adicionar gráfico de evolução mensal (LineChart)
+- [x] Implementar relatório de top clientes
+- [x] Adicionar lista de OS atrasadas
+- [x] Criar tabs organizadas (Visão Geral, Financeiro, Desempenho, Clientes)
