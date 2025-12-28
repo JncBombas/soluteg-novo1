@@ -630,6 +630,257 @@ export const appRouter = router({
         await workOrdersDb.updateWorkOrder(input.id, { status: "cancelada" as any });
         return { success: true, message: "Recorrência cancelada com sucesso" };
       }),
+
+    // ==================== TASKS ====================
+    tasks: router({
+      list: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getTasksByWorkOrderId(input.workOrderId);
+        }),
+
+      create: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          title: z.string().min(1),
+          description: z.string().optional(),
+          orderIndex: z.number().default(0),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.createTask(input);
+          return { success: true, message: "Tarefa criada com sucesso" };
+        }),
+
+      update: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          title: z.string().optional(),
+          description: z.string().optional(),
+          orderIndex: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          const { id, ...updates } = input;
+          await auxDb.updateTask(id, updates);
+          return { success: true, message: "Tarefa atualizada com sucesso" };
+        }),
+
+      toggle: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          isCompleted: z.boolean(),
+          completedBy: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.toggleTaskCompletion(input.id, input.isCompleted, input.completedBy);
+          return { success: true, message: "Tarefa atualizada com sucesso" };
+        }),
+
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.deleteTask(input.id);
+          return { success: true, message: "Tarefa deletada com sucesso" };
+        }),
+    }),
+
+    // ==================== MATERIALS ====================
+    materials: router({
+      list: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getMaterialsByWorkOrderId(input.workOrderId);
+        }),
+
+      create: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          materialName: z.string().min(1),
+          quantity: z.number().min(1),
+          unit: z.string().optional(),
+          unitCost: z.number().optional(),
+          totalCost: z.number().optional(),
+          addedBy: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.createMaterial(input);
+          return { success: true, message: "Material adicionado com sucesso" };
+        }),
+
+      update: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          materialName: z.string().optional(),
+          quantity: z.number().optional(),
+          unit: z.string().optional(),
+          unitCost: z.number().optional(),
+          totalCost: z.number().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          const { id, ...updates } = input;
+          await auxDb.updateMaterial(id, updates);
+          return { success: true, message: "Material atualizado com sucesso" };
+        }),
+
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.deleteMaterial(input.id);
+          return { success: true, message: "Material deletado com sucesso" };
+        }),
+
+      getTotalCost: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getTotalMaterialsCost(input.workOrderId);
+        }),
+    }),
+
+    // ==================== ATTACHMENTS ====================
+    attachments: router({
+      list: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          category: z.enum(["before", "during", "after", "document", "other"]).optional(),
+        }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          if (input.category) {
+            return await auxDb.getAttachmentsByCategory(input.workOrderId, input.category);
+          }
+          return await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
+        }),
+
+      create: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          fileName: z.string().min(1),
+          fileKey: z.string().min(1),
+          fileUrl: z.string().min(1),
+          fileType: z.string().optional(),
+          fileSize: z.number().optional(),
+          category: z.enum(["before", "during", "after", "document", "other"]).default("other"),
+          uploadedBy: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.createAttachment(input);
+          return { success: true, message: "Anexo adicionado com sucesso" };
+        }),
+
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.deleteAttachment(input.id);
+          return { success: true, message: "Anexo deletado com sucesso" };
+        }),
+    }),
+
+    // ==================== COMMENTS ====================
+    comments: router({
+      list: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          includeInternal: z.boolean().default(true),
+        }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getCommentsByWorkOrderId(input.workOrderId, input.includeInternal);
+        }),
+
+      create: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          userId: z.string().min(1),
+          userType: z.enum(["admin", "client"]),
+          comment: z.string().min(1),
+          isInternal: z.number().default(1),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.createComment(input);
+          return { success: true, message: "Comentário adicionado com sucesso" };
+        }),
+
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.deleteComment(input.id);
+          return { success: true, message: "Comentário deletado com sucesso" };
+        }),
+    }),
+
+    // ==================== TIME TRACKING ====================
+    timeTracking: router({
+      list: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getTimeEntriesByWorkOrderId(input.workOrderId);
+        }),
+
+      create: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          userId: z.string().min(1),
+          startedAt: z.date(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.createTimeEntry(input);
+          return { success: true, message: "Entrada de tempo criada com sucesso" };
+        }),
+
+      end: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          endedAt: z.date(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.endTimeEntry(input.id, input.endedAt);
+          return { success: true, message: "Entrada de tempo finalizada com sucesso" };
+        }),
+
+      update: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          const { id, ...updates } = input;
+          await auxDb.updateTimeEntry(id, updates);
+          return { success: true, message: "Entrada de tempo atualizada com sucesso" };
+        }),
+
+      delete: publicProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.deleteTimeEntry(input.id);
+          return { success: true, message: "Entrada de tempo deletada com sucesso" };
+        }),
+
+      getTotalTime: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          return await auxDb.getTotalTimeSpent(input.workOrderId);
+        }),
+    }),
   }),
 });
 

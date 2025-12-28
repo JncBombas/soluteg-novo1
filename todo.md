@@ -372,7 +372,8 @@
 - [x] Aplicar migrações no banco de dados
 
 ### Fase 2: CRUD Completo
-- [ ] Implementar procedures tRPC completas
+- [x] Implementar procedures tRPC completas (25+ endpoints)
+- [x] Criar routers para tasks, materials, attachments, comments, time tracking
 - [ ] Criar página de listagem com filtros avançados
 - [ ] Criar página de visualização detalhada melhorada
 - [ ] Criar formulário de criação/edição completo
