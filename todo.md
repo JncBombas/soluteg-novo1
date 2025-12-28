@@ -359,3 +359,43 @@
 - [x] Adicionar ações de mudança de status
 - [x] Adicionar visualização de histórico de mudanças
 - [x] Adicionar cancelamento de recorrência
+
+## Implementação Sistema Completo de OS v2.0 (Seguindo Arquitetura Técnica)
+
+### Fase 1: Fundação
+- [x] Atualizar schema work_orders com todos os campos novos
+- [x] Criar tabela work_order_tasks
+- [x] Criar tabela work_order_materials
+- [x] Criar tabela work_order_attachments
+- [x] Criar tabela work_order_comments
+- [x] Criar tabela work_order_time_tracking
+- [x] Aplicar migrações no banco de dados
+
+### Fase 2: CRUD Completo
+- [ ] Implementar procedures tRPC completas
+- [ ] Criar página de listagem com filtros avançados
+- [ ] Criar página de visualização detalhada melhorada
+- [ ] Criar formulário de criação/edição completo
+
+### Fase 3: Funcionalidades Avançadas
+- [ ] Implementar view Kanban com drag-and-drop
+- [ ] Criar sistema de tarefas/checklist
+- [ ] Implementar gestão de materiais
+- [ ] Adicionar upload de anexos (S3)
+- [ ] Criar sistema de comentários/timeline
+
+### Fase 4: Financeiro e Relatórios
+- [ ] Implementar cálculos financeiros automáticos
+- [ ] Criar dashboard com estatísticas
+- [ ] Implementar relatórios
+- [ ] Adicionar geração de PDF
+
+### Fase 5: Recorrência e Automação
+- [ ] Implementar lógica de recorrência
+- [ ] Criar job scheduler
+- [ ] Adicionar sistema de notificações
+
+### Fase 6: Polimento e Testes
+- [ ] Testes de integração
+- [ ] Otimizações de performance
+- [ ] Ajustes de UI/UX

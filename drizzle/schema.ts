@@ -282,3 +282,91 @@ export const workOrderHistory = mysqlTable("workOrderHistory", {
 
 export type WorkOrderHistory = typeof workOrderHistory.$inferSelect;
 export type InsertWorkOrderHistory = typeof workOrderHistory.$inferInsert;
+
+/**
+ * Tarefas/Checklist dentro de uma OS
+ */
+export const workOrderTasks = mysqlTable("workOrderTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  isCompleted: int("isCompleted").default(0).notNull(),
+  completedAt: timestamp("completedAt"),
+  completedBy: varchar("completedBy", { length: 100 }),
+  orderIndex: int("orderIndex").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WorkOrderTask = typeof workOrderTasks.$inferSelect;
+export type InsertWorkOrderTask = typeof workOrderTasks.$inferInsert;
+
+/**
+ * Materiais/Peças utilizadas em uma OS
+ */
+export const workOrderMaterials = mysqlTable("workOrderMaterials", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  materialName: varchar("materialName", { length: 255 }).notNull(),
+  quantity: int("quantity").notNull(),
+  unit: varchar("unit", { length: 20 }), // Ex: unidade, metro, litro
+  unitCost: int("unitCost"), // Em centavos
+  totalCost: int("totalCost"), // Em centavos
+  addedAt: timestamp("addedAt").defaultNow().notNull(),
+  addedBy: varchar("addedBy", { length: 100 }),
+});
+
+export type WorkOrderMaterial = typeof workOrderMaterials.$inferSelect;
+export type InsertWorkOrderMaterial = typeof workOrderMaterials.$inferInsert;
+
+/**
+ * Anexos (fotos, documentos) de uma OS
+ */
+export const workOrderAttachments = mysqlTable("workOrderAttachments", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileKey: text("fileKey").notNull(), // Chave S3
+  fileUrl: text("fileUrl").notNull(),
+  fileType: varchar("fileType", { length: 100 }), // Ex: image/jpeg, application/pdf
+  fileSize: int("fileSize"), // Em bytes
+  category: mysqlEnum("category", ["before", "during", "after", "document", "other"]).default("other").notNull(),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  uploadedBy: varchar("uploadedBy", { length: 100 }),
+});
+
+export type WorkOrderAttachment = typeof workOrderAttachments.$inferSelect;
+export type InsertWorkOrderAttachment = typeof workOrderAttachments.$inferInsert;
+
+/**
+ * Comentários/Timeline de uma OS
+ */
+export const workOrderComments = mysqlTable("workOrderComments", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  userId: varchar("userId", { length: 100 }).notNull(),
+  userType: mysqlEnum("userType", ["admin", "client"]).notNull(),
+  comment: text("comment").notNull(),
+  isInternal: int("isInternal").default(1).notNull(), // 1 = interno, 0 = visível ao cliente
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WorkOrderComment = typeof workOrderComments.$inferSelect;
+export type InsertWorkOrderComment = typeof workOrderComments.$inferInsert;
+
+/**
+ * Rastreamento de tempo gasto em uma OS
+ */
+export const workOrderTimeTracking = mysqlTable("workOrderTimeTracking", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  userId: varchar("userId", { length: 100 }).notNull(),
+  startedAt: timestamp("startedAt").notNull(),
+  endedAt: timestamp("endedAt"),
+  durationMinutes: int("durationMinutes"), // Calculado automaticamente
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WorkOrderTimeTracking = typeof workOrderTimeTracking.$inferSelect;
+export type InsertWorkOrderTimeTracking = typeof workOrderTimeTracking.$inferInsert;
