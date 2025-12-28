@@ -379,11 +379,14 @@
 - [ ] Criar formulário de criação/edição completo
 
 ### Fase 3: Funcionalidades Avançadas
-- [ ] Implementar view Kanban com drag-and-drop
-- [ ] Criar sistema de tarefas/checklist
-- [ ] Implementar gestão de materiais
-- [ ] Adicionar upload de anexos (S3)
-- [ ] Criar sistema de comentários/timeline
+- [x] Criar página de visualização detalhada com tabs
+- [x] Implementar componente de tarefas/checklist
+- [x] Implementar componente de materiais com cálculo de custos
+- [x] Implementar componente de anexos por categoria
+- [x] Implementar componente de comentários (interno/externo)
+- [x] Implementar componente de timeline visual
+- [ ] Implementar view Kanban com drag-and-drop (próxima fase)
+- [ ] Adicionar upload real de anexos para S3 (próxima fase)
 
 ### Fase 4: Financeiro e Relatórios
 - [ ] Implementar cálculos financeiros automáticos
