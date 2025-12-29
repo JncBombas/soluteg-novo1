@@ -424,3 +424,40 @@
 - [x] Implementar reativação de recorrência
 - [x] Criar função para obter próxima data de recorrência
 - [x] Criar função para listar instâncias de uma OS recorrente
+
+## Melhorias Finais do Sistema de OS
+
+### Kanban View
+- [x] Criar página AdminWorkOrderKanban
+- [x] Implementar drag-and-drop entre colunas de status
+- [x] Adicionar cards visuais com informações resumidas
+- [x] Implementar filtros por tipo, prioridade, cliente
+- [x] Adicionar contador de OS por coluna
+
+### Upload de Arquivos S3
+- [ ] Integrar storagePut para upload de anexos
+- [ ] Criar componente de upload com preview
+- [ ] Implementar categorização de anexos (antes/durante/depois)
+- [ ] Adicionar galeria de imagens na visualização de OS
+- [ ] Implementar download de anexos
+
+### Geração de PDF
+- [ ] Instalar biblioteca de geração de PDF
+- [ ] Criar template de PDF para OS
+- [ ] Implementar procedure para gerar PDF
+- [ ] Adicionar botão de exportar PDF na visualização
+- [ ] Incluir logo, dados, tarefas, materiais e timeline no PDF
+
+### Sistema de Notificações
+- [ ] Criar procedure para enviar notificações
+- [ ] Implementar notificação de mudança de status
+- [ ] Implementar notificação de OS atrasada
+- [ ] Implementar notificação de aprovação de orçamento
+- [ ] Adicionar preferências de notificação
+
+### Versão Mobile/Responsiva
+- [ ] Otimizar layout mobile do dashboard
+- [ ] Otimizar formulários para mobile
+- [ ] Otimizar visualização de OS para mobile
+- [ ] Testar em diferentes tamanhos de tela
+- [ ] Adicionar menu mobile hamburger se necessário
