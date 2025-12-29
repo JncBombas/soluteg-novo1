@@ -821,6 +821,45 @@ export const appRouter = router({
         }),
     }),
 
+    // ==================== RECURRENCE ====================
+    recurrence: router({
+      process: publicProcedure.mutation(async () => {
+        const recurrence = await import("./workOrdersRecurrence");
+        return await recurrence.processRecurringWorkOrders();
+      }),
+
+      cancel: publicProcedure
+        .input(z.object({
+          workOrderId: z.number(),
+          cancelFutureOnly: z.boolean().optional().default(false),
+        }))
+        .mutation(async ({ input }) => {
+          const recurrence = await import("./workOrdersRecurrence");
+          return await recurrence.cancelRecurrence(input.workOrderId, input.cancelFutureOnly);
+        }),
+
+      reactivate: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .mutation(async ({ input }) => {
+          const recurrence = await import("./workOrdersRecurrence");
+          return await recurrence.reactivateRecurrence(input.workOrderId);
+        }),
+
+      getNextDate: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const recurrence = await import("./workOrdersRecurrence");
+          return await recurrence.getNextRecurrenceDate(input.workOrderId);
+        }),
+
+      getInstances: publicProcedure
+        .input(z.object({ parentWorkOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const recurrence = await import("./workOrdersRecurrence");
+          return await recurrence.getRecurrenceInstances(input.parentWorkOrderId);
+        }),
+    }),
+
     // ==================== METRICS ====================
     metrics: router({      getStats: publicProcedure.query(async () => {
         const metrics = await import("./workOrdersMetrics");

@@ -415,3 +415,12 @@
 - [x] Implementar relatório de top clientes
 - [x] Adicionar lista de OS atrasadas
 - [x] Criar tabs organizadas (Visão Geral, Financeiro, Desempenho, Clientes)
+
+## Fase 5: Recorrência e Automação (Concluída)
+- [x] Criar procedure para processar recorrências
+- [x] Implementar lógica de criação automática de OS mensais
+- [x] Criar endpoints tRPC para job de recorrência (5 procedures)
+- [x] Implementar cancelamento de recorrência (apenas atual, atual + futuras)
+- [x] Implementar reativação de recorrência
+- [x] Criar função para obter próxima data de recorrência
+- [x] Criar função para listar instâncias de uma OS recorrente
