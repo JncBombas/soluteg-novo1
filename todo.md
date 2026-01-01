@@ -461,3 +461,10 @@
 - [ ] Otimizar visualização de OS para mobile
 - [ ] Testar em diferentes tamanhos de tela
 - [ ] Adicionar menu mobile hamburger se necessário
+
+## Filtros na Lista de Ordens de Serviço (Nova)
+- [x] Adicionar filtros por status (Aberta, Em Andamento, Concluída, Cancelada)
+- [x] Adicionar filtro por prioridade (Baixa, Normal, Alta, Urgente)
+- [ ] Adicionar filtro por cliente
+- [x] Adicionar campo de busca por título/descrição
+- [x] Testar filtros funcionando corretamente

@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Eye, Edit2, Trash2, ChevronDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Eye, Edit2, Trash2, ChevronDown, Search, Filter } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -11,6 +13,11 @@ export default function AdminWorkOrders() {
     const stored = localStorage.getItem("adminId");
     return stored ? parseInt(stored) : 1;
   });
+
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
   const { data: workOrders = [], isLoading } = trpc.workOrders.list.useQuery({
     adminId,
@@ -75,6 +82,24 @@ export default function AdminWorkOrders() {
     return labels[priority] || priority;
   };
 
+  // Filtrar ordens de serviço
+  const filteredWorkOrders = useMemo(() => {
+    return workOrders.filter((order) => {
+      // Filtro de busca
+      const matchesSearch = searchTerm === "" || 
+        order.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.osNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Filtro de status
+      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+      
+      // Filtro de prioridade
+      const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
+      
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [workOrders, searchTerm, statusFilter, priorityFilter]);
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -93,6 +118,59 @@ export default function AdminWorkOrders() {
           </Button>
         </div>
 
+        {/* Filtros */}
+        <Card className="p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="w-5 h-5 text-gray-600" />
+            <h2 className="text-lg font-semibold">Filtros</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Busca */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar por título ou número..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Filtro de Status */}
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="aberta">Aberta</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Concluída</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filtro de Prioridade */}
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as prioridades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as prioridades</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="critica">Crítica</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Contador de resultados */}
+          <div className="mt-4 text-sm text-gray-600">
+            Mostrando <strong>{filteredWorkOrders.length}</strong> de <strong>{workOrders.length}</strong> ordens de serviço
+          </div>
+        </Card>
+
         {/* Loading State */}
         {isLoading && (
           <Card className="p-8 text-center">
@@ -101,7 +179,7 @@ export default function AdminWorkOrders() {
         )}
 
         {/* Empty State */}
-        {!isLoading && workOrders.length === 0 && (
+        {!isLoading && filteredWorkOrders.length === 0 && workOrders.length === 0 && (
           <Card className="p-8 text-center">
             <p className="text-gray-600 mb-4">Nenhuma ordem de serviço criada ainda</p>
             <Button
@@ -114,10 +192,27 @@ export default function AdminWorkOrders() {
           </Card>
         )}
 
+        {/* No Results State */}
+        {!isLoading && filteredWorkOrders.length === 0 && workOrders.length > 0 && (
+          <Card className="p-8 text-center">
+            <p className="text-gray-600 mb-2">Nenhuma ordem de serviço encontrada com os filtros aplicados</p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("all");
+                setPriorityFilter("all");
+              }}
+            >
+              Limpar filtros
+            </Button>
+          </Card>
+        )}
+
         {/* Work Orders List */}
-        {!isLoading && workOrders.length > 0 && (
+        {!isLoading && filteredWorkOrders.length > 0 && (
           <div className="space-y-4">
-            {workOrders.map((order) => (
+            {filteredWorkOrders.map((order) => (
               <Card
                 key={order.id}
                 className="p-6 hover:shadow-lg transition-shadow"
