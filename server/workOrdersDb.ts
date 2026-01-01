@@ -1,4 +1,4 @@
-import { eq, and, desc, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { workOrders, workOrderHistory, InsertWorkOrder, InsertWorkOrderHistory } from "../drizzle/schema";
 
@@ -12,20 +12,24 @@ export async function generateOsNumber(): Promise<string> {
   const year = new Date().getFullYear();
   const prefix = `OS-${year}-`;
 
-  // Buscar última OS do ano
-  const lastOs = await db
-    .select()
+  // Buscar todas as OS do ano atual para encontrar o maior número
+  const osThisYear = await db
+    .select({ osNumber: workOrders.osNumber })
     .from(workOrders)
-    .where(eq(workOrders.osNumber, prefix))
-    .orderBy(desc(workOrders.id))
-    .limit(1);
+    .where(like(workOrders.osNumber, `${prefix}%`));
 
-  let nextNumber = 1;
-  if (lastOs.length > 0 && lastOs[0]?.osNumber) {
-    const lastNumber = parseInt(lastOs[0].osNumber.split("-")[2] || "0");
-    nextNumber = lastNumber + 1;
+  let maxNumber = 0;
+  for (const os of osThisYear) {
+    if (os.osNumber) {
+      const parts = os.osNumber.split("-");
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2] || "0");
+        if (num > maxNumber) maxNumber = num;
+      }
+    }
   }
 
+  const nextNumber = maxNumber + 1;
   return `${prefix}${String(nextNumber).padStart(4, "0")}`;
 }
 

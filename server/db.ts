@@ -198,6 +198,14 @@ export async function getAdminByEmail(email: string) {
   return result.length > 0 ? result[0] : null;
 }
 
+export async function getAdminByUsername(username: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(admins).where(eq(admins.username, username)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
 export async function getAdminById(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -415,8 +423,8 @@ export async function getClientByUsername(username: string): Promise<Client | un
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  // Procura pelo nome do cliente (case-insensitive)
-  const result = await db.select().from(clients).where(eq(clients.name, username)).limit(1);
+  // Procura pelo username do cliente
+  const result = await db.select().from(clients).where(eq(clients.username, username)).limit(1);
   return result.length > 0 ? result[0] : undefined;
 }
 
@@ -623,20 +631,25 @@ export async function getNextOSNumber() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const lastOS = await db
+  const year = new Date().getFullYear();
+  
+  // Buscar todas as OS do ano atual para encontrar o maior número
+  const osThisYear = await db
     .select({ osNumber: workOrders.osNumber })
     .from(workOrders)
-    .orderBy(desc(workOrders.createdAt))
-    .limit(1);
+    .where(sql`${workOrders.osNumber} LIKE ${`OS-${year}-%`}`);
   
-  let nextNumber = 1;
-  if (lastOS.length > 0) {
-    const lastNumber = parseInt(lastOS[0].osNumber.split("-")[2] || "0");
-    nextNumber = lastNumber + 1;
+  let maxNumber = 0;
+  for (const os of osThisYear) {
+    const parts = os.osNumber.split("-");
+    if (parts.length >= 3) {
+      const num = parseInt(parts[2] || "0");
+      if (num > maxNumber) maxNumber = num;
+    }
   }
   
-  const year = new Date().getFullYear();
-  return `OS-${year}-${String(nextNumber).padStart(3, "0")}`;
+  const nextNumber = maxNumber + 1;
+  return `OS-${year}-${String(nextNumber).padStart(4, "0")}`;
 }
 
 // Document filtering functions

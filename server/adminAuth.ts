@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { getAdminByEmail, updateAdminLastLogin } from './db';
+import { getAdminByEmail, getAdminByUsername, updateAdminLastLogin } from './db';
 import { ENV } from './_core/env';
 
 const SALT_ROUNDS = 10;
@@ -36,8 +36,8 @@ export function verifyToken(token: string): { adminId: number; type: string } | 
   }
 }
 
-export async function authenticateAdmin(email: string, password: string) {
-  const admin = await getAdminByEmail(email);
+export async function authenticateAdmin(username: string, password: string) {
+  const admin = await getAdminByUsername(username);
   
   if (!admin || !admin.active) {
     throw new Error('Admin não encontrado ou inativo');

@@ -61,8 +61,7 @@ export default function AdminLogin() {
 
     setIsLoading(true);
     try {
-      // Usar username como email para login
-      await loginMutation.mutateAsync({ email: username, password });
+      await loginMutation.mutateAsync({ username, password });
     } finally {
       setIsLoading(false);
     }

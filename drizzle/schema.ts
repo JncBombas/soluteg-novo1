@@ -71,6 +71,7 @@ export type InsertInvite = typeof invites.$inferInsert;
  */
 export const admins = mysqlTable("admins", {
   id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 100 }).notNull().unique(),
   email: varchar("email", { length: 320 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   name: varchar("name", { length: 255 }).notNull(),

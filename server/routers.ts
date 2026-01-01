@@ -130,12 +130,12 @@ export const appRouter = router({
   adminAuth: router({
     login: publicProcedure
       .input(z.object({
-        email: z.string().email(),
-        password: z.string().min(6),
+        username: z.string().min(1),
+        password: z.string().min(1),
       }))
       .mutation(async ({ input, ctx }) => {
         try {
-          const result = await authenticateAdmin(input.email, input.password);
+          const result = await authenticateAdmin(input.username, input.password);
           const cookieOptions = getSessionCookieOptions(ctx.req);
           ctx.res.setHeader('Set-Cookie', `admin_token=${result.token}; ${Object.entries(cookieOptions).map(([k, v]) => `${k}=${v}`).join('; ')}`);
           return result;
