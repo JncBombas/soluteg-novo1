@@ -468,3 +468,19 @@
 - [ ] Adicionar filtro por cliente
 - [x] Adicionar campo de busca por título/descrição
 - [x] Testar filtros funcionando corretamente
+
+### Sistema de Materiais e Preços nas OS (Nova)
+- [x] Criar tabela de materiais no banco de dados
+- [x] Implementar procedures tRPC para CRUD de materiais
+- [x] Criar interface para adicionar materiais na OS
+- [x] Adicionar campos: nome, quantidade, unidade, preço unitário
+- [x] Implementar cálculo automático de subtotal por item
+- [x] Implementar cálculo de total geral da OS
+- [x] Adicionar visualização de lista de materiais na página de detalhes da OS
+- [x] Testar adição, edição e remoção de materiais
+## Correção das Abas na Página de Detalhes da OS (Bug)
+- [x] Investigar por que as abas não estão sendo renderizadas
+- [x] Verificar componente Tabs do shadcn/ui
+- [x] Corrigir problema de renderização (rota incorreta no botão Ver)
+- [x] Testar acesso à aba de Materiais
+- [x] Testar todas as outras abas (Tarefas, Anexos, Comentários, Timeline)
