@@ -136,23 +136,24 @@ export default function AdminWorkOrderDetail() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="icon"
             onClick={() => navigate("/admin/work-orders")}
+            className="h-9 w-9 md:h-10 md:w-10"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">OS #{workOrder.id}</h1>
-            <p className="text-muted-foreground">{workOrder.title}</p>
+          <div className="flex-1">
+            <h1 className="text-xl md:text-3xl font-bold">OS #{workOrder.id}</h1>
+            <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge className={getStatusColor(workOrder.status)}>
             {getStatusLabel(workOrder.status)}
           </Badge>
@@ -164,7 +165,7 @@ export default function AdminWorkOrderDetail() {
       </div>
 
       {/* Quick Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cliente</CardTitle>

@@ -484,3 +484,12 @@
 - [x] Corrigir problema de renderização (rota incorreta no botão Ver)
 - [x] Testar acesso à aba de Materiais
 - [x] Testar todas as outras abas (Tarefas, Anexos, Comentários, Timeline)
+
+## Otimização Mobile - Página de Ordens de Serviço
+- [x] Analisar problemas de responsividade na lista de OS
+- [x] Adaptar tabela de OS para cards em mobile
+- [x] Otimizar filtros para telas pequenas
+- [x] Melhorar layout da página de detalhes da OS em mobile
+- [x] Adaptar tabela de materiais para mobile (desktop + cards mobile)
+- [x] Testar em diferentes tamanhos de tela
+- [ ] Verificar outras páginas do site (dashboard, clientes, documentos)

@@ -222,65 +222,122 @@ export default function WorkOrderMaterials({ workOrderId }: WorkOrderMaterialsPr
       </CardHeader>
       <CardContent>
         {materials && materials.length > 0 ? (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Material</TableHead>
-                  <TableHead className="text-right">Quantidade</TableHead>
-                  <TableHead className="text-right">Custo Unit.</TableHead>
-                  <TableHead className="text-right">Custo Total</TableHead>
-                  <TableHead className="text-center">Adicionado em</TableHead>
-                  <TableHead className="w-[80px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {materials.map((material) => (
-                  <TableRow key={material.id}>
-                    <TableCell className="font-medium">
-                      {material.materialName}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {material.quantity}
-                      {material.unit && ` ${material.unit}`}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {material.unitCost
-                        ? `R$ ${material.unitCost.toFixed(2)}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {material.totalCost
-                        ? `R$ ${material.totalCost.toFixed(2)}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-gray-600">
-                      {new Date(material.addedAt).toLocaleDateString("pt-BR")}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteMaterial(material.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Material</TableHead>
+                    <TableHead className="text-right">Quantidade</TableHead>
+                    <TableHead className="text-right">Custo Unit.</TableHead>
+                    <TableHead className="text-right">Custo Total</TableHead>
+                    <TableHead className="text-center">Adicionado em</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
-                ))}
-                <TableRow className="bg-gray-50 font-bold">
-                  <TableCell colSpan={3} className="text-right">
-                    TOTAL
-                  </TableCell>
-                  <TableCell className="text-right">
-                    R$ {(totalCost || 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell colSpan={2}></TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {materials.map((material) => (
+                    <TableRow key={material.id}>
+                      <TableCell className="font-medium">
+                        {material.materialName}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {material.quantity}
+                        {material.unit && ` ${material.unit}`}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {material.unitCost
+                          ? `R$ ${material.unitCost.toFixed(2)}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {material.totalCost
+                          ? `R$ ${material.totalCost.toFixed(2)}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-center text-sm text-gray-600">
+                        {new Date(material.addedAt).toLocaleDateString("pt-BR")}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteMaterial(material.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-gray-50 font-bold">
+                    <TableCell colSpan={3} className="text-right">
+                      TOTAL
+                    </TableCell>
+                    <TableCell className="text-right">
+                      R$ {(totalCost || 0).toFixed(2)}
+                    </TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {materials.map((material) => (
+                <div key={material.id} className="border rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <h4 className="font-medium text-sm">{material.materialName}</h4>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteMaterial(material.id)}
+                      className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 -mt-1 -mr-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-600">Quantidade:</span>
+                      <p className="font-medium">
+                        {material.quantity}
+                        {material.unit && ` ${material.unit}`}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Custo Unit.:</span>
+                      <p className="font-medium">
+                        {material.unitCost
+                          ? `R$ ${material.unitCost.toFixed(2)}`
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Custo Total:</span>
+                      <p className="font-semibold text-base">
+                        {material.totalCost
+                          ? `R$ ${material.totalCost.toFixed(2)}`
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Adicionado:</span>
+                      <p className="font-medium">
+                        {new Date(material.addedAt).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="border-t-2 pt-3 flex justify-between items-center font-bold">
+                <span>TOTAL</span>
+                <span className="text-lg">R$ {(totalCost || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="text-center py-12 text-gray-500">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />

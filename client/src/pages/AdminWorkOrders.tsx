@@ -101,30 +101,30 @@ export default function AdminWorkOrders() {
   }, [workOrders, searchTerm, statusFilter, priorityFilter]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-center">
+        <div className="mb-6 md:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Ordens de Serviço</h1>
-            <p className="text-gray-600">Gerencie todas as ordens de serviço</p>
+            <h1 className="text-2xl md:text-3xl font-bold mb-2">Ordens de Serviço</h1>
+            <p className="text-gray-600 text-sm md:text-base">Gerencie todas as ordens de serviço</p>
           </div>
           <Button
             onClick={handleCreateOS}
-            className="bg-blue-600 hover:bg-blue-700 h-12 px-6 flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2 w-full sm:w-auto"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 md:w-5 h-4 md:h-5" />
             Criar OS
           </Button>
         </div>
 
         {/* Filtros */}
-        <Card className="p-6 mb-6">
+        <Card className="p-4 md:p-6 mb-4 md:mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold">Filtros</h2>
+            <Filter className="w-4 md:w-5 h-4 md:h-5 text-gray-600" />
+            <h2 className="text-base md:text-lg font-semibold">Filtros</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 md:gap-4">
             {/* Busca */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -166,7 +166,7 @@ export default function AdminWorkOrders() {
           </div>
           
           {/* Contador de resultados */}
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-3 md:mt-4 text-xs md:text-sm text-gray-600">
             Mostrando <strong>{filteredWorkOrders.length}</strong> de <strong>{workOrders.length}</strong> ordens de serviço
           </div>
         </Card>
@@ -211,25 +211,25 @@ export default function AdminWorkOrders() {
 
         {/* Work Orders List */}
         {!isLoading && filteredWorkOrders.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {filteredWorkOrders.map((order) => (
               <Card
                 key={order.id}
-                className="p-6 hover:shadow-lg transition-shadow"
+                className="p-4 md:p-6 hover:shadow-lg transition-shadow"
               >
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold">{order.osNumber}</h3>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <h3 className="text-lg md:text-xl font-semibold">{order.osNumber}</h3>
+                      <span className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getStatusColor(order.status)}`}>
                         {getStatusLabel(order.status)}
                       </span>
-                      <span className={`text-sm font-medium ${getPriorityColor(order.priority)}`}>
-                        Prioridade: {getPriorityLabel(order.priority)}
+                      <span className={`text-xs md:text-sm font-medium ${getPriorityColor(order.priority)}`}>
+                        {getPriorityLabel(order.priority)}
                       </span>
                     </div>
-                    <p className="text-gray-700 mb-2">{order.title}</p>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <p className="text-gray-700 mb-3 text-sm md:text-base">{order.title}</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600">
                       <span>Cliente ID: <strong>{order.clientId}</strong></span>
                       {order.scheduledDate && (
                         <span>
@@ -241,7 +241,7 @@ export default function AdminWorkOrders() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-end md:justify-start">
                     <Button
                       variant="outline"
                       size="sm"
