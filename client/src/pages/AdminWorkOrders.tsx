@@ -34,7 +34,7 @@ export default function AdminWorkOrders() {
   };
 
   const handleViewOS = (id: number) => {
-    navigate(`/admin/work-orders/view/${id}`);
+    navigate(`/admin/work-orders/${id}`);
   };
 
   const handleEditOS = (id: number) => {

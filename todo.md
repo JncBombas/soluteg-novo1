@@ -532,3 +532,8 @@
 - [x] Implementar endpoint tRPC para exportação em lote
 - [x] Gerar arquivo ZIP com múltiplos PDFs
 - [x] Testar exportação de múltiplas OS
+
+## Bug: Erro 404 ao Ver OS
+- [x] Investigar causa do erro 404 ao clicar em "Ver" na listagem de OS
+- [x] Corrigir roteamento para página de detalhes
+- [x] Testar navegação completa
