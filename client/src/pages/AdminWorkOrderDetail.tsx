@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +30,7 @@ import WorkOrderTimeline from "@/components/workorder/WorkOrderTimeline";
 export default function AdminWorkOrderDetail() {
   const params = useParams();
   const [, navigate] = useLocation();
+  const [exportingPDF, setExportingPDF] = useState(false);
   const workOrderId = Number(params.id);
 
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
@@ -48,6 +50,38 @@ export default function AdminWorkOrderDetail() {
       toast.error(`Erro ao atualizar status: ${error.message}`);
     },
   });
+
+  const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
+    onSuccess: (data) => {
+      // Converter base64 para blob e fazer download
+      const byteCharacters = atob(data.pdf);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = data.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF gerado com sucesso!");
+      setExportingPDF(false);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao gerar PDF: ${error.message}`);
+      setExportingPDF(false);
+    },
+  });
+
+  const handleExportPDF = async () => {
+    setExportingPDF(true);
+    exportPDFMutation.mutate({ id: workOrderId });
+  };
 
   if (isLoading) {
     return (
@@ -152,6 +186,20 @@ export default function AdminWorkOrderDetail() {
             <h1 className="text-xl md:text-3xl font-bold">OS #{workOrder.id}</h1>
             <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportPDF}
+            disabled={exportingPDF}
+            className="gap-2"
+          >
+            {exportingPDF ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileDown className="h-4 w-4" />
+            )}
+            {exportingPDF ? "Gerando..." : "Exportar PDF"}
+          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={getStatusColor(workOrder.status)}>

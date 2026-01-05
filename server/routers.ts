@@ -912,6 +912,19 @@ export const appRouter = router({
       }),
     }),
 
+    // ==================== PDF EXPORT ====================
+    exportPDF: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const pdfGen = await import("./pdfGenerator");
+        const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+        return {
+          success: true,
+          pdf: pdfBuffer.toString('base64'),
+          filename: `OS-${input.id}.pdf`
+        };
+      }),
+
     // ==================== TIME TRACKING ====================
     timeTracking: router({
       list: publicProcedure

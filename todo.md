@@ -510,3 +510,17 @@
 - [x] Tornar data de agendamento editável
 - [x] Corrigir erro 404 do botão "Editar OS"
 - [x] Melhorar navegação de abas em mobile (scroll horizontal)
+
+## Exportação de OS em PDF (Nova)
+- [ ] Criar endpoint backend para gerar PDF da OS
+- [ ] Implementar template de PDF com informações da OS
+- [ ] Adicionar seção de materiais no PDF
+- [ ] Adicionar seção de tarefas no PDF
+- [ ] Adicionar cálculo de custos totais no PDF
+- [ ] Adicionar botão "Exportar PDF" na página de detalhes da OS
+- [ ] Testar geração e download de PDF
+
+## Exportação de PDF com PDFKit (Nova)
+- [x] Remover Puppeteer e instalar PDFKit
+- [x] Implementar gerador de PDF com PDFKit
+- [x] Testar geração e download de PDF da OS

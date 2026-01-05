@@ -47,8 +47,7 @@ function Router() {
       <Route path="/admin/work-orders/dashboard" component={AdminWorkOrderDashboard} />
       <Route path="/admin/work-orders/kanban" component={AdminWorkOrderKanban} />
       <Route path="/admin/work-orders/create" component={AdminCreateWorkOrderNew} />
-      <Route path="/admin/work-orders/view/:id" component={AdminWorkOrderDetail} />
-      <Route path="/admin/work-orders/:id" component={AdminViewWorkOrder} />
+      <Route path="/admin/work-orders/:id" component={AdminWorkOrderDetail} />
       <Route path="/admin/work-orders/:id/edit" component={AdminEditWorkOrder} />
       <Route path="/relatorios/cadastro-cliente" component={ReportClientRegistration} />
       <Route path="/relatorios/visita-inspecao" component={ReportInspectionVisit} />
