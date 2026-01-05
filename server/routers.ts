@@ -924,6 +924,35 @@ export const appRouter = router({
           filename: `OS-${input.id}.pdf`
         };
       }),
+    
+    exportBatch: publicProcedure
+      .input(z.object({ ids: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        const JSZip = (await import('jszip')).default;
+        const pdfGen = await import("./pdfGenerator");
+        
+        const zip = new JSZip();
+        
+        // Gerar PDF para cada OS
+        for (const id of input.ids) {
+          try {
+            const pdfBuffer = await pdfGen.generateWorkOrderPDF(id);
+            zip.file(`OS-${id}.pdf`, pdfBuffer);
+          } catch (error) {
+            console.error(`Erro ao gerar PDF da OS ${id}:`, error);
+          }
+        }
+        
+        // Gerar ZIP
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+        const timestamp = new Date().toISOString().split('T')[0];
+        
+        return {
+          success: true,
+          zipBase64: zipBuffer.toString('base64'),
+          filename: `ordens-servico-${timestamp}.zip`
+        };
+      }),
 
     // ==================== TIME TRACKING ====================
     timeTracking: router({

@@ -524,3 +524,11 @@
 - [x] Remover Puppeteer e instalar PDFKit
 - [x] Implementar gerador de PDF com PDFKit
 - [x] Testar geração e download de PDF da OS
+
+## Logo no PDF e Exportação em Lote
+- [x] Adicionar logo da empresa no cabeçalho do PDF
+- [x] Implementar seleção múltipla (checkboxes) na listagem de OS
+- [x] Criar botão "Exportar Selecionadas" na listagem
+- [x] Implementar endpoint tRPC para exportação em lote
+- [x] Gerar arquivo ZIP com múltiplos PDFs
+- [x] Testar exportação de múltiplas OS

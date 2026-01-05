@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Eye, Edit2, Trash2, ChevronDown, Search, Filter } from "lucide-react";
+import { Plus, Eye, Edit2, Trash2, ChevronDown, Search, Filter, Download, CheckSquare, Square } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -18,10 +18,16 @@ export default function AdminWorkOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  
+  // Seleção múltipla
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: workOrders = [], isLoading } = trpc.workOrders.list.useQuery({
     adminId,
   });
+  
+  const exportBatchMutation = trpc.workOrders.exportBatch.useMutation();
 
   const handleCreateOS = () => {
     navigate("/admin/work-orders/create");
@@ -33,6 +39,48 @@ export default function AdminWorkOrders() {
 
   const handleEditOS = (id: number) => {
     navigate(`/admin/work-orders/${id}/edit`);
+  };
+  
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredWorkOrders.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredWorkOrders.map(o => o.id));
+    }
+  };
+  
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+  
+  const handleExportBatch = async () => {
+    if (selectedIds.length === 0) return;
+    
+    setIsExporting(true);
+    try {
+      const result = await exportBatchMutation.mutateAsync({ ids: selectedIds });
+      
+      // Criar link para download do ZIP
+      const blob = new Blob([Uint8Array.from(atob(result.zipBase64), c => c.charCodeAt(0))], { type: 'application/zip' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      // Limpar seleção
+      setSelectedIds([]);
+    } catch (error) {
+      console.error('Erro ao exportar:', error);
+      alert('Erro ao exportar PDFs');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -109,13 +157,25 @@ export default function AdminWorkOrders() {
             <h1 className="text-2xl md:text-3xl font-bold mb-2">Ordens de Serviço</h1>
             <p className="text-gray-600 text-sm md:text-base">Gerencie todas as ordens de serviço</p>
           </div>
-          <Button
-            onClick={handleCreateOS}
-            className="bg-blue-600 hover:bg-blue-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2 w-full sm:w-auto"
-          >
-            <Plus className="w-4 md:w-5 h-4 md:h-5" />
-            Criar OS
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {selectedIds.length > 0 && (
+              <Button
+                onClick={handleExportBatch}
+                disabled={isExporting}
+                className="bg-green-600 hover:bg-green-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2"
+              >
+                <Download className="w-4 md:w-5 h-4 md:h-5" />
+                {isExporting ? 'Exportando...' : `Exportar ${selectedIds.length} OS`}
+              </Button>
+            )}
+            <Button
+              onClick={handleCreateOS}
+              className="bg-blue-600 hover:bg-blue-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2 w-full sm:w-auto"
+            >
+              <Plus className="w-4 md:w-5 h-4 md:h-5" />
+              Criar OS
+            </Button>
+          </div>
         </div>
 
         {/* Filtros */}
@@ -165,9 +225,28 @@ export default function AdminWorkOrders() {
             </Select>
           </div>
           
-          {/* Contador de resultados */}
-          <div className="mt-3 md:mt-4 text-xs md:text-sm text-gray-600">
-            Mostrando <strong>{filteredWorkOrders.length}</strong> de <strong>{workOrders.length}</strong> ordens de serviço
+          {/* Contador de resultados e seleção */}
+          <div className="mt-3 md:mt-4 flex justify-between items-center">
+            <div className="text-xs md:text-sm text-gray-600">
+              Mostrando <strong>{filteredWorkOrders.length}</strong> de <strong>{workOrders.length}</strong> ordens de serviço
+              {selectedIds.length > 0 && (
+                <span className="ml-2 text-blue-600 font-semibold">({selectedIds.length} selecionadas)</span>
+              )}
+            </div>
+            {filteredWorkOrders.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleSelectAll}
+                className="text-xs md:text-sm"
+              >
+                {selectedIds.length === filteredWorkOrders.length ? (
+                  <><CheckSquare className="w-4 h-4 mr-1" /> Desmarcar todas</>
+                ) : (
+                  <><Square className="w-4 h-4 mr-1" /> Selecionar todas</>
+                )}
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -217,7 +296,22 @@ export default function AdminWorkOrders() {
                 key={order.id}
                 className="p-4 md:p-6 hover:shadow-lg transition-shadow"
               >
-                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                <div className="flex gap-3">
+                  {/* Checkbox de seleção */}
+                  <div className="flex items-start pt-1">
+                    <button
+                      onClick={() => toggleSelect(order.id)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                    >
+                      {selectedIds.includes(order.id) ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div className="flex-1 flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <h3 className="text-lg md:text-xl font-semibold">{order.osNumber}</h3>
@@ -261,6 +355,7 @@ export default function AdminWorkOrders() {
                       Editar
                     </Button>
                   </div>
+                </div>
                 </div>
               </Card>
             ))}

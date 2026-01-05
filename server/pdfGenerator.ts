@@ -1,6 +1,12 @@
 import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
 import { getMaterialsByWorkOrderId } from './workOrdersAuxDb';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Gera um PDF da Ordem de Serviço usando PDFKit
@@ -35,6 +41,17 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.on('error', reject);
 
       // === CABEÇALHO ===
+      // Adicionar logo
+      const logoPath = path.join(__dirname, 'logo-jnc.png');
+      if (fs.existsSync(logoPath)) {
+        // Logo centralizado no topo
+        const logoWidth = 120;
+        const logoHeight = 56; // Proporção mantida (1280x601 -> 120x56)
+        const logoX = (doc.page.width - logoWidth) / 2;
+        doc.image(logoPath, logoX, 50, { width: logoWidth, height: logoHeight });
+        doc.moveDown(4);
+      }
+      
       doc.fontSize(20)
          .fillColor('#FF6B00')
          .text('SOLUTEG GERADORES', { align: 'center' });
