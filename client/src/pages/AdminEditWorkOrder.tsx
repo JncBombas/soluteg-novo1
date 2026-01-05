@@ -38,6 +38,7 @@ export default function AdminEditWorkOrder() {
     serviceType: "",
     status: "aberta" as const,
     priority: "media" as const,
+    scheduledDate: "",
     estimatedHours: "",
     actualHours: "",
   });
@@ -73,6 +74,7 @@ export default function AdminEditWorkOrder() {
         serviceType: data.serviceType || "",
         status: data.status || "aberta",
         priority: data.priority || "media",
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : "",
         estimatedHours: data.estimatedHours?.toString() || "",
         actualHours: data.actualHours?.toString() || "",
       });
@@ -100,6 +102,7 @@ export default function AdminEditWorkOrder() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : null,
           estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
           actualHours: formData.actualHours ? parseInt(formData.actualHours) : null,
         }),
@@ -207,6 +210,16 @@ export default function AdminEditWorkOrder() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows={4}
+                />
+              </div>
+
+              {/* Data Agendada */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Data Agendada</label>
+                <Input
+                  type="date"
+                  value={formData.scheduledDate}
+                  onChange={(e) => setFormData({ ...formData, scheduledDate: e.target.value })}
                 />
               </div>
 

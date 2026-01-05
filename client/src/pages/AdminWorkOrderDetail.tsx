@@ -172,7 +172,10 @@ export default function AdminWorkOrderDetail() {
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Cliente #{workOrder.clientId}</div>
+            <div className="text-lg md:text-xl font-bold">{workOrder.clientName || `Cliente #${workOrder.clientId}`}</div>
+            {workOrder.clientPhone && (
+              <p className="text-xs md:text-sm text-muted-foreground mt-1">{workOrder.clientPhone}</p>
+            )}
           </CardContent>
         </Card>
 
@@ -219,14 +222,16 @@ export default function AdminWorkOrderDetail() {
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="details" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="details">Detalhes</TabsTrigger>
-          <TabsTrigger value="tasks">Tarefas</TabsTrigger>
-          <TabsTrigger value="materials">Materiais</TabsTrigger>
-          <TabsTrigger value="attachments">Anexos</TabsTrigger>
-          <TabsTrigger value="comments">Comentários</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6">
+            <TabsTrigger value="details" className="flex-shrink-0">Detalhes</TabsTrigger>
+            <TabsTrigger value="tasks" className="flex-shrink-0">Tarefas</TabsTrigger>
+            <TabsTrigger value="materials" className="flex-shrink-0">Materiais</TabsTrigger>
+            <TabsTrigger value="attachments" className="flex-shrink-0">Anexos</TabsTrigger>
+            <TabsTrigger value="comments" className="flex-shrink-0">Comentários</TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-shrink-0">Timeline</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Detalhes Tab */}
         <TabsContent value="details" className="space-y-4">
@@ -262,6 +267,18 @@ export default function AdminWorkOrderDetail() {
                   {workOrder.description || "Sem descrição"}
                 </p>
               </div>
+
+              {workOrder.clientAddress && (
+                <>
+                  <Separator />
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">
+                      Endereço do Cliente
+                    </label>
+                    <p className="text-lg mt-2">{workOrder.clientAddress}</p>
+                  </div>
+                </>
+              )}
 
               {workOrder.internalNotes && (
                 <>
@@ -344,7 +361,7 @@ export default function AdminWorkOrderDetail() {
                 )}
                 <Button
                   variant="outline"
-                  onClick={() => navigate(`/admin/work-orders/edit/${workOrderId}`)}
+                  onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
                 >
                   Editar OS
                 </Button>

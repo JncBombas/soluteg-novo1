@@ -301,23 +301,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Enviar Documentos Card */}
-            <Card className="border-green-200 bg-green-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base md:text-lg text-green-900">Enviar Documentos</CardTitle>
-                <CardDescription className="text-xs">Upload de arquivos para clientes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setLocation("/admin/documentos")}
-                  className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white text-xs md:text-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  Enviar Documentos
-                </Button>
-              </CardContent>
-            </Card>
-
             {/* Gerenciar Documentos Card */}
             <Card className="border-purple-200 bg-purple-50">
               <CardHeader className="pb-3">

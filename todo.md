@@ -493,3 +493,20 @@
 - [x] Adaptar tabela de materiais para mobile (desktop + cards mobile)
 - [x] Testar em diferentes tamanhos de tela
 - [ ] Verificar outras páginas do site (dashboard, clientes, documentos)
+
+## Correções de UX e Bugs
+- [ ] Remover botão duplicado "Enviar Documentos" do dashboard
+- [ ] Adicionar nome do cliente na página de detalhes da OS
+- [ ] Adicionar endereço do cliente na página de detalhes da OS
+- [ ] Tornar data de agendamento editável
+- [ ] Corrigir erro 404 do botão "Editar OS" na aba detalhes
+- [ ] Melhorar navegação de abas em mobile (dropdown ou menu lateral)
+- [ ] Testar todas as correções
+
+## Correções de UX e Bugs - Janeiro 2026 (Nova)
+- [x] Remover botão duplicado "Enviar Documentos" do dashboard
+- [x] Adicionar nome do cliente na página de detalhes da OS
+- [x] Adicionar endereço do cliente na página de detalhes da OS (condicional)
+- [x] Tornar data de agendamento editável
+- [x] Corrigir erro 404 do botão "Editar OS"
+- [x] Melhorar navegação de abas em mobile (scroll horizontal)

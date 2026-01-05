@@ -58,15 +58,50 @@ export async function createWorkOrder(data: Omit<InsertWorkOrder, "osNumber">) {
 }
 
 /**
- * Buscar OS por ID
+ * Buscar OS por ID com dados do cliente
  */
 export async function getWorkOrderById(id: number) {
   const db = await getDb();
   if (!db) return null;
 
+  const { clients } = await import("../drizzle/schema");
+  
   const result = await db
-    .select()
+    .select({
+      // Campos da OS
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      adminId: workOrders.adminId,
+      clientId: workOrders.clientId,
+      type: workOrders.type,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      title: workOrders.title,
+      description: workOrders.description,
+      serviceType: workOrders.serviceType,
+      scheduledDate: workOrders.scheduledDate,
+      startedAt: workOrders.startedAt,
+      completedAt: workOrders.completedAt,
+      estimatedHours: workOrders.estimatedHours,
+      actualHours: workOrders.actualHours,
+      estimatedValue: workOrders.estimatedValue,
+      finalValue: workOrders.finalValue,
+      internalNotes: workOrders.internalNotes,
+      clientNotes: workOrders.clientNotes,
+      cancellationReason: workOrders.cancellationReason,
+      isRecurring: workOrders.isRecurring,
+      recurrenceType: workOrders.recurrenceType,
+      recurrenceDay: workOrders.recurrenceDay,
+      createdAt: workOrders.createdAt,
+      updatedAt: workOrders.updatedAt,
+      // Dados do cliente
+      clientName: clients.name,
+      clientAddress: clients.address,
+      clientPhone: clients.phone,
+      clientEmail: clients.email,
+    })
     .from(workOrders)
+    .leftJoin(clients, eq(workOrders.clientId, clients.id))
     .where(eq(workOrders.id, id))
     .limit(1);
 
