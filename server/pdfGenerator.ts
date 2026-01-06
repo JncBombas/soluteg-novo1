@@ -51,7 +51,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       let headerY = 30;
       
       // Logo no topo centralizado - ajustado para não sobrepor o título
-      const logoPath = path.join(__dirname, 'logo-jnc.png');
+      const logoPath = path.join(__dirname, 'logo-jnc-transparente.png');
       if (fs.existsSync(logoPath)) {
         const logoWidth = 80; // Logo menor para caber melhor
         const logoHeight = 80; // Proporcional (logo é quadrado 1440x1440)

@@ -552,3 +552,9 @@
 - [x] Atualizar logo no PDF
 - [x] Atualizar cores do PDF para combinar com logo
 - [x] Testar site e PDF com novas cores
+
+## Correção de Logos
+- [x] Reverter logo do site para o anterior (JNC Comércio e Serviços)
+- [x] Manter novo logo (JNC Componentes Elétricos) apenas no PDF
+- [x] Remover fundo branco do logo no PDF
+- [x] Testar PDF com logo sem fundo
