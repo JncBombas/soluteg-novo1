@@ -537,3 +537,10 @@
 - [x] Investigar causa do erro 404 ao clicar em "Ver" na listagem de OS
 - [x] Corrigir roteamento para página de detalhes
 - [x] Testar navegação completa
+
+## Bug: Layout do PDF incorreto
+- [x] Logo deve aparecer acima do título "Ordem de Serviço"
+- [x] Data deve aparecer no canto direito inferior do cabeçalho
+- [x] Alinhar nome e telefone do cliente corretamente
+- [x] Mostrar descrição dos materiais na tabela
+- [x] Remover páginas em branco desnecessárias
