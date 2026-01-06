@@ -51,8 +51,24 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       let headerY = 30;
       
       // Logo no topo centralizado - ajustado para não sobrepor o título
-      const logoPath = path.join(__dirname, 'logo-jnc-transparente.png');
-      if (fs.existsSync(logoPath)) {
+      // Tentar múltiplos caminhos para encontrar o logo
+      const possibleLogoPaths = [
+        path.join(__dirname, 'logo-jnc-transparente.png'),
+        path.join(process.cwd(), 'server', 'logo-jnc-transparente.png'),
+        path.join(process.cwd(), 'logo-jnc-transparente.png'),
+        '/home/ubuntu/soluteg-novo/server/logo-jnc-transparente.png'
+      ];
+      
+      let logoPath = '';
+      for (const p of possibleLogoPaths) {
+        if (fs.existsSync(p)) {
+          logoPath = p;
+          console.log('[PDF] Logo encontrado em:', p);
+          break;
+        }
+      }
+      
+      if (logoPath && fs.existsSync(logoPath)) {
         const logoWidth = 80; // Logo menor para caber melhor
         const logoHeight = 80; // Proporcional (logo é quadrado 1440x1440)
         const logoX = (pageWidth - logoWidth) / 2;
