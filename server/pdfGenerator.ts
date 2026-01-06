@@ -48,15 +48,16 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const contentWidth = rightMargin - leftMargin;
 
       // === CABEÇALHO COM LOGO ===
-      let headerY = 40;
+      let headerY = 30;
       
-      // Logo no topo centralizado
+      // Logo no topo centralizado - ajustado para não sobrepor o título
       const logoPath = path.join(__dirname, 'logo-jnc.png');
       if (fs.existsSync(logoPath)) {
-        const logoWidth = 100;
+        const logoWidth = 80; // Logo menor para caber melhor
+        const logoHeight = 80; // Proporcional (logo é quadrado 1440x1440)
         const logoX = (pageWidth - logoWidth) / 2;
-        doc.image(logoPath, logoX, headerY, { width: logoWidth });
-        headerY += 50;
+        doc.image(logoPath, logoX, headerY, { width: logoWidth, height: logoHeight });
+        headerY += logoHeight + 10; // Espaço após o logo
       }
 
       // Título "ORDEM DE SERVIÇO" centralizado abaixo do logo
@@ -70,9 +71,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       
       headerY += 25;
 
-      // Número da OS centralizado
+      // Número da OS centralizado - Cor dourada do logo JNC
       doc.fontSize(14)
-         .fillColor('#FF6B00')
+         .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text(workOrder.osNumber || `OS-${workOrderId}`, leftMargin, headerY, { 
            width: contentWidth, 
@@ -92,8 +93,8 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       
       headerY += 15;
 
-      // Linha divisória do cabeçalho
-      doc.strokeColor('#FF6B00')
+      // Linha divisória do cabeçalho - Cor dourada do logo JNC
+      doc.strokeColor('#D4A84B')
          .lineWidth(2)
          .moveTo(leftMargin, headerY)
          .lineTo(rightMargin, headerY)
@@ -110,7 +111,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
       // Coluna esquerda - Informações da OS
       doc.fontSize(11)
-         .fillColor('#FF6B00')
+         .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text('Informações da Ordem', col1X, infoY);
       
@@ -135,7 +136,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       // Coluna direita - Informações do Cliente
       let clientY = headerY;
       doc.fontSize(11)
-         .fillColor('#FF6B00')
+         .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text('Informações do Cliente', col2X, clientY);
       
@@ -164,7 +165,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       // === DESCRIÇÃO ===
       if (workOrder.description) {
         doc.fontSize(11)
-           .fillColor('#FF6B00')
+           .fillColor('#D4A84B')
            .font('Helvetica-Bold')
            .text('Descrição', leftMargin, currentY);
         
@@ -183,7 +184,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       // === MATERIAIS ===
       if (materials && materials.length > 0) {
         doc.fontSize(11)
-           .fillColor('#FF6B00')
+           .fillColor('#D4A84B')
            .font('Helvetica-Bold')
            .text('Materiais', leftMargin, currentY);
         
@@ -199,7 +200,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
         // Fundo do cabeçalho
         doc.rect(tableLeft, currentY, tableWidth, 18)
-           .fill('#FF6B00');
+           .fill('#D4A84B');
 
         doc.fontSize(8)
            .fillColor('#FFFFFF')
@@ -235,7 +236,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
         // Linha de total
         doc.rect(tableLeft, currentY, tableWidth, 20)
-           .fill('#333333');
+           .fill('#3D4654');
         
         doc.fontSize(10)
            .fillColor('#FFFFFF')
@@ -249,7 +250,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       // === VALORES ESTIMADOS/FINAIS ===
       if (workOrder.estimatedValue || workOrder.finalValue) {
         doc.fontSize(11)
-           .fillColor('#FF6B00')
+           .fillColor('#D4A84B')
            .font('Helvetica-Bold')
            .text('Valores', leftMargin, currentY);
         

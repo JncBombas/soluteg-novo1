@@ -544,3 +544,11 @@
 - [x] Alinhar nome e telefone do cliente corretamente
 - [x] Mostrar descrição dos materiais na tabela
 - [x] Remover páginas em branco desnecessárias
+
+## Atualização de Logo e Cores
+- [x] Converter novo logo (JNC Componentes Elétricos) para PNG
+- [x] Atualizar logo no site
+- [x] Atualizar cores do site para combinar com logo (dourado #D4A84B, cinza escuro #3D4654)
+- [x] Atualizar logo no PDF
+- [x] Atualizar cores do PDF para combinar com logo
+- [x] Testar site e PDF com novas cores
