@@ -558,3 +558,16 @@
 - [x] Manter novo logo (JNC Componentes Elétricos) apenas no PDF
 - [x] Remover fundo branco do logo no PDF
 - [x] Testar PDF com logo sem fundo
+
+
+## Sistema de Checklists/Formulários Genéricos
+- [x] Criar schema do banco para checklists (templates e respostas)
+- [x] Criar templates pré-definidos (Recalque, Dreno, Piscina, Incêndio, Gerador)
+- [x] Implementar endpoints tRPC para CRUD de checklists
+- [x] Criar componentes de UI para formulários dinâmicos
+- [x] Implementar campos condicionais (número de bombas → correntes)
+- [x] Criar componente de captura de assinatura (canvas)
+- [ ] Implementar modal de conclusão com assinaturas (pendente)
+- [x] Adicionar seção de observações no PDF
+- [x] Adicionar assinaturas no PDF
+- [x] Testar fluxo completo

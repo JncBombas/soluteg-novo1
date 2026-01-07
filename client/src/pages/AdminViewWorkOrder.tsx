@@ -270,7 +270,7 @@ export default function AdminViewWorkOrder() {
                       </p>
                     </div>
                   </div>
-                  {workOrder.recurrenceCanceled === 0 && (
+                  {(workOrder as any).recurrenceCanceled === 0 && (
                     <Button
                       variant="outline"
                       onClick={() => setCancelDialogOpen(true)}
@@ -279,7 +279,7 @@ export default function AdminViewWorkOrder() {
                       Cancelar Recorrência
                     </Button>
                   )}
-                  {workOrder.recurrenceCanceled === 1 && (
+                  {(workOrder as any).recurrenceCanceled === 1 && (
                     <Badge variant="outline" className="text-red-600">
                       Recorrência Cancelada
                     </Badge>

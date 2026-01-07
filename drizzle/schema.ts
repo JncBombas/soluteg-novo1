@@ -371,3 +371,73 @@ export const workOrderTimeTracking = mysqlTable("workOrderTimeTracking", {
 
 export type WorkOrderTimeTracking = typeof workOrderTimeTracking.$inferSelect;
 export type InsertWorkOrderTimeTracking = typeof workOrderTimeTracking.$inferInsert;
+
+
+/**
+ * Templates de checklists genéricos (Bombas, Geradores, etc)
+ */
+export const checklistTemplates = mysqlTable("checklistTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // Ex: "Bomba de Recalque", "Gerador"
+  slug: varchar("slug", { length: 50 }).notNull().unique(), // Ex: "bomba_recalque", "gerador"
+  description: text("description"),
+  // JSON com a estrutura do formulário (itens, campos, etc)
+  formStructure: text("formStructure").notNull(),
+  active: int("active").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ChecklistTemplate = typeof checklistTemplates.$inferSelect;
+export type InsertChecklistTemplate = typeof checklistTemplates.$inferInsert;
+
+/**
+ * Tarefas de inspeção (agrupam múltiplos checklists)
+ */
+export const inspectionTasks = mysqlTable("inspectionTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  workOrderId: int("workOrderId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(), // Ex: "Inspeção Mensal"
+  description: text("description"),
+  status: mysqlEnum("status", ["pendente", "em_andamento", "concluida"]).default("pendente").notNull(),
+  
+  // Assinaturas de conclusão
+  collaboratorSignature: text("collaboratorSignature"), // Base64 da assinatura
+  collaboratorName: varchar("collaboratorName", { length: 255 }),
+  collaboratorDocument: varchar("collaboratorDocument", { length: 20 }), // CPF ou RG
+  clientSignature: text("clientSignature"), // Base64 da assinatura
+  clientName: varchar("clientName", { length: 255 }),
+  
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type InspectionTask = typeof inspectionTasks.$inferSelect;
+export type InsertInspectionTask = typeof inspectionTasks.$inferInsert;
+
+/**
+ * Checklists preenchidos (instâncias de templates dentro de uma tarefa)
+ */
+export const checklistInstances = mysqlTable("checklistInstances", {
+  id: int("id").autoincrement().primaryKey(),
+  inspectionTaskId: int("inspectionTaskId").notNull(),
+  templateId: int("templateId").notNull(),
+  
+  // Informações customizadas
+  customTitle: varchar("customTitle", { length: 255 }).notNull(), // Ex: "Bomba de Recalque Bloco 1"
+  brand: varchar("brand", { length: 100 }), // Marca
+  power: varchar("power", { length: 50 }), // Potência
+  
+  // Respostas do formulário em JSON
+  responses: text("responses"), // JSON com todas as respostas
+  
+  // Status
+  isComplete: int("isComplete").default(0).notNull(),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ChecklistInstance = typeof checklistInstances.$inferSelect;
+export type InsertChecklistInstance = typeof checklistInstances.$inferInsert;

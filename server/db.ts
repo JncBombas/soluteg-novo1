@@ -255,8 +255,9 @@ export async function acceptInvite(code: string, name: string, password: string)
     throw new Error("Invite expired");
   }
 
-  // Create admin
+  // Create admin - use email as username
   const result = await db.insert(admins).values({
+    username: invite.email.split('@')[0], // Use part before @ as username
     email: invite.email,
     password,
     name,

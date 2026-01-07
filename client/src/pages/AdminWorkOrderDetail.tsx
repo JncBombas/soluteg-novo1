@@ -26,6 +26,7 @@ import WorkOrderMaterials from "@/components/workorder/WorkOrderMaterials";
 import WorkOrderAttachments from "@/components/workorder/WorkOrderAttachments";
 import WorkOrderComments from "@/components/workorder/WorkOrderComments";
 import WorkOrderTimeline from "@/components/workorder/WorkOrderTimeline";
+import InspectionTasksTab from "@/components/InspectionTasksTab";
 
 export default function AdminWorkOrderDetail() {
   const params = useParams();
@@ -271,9 +272,10 @@ export default function AdminWorkOrderDetail() {
       {/* Main Content with Tabs */}
       <Tabs defaultValue="details" className="space-y-4">
         <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6">
+          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
             <TabsTrigger value="details" className="flex-shrink-0">Detalhes</TabsTrigger>
             <TabsTrigger value="tasks" className="flex-shrink-0">Tarefas</TabsTrigger>
+            <TabsTrigger value="inspections" className="flex-shrink-0">Inspeções</TabsTrigger>
             <TabsTrigger value="materials" className="flex-shrink-0">Materiais</TabsTrigger>
             <TabsTrigger value="attachments" className="flex-shrink-0">Anexos</TabsTrigger>
             <TabsTrigger value="comments" className="flex-shrink-0">Comentários</TabsTrigger>
@@ -358,7 +360,7 @@ export default function AdminWorkOrderDetail() {
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-5 w-5 text-blue-500" />
                     <span className="font-medium">OS Recorrente</span>
-                    {workOrder.recurrenceCanceled === 1 && (
+                    {(workOrder as any).recurrenceCanceled === 1 && (
                       <Badge variant="destructive">Recorrência Cancelada</Badge>
                     )}
                   </div>
@@ -421,6 +423,11 @@ export default function AdminWorkOrderDetail() {
         {/* Tarefas Tab */}
         <TabsContent value="tasks">
           <WorkOrderTasks workOrderId={workOrderId} />
+        </TabsContent>
+
+        {/* Inspeções Tab */}
+        <TabsContent value="inspections">
+          <InspectionTasksTab workOrderId={workOrderId} />
         </TabsContent>
 
         {/* Materiais Tab */}

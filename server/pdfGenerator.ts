@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
-import { getMaterialsByWorkOrderId } from './workOrdersAuxDb';
+import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId } from './workOrdersAuxDb';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,6 +20,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
   // Buscar materiais
   const materials = await getMaterialsByWorkOrderId(workOrderId);
+  
+  // Buscar comentários (apenas os não internos para o cliente)
+  const comments = await getCommentsByWorkOrderId(workOrderId, false);
   
   // Calcular total de materiais
   const totalMaterials = materials.reduce((sum: number, m: any) => sum + (m.totalCost || 0), 0);
@@ -285,27 +288,104 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         }
       }
 
-      // === RODAPÉ ===
-      const footerY = doc.page.height - 100;
+      // === OBSERVAÇÕES (Comentários para o cliente) ===
+      if (comments && comments.length > 0) {
+        // Verificar se precisa de nova página
+        if (currentY > doc.page.height - 200) {
+          doc.addPage();
+          currentY = 40;
+        }
+
+        doc.fontSize(11)
+           .fillColor('#D4A84B')
+           .font('Helvetica-Bold')
+           .text('Observações', leftMargin, currentY);
+        
+        currentY += 15;
+        doc.fontSize(9)
+           .fillColor('#333333')
+           .font('Helvetica');
+
+        comments.forEach((comment: any) => {
+          const commentDate = formatDate(comment.createdAt);
+          doc.font('Helvetica-Bold')
+             .text(`${commentDate}:`, leftMargin, currentY);
+          currentY += 12;
+          doc.font('Helvetica')
+             .text(comment.comment, leftMargin, currentY, { 
+               width: contentWidth, 
+               align: 'justify' 
+             });
+          currentY = doc.y + 10;
+        });
+        
+        currentY += 10;
+      }
+
+      // === RODAPÉ COM ASSINATURAS ===
+      // Verificar se precisa de nova página para as assinaturas
+      if (currentY > doc.page.height - 180) {
+        doc.addPage();
+        currentY = 40;
+      }
+
+      const footerY = Math.max(currentY + 30, doc.page.height - 150);
       
-      // Linha de assinatura
+      // Título da seção de assinaturas
+      doc.fontSize(11)
+         .fillColor('#D4A84B')
+         .font('Helvetica-Bold')
+         .text('Assinaturas', leftMargin, footerY - 30);
+
+      // Duas colunas para assinaturas
+      const sigCol1X = leftMargin + 30;
+      const sigCol2X = pageWidth / 2 + 30;
+      const sigWidth = (contentWidth / 2) - 60;
+      
+      // Assinatura do Colaborador (esquerda)
       doc.strokeColor('#333333')
          .lineWidth(0.5)
-         .moveTo(leftMargin + 100, footerY)
-         .lineTo(rightMargin - 100, footerY)
+         .moveTo(sigCol1X, footerY + 30)
+         .lineTo(sigCol1X + sigWidth, footerY + 30)
          .stroke();
       
       doc.fontSize(9)
          .fillColor('#666666')
          .font('Helvetica')
-         .text('Assinatura do Responsável', leftMargin, footerY + 5, { 
-           width: contentWidth, 
+         .text('Assinatura do Colaborador', sigCol1X, footerY + 35, { 
+           width: sigWidth, 
            align: 'center' 
          });
       
+      doc.fontSize(8)
+         .fillColor('#999999')
+         .text('Nome: _______________________', sigCol1X, footerY + 50, { width: sigWidth });
+      doc.text('Doc: _______________________', sigCol1X, footerY + 65, { width: sigWidth });
+
+      // Assinatura do Cliente (direita)
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(sigCol2X, footerY + 30)
+         .lineTo(sigCol2X + sigWidth, footerY + 30)
+         .stroke();
+      
+      doc.fontSize(9)
+         .fillColor('#666666')
+         .font('Helvetica')
+         .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
+           width: sigWidth, 
+           align: 'center' 
+         });
+      
+      doc.fontSize(8)
+         .fillColor('#999999')
+         .text('Nome: _______________________', sigCol2X, footerY + 50, { width: sigWidth });
+      doc.text('Doc: _______________________', sigCol2X, footerY + 65, { width: sigWidth });
+      
+      // Rodapé final
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', leftMargin, footerY + 25, { 
+         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', leftMargin, footerY + 90, { 
            width: contentWidth, 
            align: 'center' 
          });
