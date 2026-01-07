@@ -618,3 +618,25 @@
 - [x] Verificar se há erro de sintaxe no pdfGenerator.ts
 - [x] Testar geração de PDF após correções
 - [x] Validar que checklists e assinaturas aparecem no PDF
+
+
+## Assinaturas no Fluxo de Conclusão de OS (Nova)
+
+- [ ] Investigar e corrigir bug de edição de cliente
+- [ ] Mover captura de assinaturas para modal de "Concluir OS"
+- [ ] Fazer assinatura do colaborador obrigatória
+- [ ] Fazer assinatura do cliente opcional
+- [ ] Salvar assinaturas na tabela work_orders (não em inspection_tasks)
+- [ ] Ajustar PDF para renderizar assinaturas da OS
+- [ ] Testar fluxo completo de assinaturas
+
+## Status das Tarefas
+
+- [x] Corrigir bug de edição de cliente (endpoints GET/PUT adicionados)
+- [x] Adicionar campos de assinatura à tabela work_orders
+- [ ] Criar modal de assinaturas no fluxo de conclusão de OS
+- [ ] Implementar captura de assinatura do colaborador (obrigatória)
+- [ ] Implementar captura de assinatura do cliente (opcional)
+- [ ] Salvar assinaturas na OS
+- [ ] Ajustar PDF para renderizar assinaturas da OS
+- [ ] Testar fluxo completo de assinaturas
