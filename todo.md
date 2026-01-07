@@ -571,3 +571,17 @@
 - [x] Adicionar seção de observações no PDF
 - [x] Adicionar assinaturas no PDF
 - [x] Testar fluxo completo
+
+
+## Teste de Formulários de Checklist (Janeiro 2026)
+- [x] Verificar que templates estão no banco de dados (5 templates confirmados)
+- [x] Verificar que aba Inspeções aparece na página de detalhes da OS
+- [x] Verificar que botão "Nova Tarefa" está visível
+- [x] Testar criação de tarefa de inspeção
+- [x] Verificar que botão "Adicionar Checklist" aparece
+- [x] Verificar que dropdown mostra os 5 tipos de checklist
+- [ ] Testar seleção de tipo de checklist (Gerador)
+- [ ] Testar preenchimento de formulário dinâmico
+- [ ] Testar salvamento de checklist preenchido
+- [ ] Verificar que checklist aparece na tarefa
+- [ ] Testar conclusão de tarefa com assinaturas
