@@ -610,3 +610,11 @@
 
 - [ ] PDF exportado está vazio (0 bytes) - erro em runtime ao gerar PDF com checklists
 - [ ] Modal de conclusão de tarefa não fecha após clicar em "Concluir Tarefa" - mutation não está completando
+
+
+## Debug: PDF Vazio (0 bytes) - URGENTE
+
+- [x] Investigar logs do servidor para identificar erro
+- [x] Verificar se há erro de sintaxe no pdfGenerator.ts
+- [x] Testar geração de PDF após correções
+- [x] Validar que checklists e assinaturas aparecem no PDF
