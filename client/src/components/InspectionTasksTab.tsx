@@ -76,24 +76,29 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
   const [collaboratorSignature, setCollaboratorSignature] = useState("");
   const [clientName, setClientName] = useState("");
   const [clientSignature, setClientSignature] = useState("");
+  const [deleteChecklistDialogOpen, setDeleteChecklistDialogOpen] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
   // Queries
   const { data: inspectionTasks, isLoading: isLoadingTasks } = trpc.checklists.inspectionTasks.listByWorkOrder.useQuery(
-    { workOrderId }
+    { workOrderId },
+    {
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
 
   const { data: templates } = trpc.checklists.templates.list.useQuery();
 
   // Mutations
   const createTaskMutation = trpc.checklists.inspectionTasks.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Tarefa de inspeção criada com sucesso!");
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
       setIsCreateTaskOpen(false);
       setNewTaskTitle("");
       setNewTaskDescription("");
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao criar tarefa: ${error.message}`);
@@ -101,9 +106,9 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
   });
 
   const deleteTaskMutation = trpc.checklists.inspectionTasks.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Tarefa deletada com sucesso!");
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao deletar tarefa: ${error.message}`);
@@ -111,14 +116,14 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
   });
 
   const createChecklistMutation = trpc.checklists.instances.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Checklist adicionado com sucesso!");
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
       setIsAddChecklistOpen(false);
       setSelectedTemplateId("");
       setCustomTitle("");
       setBrand("");
       setPower("");
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao adicionar checklist: ${error.message}`);
@@ -126,19 +131,22 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
   });
 
   const deleteChecklistMutation = trpc.checklists.instances.delete.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Checklist removido com sucesso!");
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await utils.checklists.inspectionTasks.listByWorkOrder.refetch({ workOrderId });
+      setDeleteChecklistDialogOpen(null);
     },
     onError: (error) => {
       toast.error(`Erro ao remover checklist: ${error.message}`);
+      setDeleteChecklistDialogOpen(null);
     },
   });
 
   const updateResponsesMutation = trpc.checklists.instances.updateResponses.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Respostas salvas com sucesso!");
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao salvar respostas: ${error.message}`);
@@ -146,11 +154,11 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
   });
 
   const completeTaskMutation = trpc.checklists.inspectionTasks.complete.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Tarefa concluída com sucesso!");
+      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
       setIsCompleteTaskOpen(false);
       resetCompleteForm();
-      utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao concluir tarefa: ${error.message}`);
@@ -311,6 +319,9 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
                 setIsCompleteTaskOpen(true);
               }}
               isSavingResponses={updateResponsesMutation.isPending}
+              deleteChecklistDialogOpen={deleteChecklistDialogOpen}
+              setDeleteChecklistDialogOpen={setDeleteChecklistDialogOpen}
+              deleteChecklistMutation={deleteChecklistMutation}
             />
           ))}
         </Accordion>
@@ -498,6 +509,9 @@ interface InspectionTaskItemProps {
   onSaveResponses: (checklistId: number, responses: Record<string, unknown>, isComplete: boolean) => void;
   onCompleteTask: (taskId: number) => void;
   isSavingResponses: boolean;
+  deleteChecklistDialogOpen: number | null;
+  setDeleteChecklistDialogOpen: (id: number | null) => void;
+  deleteChecklistMutation: { isPending: boolean };
 }
 
 function InspectionTaskItem({
@@ -509,6 +523,9 @@ function InspectionTaskItem({
   onSaveResponses,
   onCompleteTask,
   isSavingResponses,
+  deleteChecklistDialogOpen,
+  setDeleteChecklistDialogOpen,
+  deleteChecklistMutation,
 }: InspectionTaskItemProps) {
   const { data: checklists, isLoading } = trpc.checklists.instances.listByTask.useQuery(
     { inspectionTaskId: task.id }
@@ -586,9 +603,21 @@ function InspectionTaskItem({
                               {checklist.isComplete ? "Completo" : "Incompleto"}
                             </Badge>
                             {!isCompleted && (
-                              <AlertDialog>
+                              <AlertDialog 
+                                open={deleteChecklistDialogOpen === checklist.id}
+                                onOpenChange={(open) => {
+                                  if (!open && !deleteChecklistMutation.isPending) {
+                                    setDeleteChecklistDialogOpen(null);
+                                  }
+                                }}
+                              >
                                 <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => setDeleteChecklistDialogOpen(checklist.id)}
+                                  >
                                     <Trash2 className="h-4 w-4 text-destructive" />
                                   </Button>
                                 </AlertDialogTrigger>
@@ -600,13 +629,21 @@ function InspectionTaskItem({
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
+                                    <AlertDialogCancel disabled={deleteChecklistMutation.isPending}>Cancelar</AlertDialogCancel>
+                                    <Button
                                       onClick={() => onDeleteChecklist(checklist.id)}
-                                      className="bg-destructive text-destructive-foreground"
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      disabled={deleteChecklistMutation.isPending}
                                     >
-                                      Remover
-                                    </AlertDialogAction>
+                                      {deleteChecklistMutation.isPending ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Removendo...
+                                        </>
+                                      ) : (
+                                        "Remover"
+                                      )}
+                                    </Button>
                                   </AlertDialogFooter>
                                 </AlertDialogContent>
                               </AlertDialog>

@@ -585,3 +585,9 @@
 - [ ] Testar salvamento de checklist preenchido
 - [ ] Verificar que checklist aparece na tarefa
 - [ ] Testar conclusão de tarefa com assinaturas
+
+## Bug: Checklists não atualizam automaticamente (Urgente)
+- [x] Adicionar invalidação de cache após adicionar checklist
+- [x] Adicionar invalidação de cache após deletar checklist
+- [x] Adicionar invalidação de cache após salvar respostas
+- [x] Corrigir atualização automática - ADIÇÃO e DELEÇÃO funcionando
