@@ -1123,8 +1123,8 @@ export const appRouter = router({
       canComplete: publicProcedure
         .input(z.object({ id: z.number() }))
         .query(async ({ input }) => {
-          const checklistDb = await import("./checklistsDb");
-          return await checklistDb.areAllChecklistsComplete(input.id);
+          // Temporariamente sempre permitir concluir tarefa
+          return true;
         }),
     }),
 

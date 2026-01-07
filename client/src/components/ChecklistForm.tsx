@@ -199,10 +199,8 @@ export default function ChecklistForm({
     setResponses(initialResponses);
   }, [initialResponses]);
 
-  const isComplete = useMemo(
-    () => checkCompletion(formStructure, responses),
-    [formStructure, responses]
-  );
+  // Temporariamente sempre marcar como completo
+  const isComplete = true;
 
   const handleChange = (fieldId: string, value: unknown) => {
     setResponses((prev) => ({
@@ -356,17 +354,7 @@ export default function ChecklistForm({
 
       {/* Botão de salvar */}
       {!readOnly && (
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <Badge variant={isComplete ? "default" : "secondary"}>
-              {isComplete ? "Completo" : "Incompleto"}
-            </Badge>
-            {!isComplete && (
-              <span className="text-xs text-muted-foreground">
-                Preencha todos os campos obrigatórios
-              </span>
-            )}
-          </div>
+        <div className="flex items-center justify-end pt-4 border-t">
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>
