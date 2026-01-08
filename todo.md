@@ -640,3 +640,15 @@
 - [ ] Salvar assinaturas na OS
 - [ ] Ajustar PDF para renderizar assinaturas da OS
 - [ ] Testar fluxo completo de assinaturas
+
+## Implementação Completa - Assinaturas e PDF
+
+- [x] Endpoints GET/PUT para edição de cliente
+- [x] Campos de assinatura adicionados à tabela work_orders
+- [x] Modal de assinaturas na conclusão de OS
+- [x] Endpoint de conclusão de OS com assinaturas
+- [x] PDF renderizando checklists preenchidos
+- [x] Seção de assinaturas no PDF
+- [ ] Salvar assinaturas digitais no banco de dados (bug a corrigir)
+- [ ] Renderizar assinaturas digitais no PDF (depende do anterior)
+

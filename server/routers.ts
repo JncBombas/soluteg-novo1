@@ -617,7 +617,33 @@ export const appRouter = router({
         return { success: true, message: "OS deletada com sucesso" };
       }),
 
-    // Cancelar recorrência
+    // Concluir OS com assinaturas
+    complete: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        collaboratorName: z.string().min(1),
+        collaboratorSignature: z.string().min(1),
+        clientName: z.string().optional(),
+        clientSignature: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
+        
+        await workOrdersDb.updateWorkOrder(id, {
+          status: "concluida",
+          completedAt: new Date(),
+          collaboratorName,
+          collaboratorSignature,
+          clientName: clientName || undefined,
+          clientSignature: clientSignature || undefined,
+          signedAt: new Date(),
+        });
+        
+        return { success: true, message: "OS concluida com sucesso" };
+      }),
+
+    // Cancelar recorrencia
     cancelRecurrence: publicProcedure
       .input(z.object({
         id: z.number(),
