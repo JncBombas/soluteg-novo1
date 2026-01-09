@@ -54,12 +54,21 @@ export default function CompleteWorkOrderModal({
     }
 
     try {
-      await onComplete({
+      const completeData = {
         collaboratorName,
         collaboratorSignature,
         clientName: clientName.trim() || undefined,
         clientSignature: clientSignature || undefined,
+      };
+      
+      console.log("[CompleteWorkOrderModal] Enviando dados:", {
+        collaboratorName: completeData.collaboratorName,
+        collaboratorSignatureSize: completeData.collaboratorSignature?.length,
+        clientName: completeData.clientName,
+        clientSignatureSize: completeData.clientSignature?.length,
       });
+      
+      await onComplete(completeData);
 
       setSuccess(true);
       setTimeout(() => {

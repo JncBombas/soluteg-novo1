@@ -98,6 +98,14 @@ export default function AdminWorkOrderDetail() {
   });
 
   const handleCompleteWorkOrder = async (data: any) => {
+    console.log("[AdminWorkOrderDetail] handleCompleteWorkOrder chamado com:", {
+      workOrderId,
+      collaboratorName: data.collaboratorName,
+      collaboratorSignatureSize: data.collaboratorSignature?.length,
+      clientName: data.clientName,
+      clientSignatureSize: data.clientSignature?.length,
+    });
+    
     completeWorkOrderMutation.mutate({
       id: workOrderId,
       ...data,

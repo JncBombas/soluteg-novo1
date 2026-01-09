@@ -630,16 +630,27 @@ export const appRouter = router({
         const workOrdersDb = await import("./workOrdersDb");
         const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
         
-        await workOrdersDb.updateWorkOrder(id, {
-          status: "concluida",
+        console.log("[workOrders.complete] Recebido:", {
+          id,
+          collaboratorName,
+          collaboratorSignatureSize: collaboratorSignature?.length,
+          clientName,
+          clientSignatureSize: clientSignature?.length,
+        });
+        
+        const updateData: Partial<any> = {
+          status: "concluida" as const,
           completedAt: new Date(),
           collaboratorName,
           collaboratorSignature,
           clientName: clientName || undefined,
           clientSignature: clientSignature || undefined,
           signedAt: new Date(),
-        });
+        };
         
+        await workOrdersDb.updateWorkOrder(id, updateData as any);
+        
+        console.log("[workOrders.complete] OS atualizada com sucesso");
         return { success: true, message: "OS concluida com sucesso" };
       }),
 

@@ -652,3 +652,12 @@
 - [ ] Salvar assinaturas digitais no banco de dados (bug a corrigir)
 - [ ] Renderizar assinaturas digitais no PDF (depende do anterior)
 
+
+## Correção de Assinaturas Digitais (Atual)
+- [x] Corrigir import duplicado de useState em AdminWorkOrderDetail.tsx
+- [x] Otimizar tamanho de assinatura (JPEG 0.8 em vez de PNG)
+- [x] Adicionar logs para debugar fluxo de assinaturas
+- [x] Melhorar tratamento de diferentes formatos de assinatura no PDF
+- [x] Corrigir tipo de dados em updateWorkOrder (TypeScript error)
+- [ ] Testar fluxo completo de assinaturas (desenhar, salvar, renderizar no PDF)
+- [ ] Verificar se assinaturas aparecem no PDF após conclusão da OS
