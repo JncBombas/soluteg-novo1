@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, osNumber, title, status, type FROM workOrders LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, osNumber, title, status, type FROM workOrders LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "osNumber": "OS-2025-0001",
+      "title": "Visita mensál ",
+      "status": "aberta",
+      "type": "rotina"
+    },
+    {
+      "id": "60001",
+      "osNumber": "OS-2025-0002",
+      "title": "Teste de criação de OS v2",
+      "status": "em_andamento",
+      "type": "emergencial"
+    },
+    {
+      "id": "60002",
+      "osNumber": "OS-2025-0003",
+      "title": "Gerador com ruído anormal",
+      "status": "aguardando_pagamento",
+      "type": "emergencial"
+    },
+    {
+      "id": "90001",
+      "osNumber": "OS-2026-0001",
+      "title": "Instalação dos hidrômetros",
+      "status": "aberta",
+      "type": "orcamento"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tosNumber\ttitle\tstatus\ttype\n1\tOS-2025-0001\tVisita mensál \taberta\trotina\n60001\tOS-2025-0002\tTeste de criação de OS v2\tem_andamento\temergencial\n60002\tOS-2025-0003\tGerador com ruído anormal\taguardando_pagamento\temergencial\n90001\tOS-2026-0001\tInstalação dos hidrômetros\taberta\torcamento\n",
+  "stderr": "",
+  "execution_time_ms": 112
+}

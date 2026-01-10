@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,13 @@ export default function AdminWorkOrders() {
   const { data: workOrders = [], isLoading } = trpc.workOrders.list.useQuery({
     adminId,
   });
+  
+  // Debug logs
+  useEffect(() => {
+    console.log("[AdminWorkOrders] adminId:", adminId);
+    console.log("[AdminWorkOrders] workOrders:", workOrders);
+    console.log("[AdminWorkOrders] isLoading:", isLoading);
+  }, [workOrders, isLoading, adminId]);
   
   const exportBatchMutation = trpc.workOrders.exportBatch.useMutation();
 
