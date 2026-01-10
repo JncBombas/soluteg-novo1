@@ -661,3 +661,12 @@
 - [x] Corrigir tipo de dados em updateWorkOrder (TypeScript error)
 - [ ] Testar fluxo completo de assinaturas (desenhar, salvar, renderizar no PDF)
 - [ ] Verificar se assinaturas aparecem no PDF após conclusão da OS
+
+
+## Correção Sistema de Cadastro de Clientes (Nova)
+- [x] Corrigir formulário para não pedir usuário/senha quando cliente é sem_portal
+- [x] Bloquear login de clientes sem_portal no endpoint de autenticação
+- [x] Tornar campos username e password opcionais no schema quando tipo é sem_portal
+- [x] Testar cadastro de cliente sem_portal (apenas dados básicos)
+- [x] Testar que cliente sem_portal não consegue fazer login
+- [x] Testar cadastro de cliente com_portal (com usuário e senha)

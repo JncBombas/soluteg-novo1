@@ -64,6 +64,11 @@ async function startServer() {
         return res.status(403).json({ message: "Cliente inativo" });
       }
       
+      // Bloquear login de clientes sem acesso ao portal
+      if (client.type === "sem_portal") {
+        return res.status(403).json({ message: "Este cliente não possui acesso ao portal. Entre em contato com o administrador." });
+      }
+      
       await updateClientLastLogin(client.id);
       
       res.json({

@@ -84,12 +84,27 @@ export default function AdminClients() {
       return;
     }
 
+    // Validação específica para cliente com portal
+    if (formData.type === "com_portal") {
+      if (!formData.username.trim()) {
+        setError("Nome de usuário é obrigatório para clientes com acesso ao portal");
+        return;
+      }
+      if (!formData.password.trim()) {
+        setError("Senha é obrigatória para clientes com acesso ao portal");
+        return;
+      }
+    }
+
     try {
       const response = await fetch("/api/admin-clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          // Para clientes sem portal, enviar username e password vazios
+          username: formData.type === "sem_portal" ? `sem_portal_${Date.now()}` : formData.username,
+          password: formData.type === "sem_portal" ? `disabled_${Date.now()}` : formData.password,
           adminId,
         }),
       });
@@ -143,6 +158,21 @@ export default function AdminClients() {
     }
   };
 
+  // Validação do formulário
+  const isFormValid = () => {
+    if (!formData.name.trim()) return false;
+    if (!isValidCnpjCpf(formData.cnpjCpf)) return false;
+    if (!isValidPhone(formData.phone)) return false;
+    
+    // Para clientes com portal, exigir username e senha
+    if (formData.type === "com_portal") {
+      if (!formData.username.trim()) return false;
+      if (!formData.password.trim()) return false;
+    }
+    
+    return true;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -185,11 +215,11 @@ export default function AdminClients() {
               Novo Cliente
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Cliente</DialogTitle>
               <DialogDescription>
-                Preencha os dados do cliente para criar uma nova conta
+                Preencha os dados do cliente
               </DialogDescription>
             </DialogHeader>
 
@@ -201,43 +231,42 @@ export default function AdminClients() {
                 </Alert>
               )}
 
+              {/* Tipo de Cliente - PRIMEIRO para condicionar os outros campos */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nome</label>
+                <label className="text-sm font-medium">Tipo de Cliente *</label>
+                <Select 
+                  value={formData.type} 
+                  onValueChange={(value: "com_portal" | "sem_portal") => {
+                    setFormData({ 
+                      ...formData, 
+                      type: value,
+                      // Limpar username e senha ao mudar para sem_portal
+                      username: value === "sem_portal" ? "" : formData.username,
+                      password: value === "sem_portal" ? "" : formData.password,
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="com_portal">Com Portal (Acesso ao painel)</SelectItem>
+                    <SelectItem value="sem_portal">Sem Portal (Apenas cadastro para OS)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-slate-500">
+                  {formData.type === "com_portal" 
+                    ? "Cliente terá acesso ao portal para ver documentos e abrir OS"
+                    : "Cliente será cadastrado apenas para vincular em Ordens de Serviço (sem login)"}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome *</label>
                 <Input
-                  placeholder="Nome completo"
+                  placeholder="Nome completo ou razão social"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">E-mail (opcional)</label>
-                <Input
-                  type="email"
-                  placeholder="cliente@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Nome de Usuário</label>
-                <Input
-                  placeholder="nome_usuario"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Senha</label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                 />
               </div>
@@ -275,22 +304,61 @@ export default function AdminClients() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo de Cliente</label>
-                <Select value={formData.type} onValueChange={(value: any) => setFormData({ ...formData, type: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="com_portal">Com Portal (Acesso ao painel)</SelectItem>
-                    <SelectItem value="sem_portal">Sem Portal (Apenas cadastro)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium">E-mail (opcional)</label>
+                <Input
+                  type="email"
+                  placeholder="cliente@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Endereço (opcional)</label>
+                <Input
+                  placeholder="Rua, número, bairro, cidade"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
+              </div>
+
+              {/* Campos de login - APENAS para clientes com portal */}
+              {formData.type === "com_portal" && (
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-sm font-medium text-slate-700 mb-3">Dados de Acesso ao Portal</p>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Nome de Usuário *</label>
+                      <Input
+                        placeholder="nome_usuario"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                        required
+                      />
+                      <p className="text-xs text-slate-500">
+                        O cliente usará este nome para fazer login no portal
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Senha *</label>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <Button 
                 type="submit" 
                 className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={!isValidCnpjCpf(formData.cnpjCpf) || !isValidPhone(formData.phone)}
+                disabled={!isFormValid()}
               >
                 Criar Cliente
               </Button>
@@ -326,9 +394,8 @@ export default function AdminClients() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Usuário</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Tipo</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -336,8 +403,14 @@ export default function AdminClients() {
                   {paginatedClients.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.name}</TableCell>
-                      <TableCell className="font-mono text-sm">{client.username}</TableCell>
-                      <TableCell className="text-sm">{client.email}</TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {client.type === "sem_portal" ? (
+                          <span className="text-slate-400 italic">-</span>
+                        ) : (
+                          client.username
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm">{client.phone || "-"}</TableCell>
                       <TableCell className="text-sm">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           client.type === "com_portal"
@@ -347,7 +420,6 @@ export default function AdminClients() {
                           {client.type === "com_portal" ? "Com Portal" : "Sem Portal"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm">{client.phone || "-"}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
                           size="sm"
