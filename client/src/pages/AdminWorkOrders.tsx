@@ -18,6 +18,7 @@ export default function AdminWorkOrders() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   
   // Seleção múltipla
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -130,6 +131,28 @@ export default function AdminWorkOrders() {
     return labels[priority] || priority;
   };
 
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      rotina: "Rotina",
+      emergencial: "Emergencial",
+      orcamento: "Orçamento",
+    };
+    return labels[type] || type;
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case "rotina":
+        return "bg-blue-100 text-blue-800";
+      case "emergencial":
+        return "bg-red-100 text-red-800";
+      case "orcamento":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   // Filtrar ordens de serviço
   const filteredWorkOrders = useMemo(() => {
     return workOrders.filter((order) => {
@@ -144,9 +167,12 @@ export default function AdminWorkOrders() {
       // Filtro de prioridade
       const matchesPriority = priorityFilter === "all" || order.priority === priorityFilter;
       
-      return matchesSearch && matchesStatus && matchesPriority;
+      // Filtro de tipo
+      const matchesType = typeFilter === "all" || order.type === typeFilter;
+      
+      return matchesSearch && matchesStatus && matchesPriority && matchesType;
     });
-  }, [workOrders, searchTerm, statusFilter, priorityFilter]);
+  }, [workOrders, searchTerm, statusFilter, priorityFilter, typeFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -221,6 +247,19 @@ export default function AdminWorkOrders() {
                 <SelectItem value="normal">Normal</SelectItem>
                 <SelectItem value="alta">Alta</SelectItem>
                 <SelectItem value="critica">Crítica</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filtro de Tipo */}
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="rotina">Rotina</SelectItem>
+                <SelectItem value="emergencial">Emergencial</SelectItem>
+                <SelectItem value="orcamento">Orçamento</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -315,11 +354,14 @@ export default function AdminWorkOrders() {
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <h3 className="text-lg md:text-xl font-semibold">{order.osNumber}</h3>
+                      <span className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getTypeColor(order.type)}`}>
+                        {getTypeLabel(order.type)}
+                      </span>
                       <span className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getStatusColor(order.status)}`}>
                         {getStatusLabel(order.status)}
                       </span>
-                      <span className={`text-xs md:text-sm font-medium ${getPriorityColor(order.priority)}`}>
-                        {getPriorityLabel(order.priority)}
+                      <span className={`px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium ${getPriorityColor(order.priority)}`}>
+                        ● {getPriorityLabel(order.priority)}
                       </span>
                     </div>
                     <p className="text-gray-700 mb-3 text-sm md:text-base">{order.title}</p>
