@@ -661,3 +661,8 @@
 - [x] Corrigir tipo de dados em updateWorkOrder (TypeScript error)
 - [ ] Testar fluxo completo de assinaturas (desenhar, salvar, renderizar no PDF)
 - [ ] Verificar se assinaturas aparecem no PDF após conclusão da OS
+
+## Bug Fix - Listagem de OS (Corrigido)
+- [x] OS não apareciam na lista (problema no endpoint de listagem)
+- [x] Corrigido: Substituído Drizzle ORM por SQL raw na função listWorkOrders
+- [x] Agora todas as OS aparecem corretamente na página de administração

@@ -1,0 +1,42 @@
+{
+  "query": "SELECT * FROM workOrders LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT * FROM workOrders LIMIT 1;",
+  "rows": [
+    {
+      "id": "1",
+      "adminId": "1",
+      "clientId": "60001",
+      "osNumber": "OS-2025-0001",
+      "type": "rotina",
+      "priority": "normal",
+      "title": "Visita mensál ",
+      "description": "Vistoria do grupo gerador de backup do condomínio. ",
+      "serviceType": "Manutenção preventiva ",
+      "status": "aberta",
+      "scheduledDate": "2025-12-22 00:00:00",
+      "startedAt": "NULL",
+      "completedAt": "NULL",
+      "estimatedHours": "NULL",
+      "actualHours": "NULL",
+      "estimatedValue": "NULL",
+      "finalValue": "NULL",
+      "approvedBy": "NULL",
+      "approvedAt": "NULL",
+      "isRecurring": "1",
+      "recurrenceType": "mensal_fixo",
+      "recurrenceDay": "16",
+      "recurrenceCanceled": "0",
+      "parentOsId": "NULL",
+      "internalNotes": "NULL",
+      "clientNotes": "NULL",
+      "cancellationReason": "NULL",
+      "attachments": "NULL",
+      "createdAt": "2025-12-21 12:53:00",
+      "updatedAt": "2025-12-21 12:53:00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tadminId\tclientId\tosNumber\ttype\tpriority\ttitle\tdescription\tserviceType\tstatus\tscheduledDate\tstartedAt\tcompletedAt\testimatedHours\tactualHours\testimatedValue\tfinalValue\tapprovedBy\tapprovedAt\tisRecurring\trecurrenceType\trecurrenceDay\trecurrenceCanceled\tparentOsId\tinternalNotes\tclientNotes\tcancellationReason\tattachments\tcreatedAt\tupdatedAt\n1\t1\t60001\tOS-2025-0001\trotina\tnormal\tVisita mensál \tVistoria do grupo gerador de backup do condomínio. \tManutenção preventiva \taberta\t2025-12-22 00:00:00\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\tNULL\t1\tmensal_fixo\t16\t0\tNULL\tNULL\tNULL\tNULL\tNULL\t2025-12-21 12:53:00\t2025-12-21 12:53:00\n",
+  "stderr": "",
+  "execution_time_ms": 101
+}
