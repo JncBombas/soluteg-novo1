@@ -1,1 +1,0 @@
-ALTER TABLE `clients` ADD `type` enum('com_portal','sem_portal') DEFAULT 'com_portal' NOT NULL;

@@ -1,9 +1,0 @@
-{
-  "query": "CREATE TABLE IF NOT EXISTS workOrderComments (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  workOrderId INT NOT NULL,\n  userId VARCHAR(100) NOT NULL,\n  userType ENUM('admin', 'client') NOT NULL,\n  comment TEXT NOT NULL,\n  isInternal INT DEFAULT 1 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_workOrderId (workOrderId),\n  FOREIGN KEY (workOrderId) REFERENCES workOrders(id) ON DELETE CASCADE\n);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute CREATE TABLE IF NOT EXISTS workOrderComments (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  workOrderId INT NOT NULL,\n  userId VARCHAR(100) NOT NULL,\n  userType ENUM('admin', 'client') NOT NULL,\n  comment TEXT NOT NULL,\n  isInternal INT DEFAULT 1 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX idx_workOrderId (workOrderId),\n  FOREIGN KEY (workOrderId) REFERENCES workOrders(id) ON DELETE CASCADE\n);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 267
-}

@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO clients (adminId, name, email, username, password, active) VALUES (1, 'Cliente Novo', 'cliente@novo.com', 'Cliente Novo', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36P4/KFm', 1);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute INSERT INTO clients (adminId, name, email, username, password, active) VALUES (1, 'Cliente Novo', 'cliente@novo.com', 'Cliente Novo', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcg7b3XeKeUxWdeS86E36P4/KFm', 1);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 67
-}
