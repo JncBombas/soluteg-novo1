@@ -396,6 +396,16 @@
 
 ### Fase 5: Recorrência e Automação
 - [ ] Implementar lógica de recorrência
+
+## Criação de Templates de Checklists (Nova)
+- [x] Criar template Bomba de Recalque no banco de dados
+- [x] Criar template Bomba de Dreno no banco de dados
+- [x] Criar template Bomba de Piscina no banco de dados
+- [x] Criar template Bomba de Incêndio no banco de dados
+- [x] Criar template Gerador no banco de dados
+- [x] Implementar formulários dinâmicos para cada tipo
+- [x] Testar adição de checklists de cada tipo
+- [x] Testar preenchimento e salvamento dos formulários
 - [ ] Criar job scheduler
 - [ ] Adicionar sistema de notificações
 
@@ -670,3 +680,11 @@
 - [x] Testar cadastro de cliente sem_portal (apenas dados básicos)
 - [x] Testar que cliente sem_portal não consegue fazer login
 - [x] Testar cadastro de cliente com_portal (com usuário e senha)
+
+
+## Testes de Cadastro e Alteração de Clientes
+- [ ] Testar cadastro de cliente com todos os campos preenchidos
+- [ ] Testar cadastro de cliente com campos opcionais vazios
+- [ ] Testar alteração de dados de cliente existente
+- [ ] Testar exclusão de cliente
+- [ ] Verificar se dados estão sendo salvos corretamente no banco de dados
