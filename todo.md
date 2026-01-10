@@ -695,3 +695,11 @@
 - [x] Criar admin padrão (jnc bombas / 011992)
 - [x] Testar login do admin
 - [x] Verificar acesso ao dashboard administrativo
+
+
+## Correção Crítica de Login do Admin (Resolvido)
+- [x] Adicionar coluna username na tabela admins
+- [x] Inserir admin padrão (jnc bombas / 011992)
+- [x] Testar login com sucesso
+- [x] Verificar acesso ao dashboard administrativo
+- [x] Sistema 100% funcional
