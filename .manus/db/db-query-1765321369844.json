@@ -1,0 +1,27 @@
+{
+  "query": "SELECT * FROM workOrders_old LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT * FROM workOrders_old LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "adminId": "1",
+      "clientId": "30001",
+      "osNumber": "OS-2025-001",
+      "title": "Manutenção ",
+      "description": "Teste de OS",
+      "serviceType": "Instalações elétricas ",
+      "status": "em_andamento",
+      "priority": "media",
+      "scheduledDate": "2025-12-03 00:00:00",
+      "completedDate": "NULL",
+      "estimatedHours": "12",
+      "actualHours": "NULL",
+      "createdAt": "2025-11-30 03:51:41",
+      "updatedAt": "2025-11-30 13:08:47"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tadminId\tclientId\tosNumber\ttitle\tdescription\tserviceType\tstatus\tpriority\tscheduledDate\tcompletedDate\testimatedHours\tactualHours\tcreatedAt\tupdatedAt\n1\t1\t30001\tOS-2025-001\tManutenção \tTeste de OS\tInstalações elétricas \tem_andamento\tmedia\t2025-12-03 00:00:00\tNULL\t12\tNULL\t2025-11-30 03:51:41\t2025-11-30 13:08:47\n",
+  "stderr": "",
+  "execution_time_ms": 51
+}
