@@ -158,53 +158,6 @@ async function startServer() {
     }
   });
   
-  // Get admin client by ID
-  app.get("/api/admin-clients/:id", async (req, res) => {
-    try {
-      const { getClientById } = await import("../db");
-      const client = await getClientById(parseInt(req.params.id));
-      
-      if (!client) {
-        return res.status(404).json({ message: "Cliente não encontrado" });
-      }
-      
-      res.json(client);
-    } catch (error) {
-      console.error("Get client error:", error);
-      res.status(500).json({ message: "Erro ao carregar cliente" });
-    }
-  });
-  
-  // Update admin client
-  app.put("/api/admin-clients/:id", async (req, res) => {
-    try {
-      const { updateClientSchema } = await import("../validation");
-      const validation = updateClientSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
-      }
-      
-      const { name, email, username, cnpjCpf, phone, address, type } = validation.data;
-      const { updateClient } = await import("../db");
-      
-      await updateClient(parseInt(req.params.id), {
-        name,
-        email: email || undefined,
-        username,
-        cnpjCpf,
-        phone,
-        address,
-        type,
-      });
-      
-      res.json({ success: true, message: "Cliente atualizado com sucesso" });
-    } catch (error) {
-      console.error("Update client error:", error);
-      res.status(500).json({ message: "Erro ao atualizar cliente" });
-    }
-  });
-  
   // Delete admin client
   app.delete("/api/admin-clients/:id", async (req, res) => {
     try {
