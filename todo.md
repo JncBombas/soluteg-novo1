@@ -688,3 +688,10 @@
 - [ ] Testar alteração de dados de cliente existente
 - [ ] Testar exclusão de cliente
 - [ ] Verificar se dados estão sendo salvos corretamente no banco de dados
+
+
+## Login do Admin (Corrigido)
+- [x] Restaurar tabela admins no banco de dados
+- [x] Criar admin padrão (jnc bombas / 011992)
+- [x] Testar login do admin
+- [x] Verificar acesso ao dashboard administrativo
