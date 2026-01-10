@@ -482,17 +482,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       if (collaboratorSig) {
         try {
-          console.log('[PDF] Renderizando assinatura do colaborador, tamanho:', collaboratorSig?.length);
-          // Extrair base64 da assinatura (pode ser data URL ou apenas base64)
-          let base64Data = collaboratorSig;
-          if (collaboratorSig.includes(',')) {
-            base64Data = collaboratorSig.split(',')[1];
-          }
-          const sigBuffer = Buffer.from(base64Data, 'base64');
+          const sigBuffer = Buffer.from(collaboratorSig.split(',')[1], 'base64');
           doc.image(sigBuffer, sigCol1X, footerY - 40, { width: sigWidth, height: 60 });
-          console.log('[PDF] Assinatura do colaborador renderizada com sucesso');
         } catch (e) {
-          console.error('[PDF] Erro ao renderizar assinatura do colaborador:', e);
           doc.strokeColor('#333333')
              .lineWidth(0.5)
              .moveTo(sigCol1X, footerY + 30)
@@ -500,7 +492,6 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
              .stroke();
         }
       } else {
-        console.log('[PDF] Nenhuma assinatura do colaborador encontrada');
         doc.strokeColor('#333333')
            .lineWidth(0.5)
            .moveTo(sigCol1X, footerY + 30)
