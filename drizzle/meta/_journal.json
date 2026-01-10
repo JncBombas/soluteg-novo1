@@ -1,5 +1,118 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1763900424629,
+      "tag": "0000_purple_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1763900484137,
+      "tag": "0001_equal_shape",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1763902867911,
+      "tag": "0002_aberrant_surge",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1763998868227,
+      "tag": "0003_typical_misty_knight",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1764008191263,
+      "tag": "0004_noisy_fenris",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1764008555736,
+      "tag": "0005_modern_pete_wisdom",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1764015068847,
+      "tag": "0006_lonely_nightmare",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1764093129085,
+      "tag": "0007_closed_barracuda",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1764202909359,
+      "tag": "0008_ambitious_multiple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1764208398575,
+      "tag": "0009_perfect_frank_castle",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1764281025153,
+      "tag": "0010_nasty_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1764282511480,
+      "tag": "0011_worthless_liz_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1764361432817,
+      "tag": "0012_exotic_shatterstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1764456337870,
+      "tag": "0013_fantastic_madame_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1764700955272,
+      "tag": "0014_daffy_jigsaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1768076317437,
+      "tag": "0015_peaceful_madripoor",
+      "breakpoints": true
+    }
+  ]
 }
