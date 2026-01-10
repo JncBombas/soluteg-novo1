@@ -509,15 +509,7 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         const workOrdersDb = await import("./workOrdersDb");
-        // Remover filtro de adminId para mostrar todas as OS
-        const filters = {
-          clientId: input.clientId,
-          type: input.type,
-          status: input.status,
-          // adminId removido propositalmente
-        };
-        const result = await workOrdersDb.listWorkOrders(filters);
-        return result;
+        return await workOrdersDb.listWorkOrders(input);
       }),
 
     // Buscar OS por ID
@@ -625,44 +617,7 @@ export const appRouter = router({
         return { success: true, message: "OS deletada com sucesso" };
       }),
 
-    // Concluir OS com assinaturas
-    complete: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        collaboratorName: z.string().min(1),
-        collaboratorSignature: z.string().min(1),
-        clientName: z.string().optional(),
-        clientSignature: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const workOrdersDb = await import("./workOrdersDb");
-        const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
-        
-        console.log("[workOrders.complete] Recebido:", {
-          id,
-          collaboratorName,
-          collaboratorSignatureSize: collaboratorSignature?.length,
-          clientName,
-          clientSignatureSize: clientSignature?.length,
-        });
-        
-        const updateData: Partial<any> = {
-          status: "concluida" as const,
-          completedAt: new Date(),
-          collaboratorName,
-          collaboratorSignature,
-          clientName: clientName || undefined,
-          clientSignature: clientSignature || undefined,
-          signedAt: new Date(),
-        };
-        
-        await workOrdersDb.updateWorkOrder(id, updateData as any);
-        
-        console.log("[workOrders.complete] OS atualizada com sucesso");
-        return { success: true, message: "OS concluida com sucesso" };
-      }),
-
-    // Cancelar recorrencia
+    // Cancelar recorrência
     cancelRecurrence: publicProcedure
       .input(z.object({
         id: z.number(),
@@ -1168,8 +1123,8 @@ export const appRouter = router({
       canComplete: publicProcedure
         .input(z.object({ id: z.number() }))
         .query(async ({ input }) => {
-          // Temporariamente sempre permitir concluir tarefa
-          return true;
+          const checklistDb = await import("./checklistsDb");
+          return await checklistDb.areAllChecklistsComplete(input.id);
         }),
     }),
 

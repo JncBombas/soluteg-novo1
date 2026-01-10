@@ -122,14 +122,22 @@ export async function listWorkOrders(filters: {
   const db = await getDb();
   if (!db) return [];
 
-  try {
-    // Usar SQL raw para evitar problemas com Drizzle
-    const result = await db.execute(sql`SELECT * FROM workOrders ORDER BY createdAt DESC`);
-    return result as any;
-  } catch (error) {
-    console.error("[listWorkOrders] Error:", error);
-    return [];
+  let query = db.select().from(workOrders);
+
+  const conditions = [];
+  if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
+  if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
+  if (filters.type) conditions.push(eq(workOrders.type, filters.type as any));
+  if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
+  if (filters.startDate) conditions.push(gte(workOrders.createdAt, filters.startDate));
+  if (filters.endDate) conditions.push(lte(workOrders.createdAt, filters.endDate));
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
   }
+
+  const result = await query.orderBy(desc(workOrders.createdAt));
+  return result;
 }
 
 /**
