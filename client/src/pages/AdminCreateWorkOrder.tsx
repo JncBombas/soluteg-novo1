@@ -122,7 +122,7 @@ export default function AdminCreateWorkOrder() {
         description: formData.description || undefined,
         serviceType: formData.serviceType || undefined,
         priority: formData.priority,
-        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
+        scheduledDate: formData.scheduledDate || undefined,
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : undefined,
       });
 

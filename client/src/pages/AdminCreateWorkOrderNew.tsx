@@ -111,7 +111,7 @@ export default function AdminCreateWorkOrderNew() {
         title: formData.title,
         description: formData.description || undefined,
         serviceType: formData.serviceType || undefined,
-        scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : undefined,
+        scheduledDate: formData.scheduledDate || undefined,
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : undefined,
         estimatedValue: formData.estimatedValue ? parseFloat(formData.estimatedValue) : undefined,
         isRecurring: formData.isRecurring ? 1 : 0,

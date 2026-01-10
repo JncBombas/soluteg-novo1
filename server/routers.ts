@@ -530,7 +530,7 @@ export const appRouter = router({
         title: z.string().min(1),
         description: z.string().optional(),
         serviceType: z.string().optional(),
-        scheduledDate: z.date().optional(),
+        scheduledDate: z.string().optional(),
         estimatedHours: z.number().optional(),
         estimatedValue: z.number().optional(),
         isRecurring: z.number().default(0),
@@ -539,7 +539,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const workOrdersDb = await import("./workOrdersDb");
-        const result = await workOrdersDb.createWorkOrder(input);
+        const convertedInput = {
+          ...input,
+          scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : undefined,
+        };
+        const result = await workOrdersDb.createWorkOrder(convertedInput as any);
         return { success: true, message: "OS criada com sucesso", ...result };
       }),
 
@@ -561,7 +565,7 @@ export const appRouter = router({
           "cancelada"
         ]).optional(),
         priority: z.enum(["normal", "alta", "critica"]).optional(),
-        scheduledDate: z.date().optional(),
+        scheduledDate: z.string().optional(),
         startedAt: z.date().optional(),
         completedAt: z.date().optional(),
         estimatedHours: z.number().optional(),
@@ -575,7 +579,11 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const workOrdersDb = await import("./workOrdersDb");
         const { id, ...data } = input;
-        await workOrdersDb.updateWorkOrder(id, data);
+        const convertedData = {
+          ...data,
+          scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : undefined,
+        };
+        await workOrdersDb.updateWorkOrder(id, convertedData as any);
         return { success: true, message: "OS atualizada com sucesso" };
       }),
 

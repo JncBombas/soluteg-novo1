@@ -64,22 +64,28 @@ export const updateDocumentSchema = z.object({
 export const createWorkOrderSchema = z.object({
   adminId: z.number().int().positive(),
   clientId: z.number().int().positive(),
+  type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
   title: z.string().min(1, "Título é obrigatório"),
   description: z.string().optional(),
-  status: z.enum(["aberta", "em_andamento", "concluida", "cancelada"]).default("aberta"),
-  priority: z.enum(["baixa", "media", "alta"]).default("media"),
+  serviceType: z.string().optional(),
+  status: z.enum(["aberta", "aguardando_aprovacao", "aprovada", "rejeitada", "em_andamento", "concluida", "aguardando_pagamento", "cancelada"]).default("aberta"),
+  priority: z.enum(["normal", "alta", "critica"]).default("normal"),
   scheduledDate: z.string().optional(),
   estimatedHours: z.number().positive().optional(),
+  estimatedValue: z.number().positive().optional(),
+  isRecurring: z.number().optional(),
+  recurrenceType: z.enum(["mensal_fixo", "mensal_inicio"]).optional(),
+  recurrenceDay: z.number().optional(),
 });
 
 export const updateWorkOrderSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  status: z.enum(["aberta", "em_andamento", "concluida", "cancelada"]).optional(),
-  priority: z.enum(["baixa", "media", "alta"]).optional(),
+  status: z.enum(["aberta", "aguardando_aprovacao", "aprovada", "rejeitada", "em_andamento", "concluida", "aguardando_pagamento", "cancelada"]).optional(),
+  priority: z.enum(["normal", "alta", "critica"]).optional(),
   scheduledDate: z.string().optional(),
   estimatedHours: z.number().positive().optional(),
-  completedHours: z.number().positive().optional(),
+  actualHours: z.number().positive().optional(),
 });
 
 // Schemas para validação de login

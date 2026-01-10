@@ -1,1 +1,0 @@
-ALTER TABLE `invites` MODIFY COLUMN `code` varchar(255) NOT NULL;
