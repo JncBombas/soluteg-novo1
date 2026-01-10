@@ -254,7 +254,7 @@ export default function AdminWorkOrdersNew() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {workOrders.filter((o: any) => o.status === "em_andamento").length}
+                  {workOrders.filter(o => o.status === "em_andamento").length}
                 </p>
                 <p className="text-sm text-gray-600">Em Andamento</p>
               </div>
@@ -267,7 +267,7 @@ export default function AdminWorkOrdersNew() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {workOrders.filter((o: any) => o.status === "aguardando_aprovacao").length}
+                  {workOrders.filter(o => o.status === "aguardando_aprovacao").length}
                 </p>
                 <p className="text-sm text-gray-600">Aguardando Aprovação</p>
               </div>
@@ -280,7 +280,7 @@ export default function AdminWorkOrdersNew() {
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {workOrders.filter((o: any) => o.status === "concluida").length}
+                  {workOrders.filter(o => o.status === "concluida").length}
                 </p>
                 <p className="text-sm text-gray-600">Concluídas</p>
               </div>

@@ -509,15 +509,7 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         const workOrdersDb = await import("./workOrdersDb");
-        // Remover filtro de adminId para mostrar todas as OS
-        const filters = {
-          clientId: input.clientId,
-          type: input.type,
-          status: input.status,
-          // adminId removido propositalmente
-        };
-        const result = await workOrdersDb.listWorkOrders(filters);
-        return result;
+        return await workOrdersDb.listWorkOrders(input);
       }),
 
     // Buscar OS por ID
