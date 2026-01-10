@@ -479,25 +479,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const sigWidth = (contentWidth / 2) - 60;
       
       // Assinatura do Colaborador (esquerda)
-      const collaboratorSig = (workOrder as any).collaboratorSignature;
-      if (collaboratorSig) {
-        try {
-          const sigBuffer = Buffer.from(collaboratorSig.split(',')[1], 'base64');
-          doc.image(sigBuffer, sigCol1X, footerY - 40, { width: sigWidth, height: 60 });
-        } catch (e) {
-          doc.strokeColor('#333333')
-             .lineWidth(0.5)
-             .moveTo(sigCol1X, footerY + 30)
-             .lineTo(sigCol1X + sigWidth, footerY + 30)
-             .stroke();
-        }
-      } else {
-        doc.strokeColor('#333333')
-           .lineWidth(0.5)
-           .moveTo(sigCol1X, footerY + 30)
-           .lineTo(sigCol1X + sigWidth, footerY + 30)
-           .stroke();
-      }
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(sigCol1X, footerY + 30)
+         .lineTo(sigCol1X + sigWidth, footerY + 30)
+         .stroke();
       
       doc.fontSize(9)
          .fillColor('#666666')
@@ -512,32 +498,25 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .text('Nome: _______________________', sigCol1X, footerY + 50, { width: sigWidth });
       doc.text('Doc: _______________________', sigCol1X, footerY + 65, { width: sigWidth });
 
-      // Assinatura do Cliente (direita) - apenas se existir
-      const clientSig = (workOrder as any).clientSignature;
-      if (clientSig) {
-        doc.strokeColor('#333333')
-           .lineWidth(0.5)
-           .moveTo(sigCol2X, footerY + 30)
-           .lineTo(sigCol2X + sigWidth, footerY + 30)
-           .stroke();
-        
-        doc.fontSize(9)
-           .fillColor('#666666')
-           .font('Helvetica')
-           .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
-             width: sigWidth, 
-             align: 'center' 
-           });
-        
-        try {
-          const sigBuffer = Buffer.from(clientSig.split(',')[1], 'base64');
-          doc.image(sigBuffer, sigCol2X, footerY - 40, { width: sigWidth, height: 60 });
-        } catch (e) {
-          doc.fontSize(8)
-             .fillColor('#999999')
-             .text('Nome: ' + ((workOrder as any).clientName || '_______________________'), sigCol2X, footerY + 50, { width: sigWidth });
-        }
-      }
+      // Assinatura do Cliente (direita)
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(sigCol2X, footerY + 30)
+         .lineTo(sigCol2X + sigWidth, footerY + 30)
+         .stroke();
+      
+      doc.fontSize(9)
+         .fillColor('#666666')
+         .font('Helvetica')
+         .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
+           width: sigWidth, 
+           align: 'center' 
+         });
+      
+      doc.fontSize(8)
+         .fillColor('#999999')
+         .text('Nome: _______________________', sigCol2X, footerY + 50, { width: sigWidth });
+      doc.text('Doc: _______________________', sigCol2X, footerY + 65, { width: sigWidth });
       
       // Rodapé final
       doc.fontSize(7)
