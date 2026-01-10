@@ -260,6 +260,13 @@ export const workOrders = mysqlTable("workOrders", {
   cancellationReason: text("cancellationReason"),
   attachments: text("attachments"),
   
+  // Assinaturas digitais
+  collaboratorSignature: text("collaboratorSignature"),
+  collaboratorName: varchar("collaboratorName", { length: 255 }),
+  clientSignature: text("clientSignature"),
+  clientName: varchar("clientName", { length: 255 }),
+  signedAt: timestamp("signedAt"),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

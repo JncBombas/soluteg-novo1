@@ -591,3 +591,52 @@
 - [x] Adicionar invalidação de cache após deletar checklist
 - [x] Adicionar invalidação de cache após salvar respostas
 - [x] Corrigir atualização automática - ADIÇÃO e DELEÇÃO funcionando
+
+
+## Ajuste: Remover Validação de Completude (Temporário)
+- [x] Remover badge "Completo/Incompleto" do formulário
+- [x] Sempre salvar isComplete como 1 ao salvar respostas
+- [x] Permitir concluir tarefa independente do status dos checklists
+
+## Status das Implementações - Assinaturas e PDF
+
+- [x] Remover validação de completude dos checklists
+- [x] Implementar captura de assinaturas digitais (já existia)
+- [x] Adicionar código para incluir checklists no PDF
+- [x] Adicionar código para incluir assinaturas no PDF
+- [ ] Debugar erro de PDF vazio (0 bytes) - requer investigação dos logs do servidor
+
+## Bugs Conhecidos
+
+- [ ] PDF exportado está vazio (0 bytes) - erro em runtime ao gerar PDF com checklists
+- [ ] Modal de conclusão de tarefa não fecha após clicar em "Concluir Tarefa" - mutation não está completando
+
+
+## Debug: PDF Vazio (0 bytes) - URGENTE
+
+- [x] Investigar logs do servidor para identificar erro
+- [x] Verificar se há erro de sintaxe no pdfGenerator.ts
+- [x] Testar geração de PDF após correções
+- [x] Validar que checklists e assinaturas aparecem no PDF
+
+
+## Assinaturas no Fluxo de Conclusão de OS (Nova)
+
+- [ ] Investigar e corrigir bug de edição de cliente
+- [ ] Mover captura de assinaturas para modal de "Concluir OS"
+- [ ] Fazer assinatura do colaborador obrigatória
+- [ ] Fazer assinatura do cliente opcional
+- [ ] Salvar assinaturas na tabela work_orders (não em inspection_tasks)
+- [ ] Ajustar PDF para renderizar assinaturas da OS
+- [ ] Testar fluxo completo de assinaturas
+
+## Status das Tarefas
+
+- [x] Corrigir bug de edição de cliente (endpoints GET/PUT adicionados)
+- [x] Adicionar campos de assinatura à tabela work_orders
+- [ ] Criar modal de assinaturas no fluxo de conclusão de OS
+- [ ] Implementar captura de assinatura do colaborador (obrigatória)
+- [ ] Implementar captura de assinatura do cliente (opcional)
+- [ ] Salvar assinaturas na OS
+- [ ] Ajustar PDF para renderizar assinaturas da OS
+- [ ] Testar fluxo completo de assinaturas
