@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
 import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId } from './workOrdersAuxDb';
+import { getInspectionTasksByWorkOrder, getChecklistsByInspectionTask } from './checklistsDb';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -23,6 +24,17 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
   
   // Buscar comentários (apenas os não internos para o cliente)
   const comments = await getCommentsByWorkOrderId(workOrderId, false);
+  
+  // Buscar tarefas de inspeção com checklists
+  const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
+  
+  // Buscar todos os checklists de todas as tarefas
+  const tasksWithChecklists = await Promise.all(
+    inspectionTasks.map(async (task) => ({
+      ...task,
+      checklists: await getChecklistsByInspectionTask(task.id)
+    }))
+  );
   
   // Calcular total de materiais
   const totalMaterials = materials.reduce((sum: number, m: any) => sum + (m.totalCost || 0), 0);
@@ -288,6 +300,130 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         }
       }
 
+      // === INSPEÇÕES (Checklists preenchidos) ===
+      if (tasksWithChecklists && tasksWithChecklists.length > 0) {
+
+        // Verificar se precisa de nova página
+        if (currentY > doc.page.height - 200) {
+          doc.addPage();
+          currentY = 40;
+        }
+
+        doc.fontSize(11)
+           .fillColor('#D4A84B')
+           .font('Helvetica-Bold')
+           .text('Inspeções', leftMargin, currentY);
+        
+        currentY += 20;
+
+        for (const task of tasksWithChecklists) {
+          // Título da tarefa
+          doc.fontSize(10)
+             .fillColor('#333333')
+             .font('Helvetica-Bold')
+             .text(task.title, leftMargin, currentY);
+          currentY += 15;
+
+          // Status da tarefa
+          const statusText = task.status === 'concluida' ? 'Concluída' : task.status === 'em_andamento' ? 'Em Andamento' : 'Pendente';
+          doc.fontSize(8)
+             .fillColor('#666666')
+             .font('Helvetica')
+             .text(`Status: ${statusText}`, leftMargin, currentY);
+          currentY += 12;
+
+          // Listar checklists da tarefa
+          if (task.checklists && task.checklists.length > 0) {
+            for (const checklist of task.checklists) {
+              // Título do checklist
+              doc.fontSize(9)
+                 .fillColor('#D4A84B')
+                 .font('Helvetica-Bold')
+                 .text(`• ${checklist.customTitle}`, leftMargin + 10, currentY);
+              currentY += 12;
+
+              // Dados técnicos
+              if (checklist.brand || checklist.power) {
+                doc.fontSize(8)
+                   .fillColor('#666666')
+                   .font('Helvetica')
+                   .text(`Marca: ${checklist.brand || 'N/A'} | Potência: ${checklist.power || 'N/A'}`, leftMargin + 20, currentY);
+                currentY += 12;
+              }
+
+              // Respostas do checklist
+              if (checklist.responses) {
+                try {
+                  const responses = typeof checklist.responses === 'string' ? JSON.parse(checklist.responses) : checklist.responses;
+                  
+                  // Renderizar campos do checklist
+                  for (const [key, value] of Object.entries(responses)) {
+                    if (value !== null && value !== undefined && value !== '') {
+                      const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                      const formattedValue = formatFieldValue(value);
+                      
+                      doc.fontSize(8)
+                         .fillColor('#333333')
+                         .font('Helvetica')
+                         .text(`${formattedKey}: ${formattedValue}`, leftMargin + 20, currentY, { width: contentWidth - 20 });
+                      currentY += 10;
+                    }
+                  }
+                } catch (e) {
+                  console.error('[PDF] Erro ao parsear respostas do checklist:', e);
+                }
+              }
+
+              currentY += 8;
+            }
+          }
+
+          // Assinaturas da tarefa (se concluída)
+          if (task.status === 'concluida' && (task.collaboratorSignature || task.clientSignature)) {
+            doc.fontSize(9)
+               .fillColor('#D4A84B')
+               .font('Helvetica-Bold')
+               .text('Assinaturas:', leftMargin + 10, currentY);
+            currentY += 15;
+
+            const sigWidth = (contentWidth / 2) - 40;
+            const sigCol1X = leftMargin + 20;
+            const sigCol2X = pageWidth / 2 + 20;
+
+            // Assinatura do Colaborador
+            if (task.collaboratorSignature) {
+              try {
+                doc.image(task.collaboratorSignature, sigCol1X, currentY, { width: sigWidth, height: 60 });
+                doc.fontSize(7)
+                   .fillColor('#666666')
+                   .font('Helvetica')
+                   .text(`${task.collaboratorName || 'Colaborador'}`, sigCol1X, currentY + 65, { width: sigWidth, align: 'center' });
+                doc.text(`${task.collaboratorDocument || ''}`, sigCol1X, currentY + 75, { width: sigWidth, align: 'center' });
+              } catch (e) {
+                console.error('[PDF] Erro ao adicionar assinatura do colaborador:', e);
+              }
+            }
+
+            // Assinatura do Cliente
+            if (task.clientSignature) {
+              try {
+                doc.image(task.clientSignature, sigCol2X, currentY, { width: sigWidth, height: 60 });
+                doc.fontSize(7)
+                   .fillColor('#666666')
+                   .font('Helvetica')
+                   .text(`${task.clientName || 'Cliente'}`, sigCol2X, currentY + 65, { width: sigWidth, align: 'center' });
+              } catch (e) {
+                console.error('[PDF] Erro ao adicionar assinatura do cliente:', e);
+              }
+            }
+
+            currentY += 95;
+          }
+
+          currentY += 15;
+        }
+      }
+
       // === OBSERVAÇÕES (Comentários para o cliente) ===
       if (comments && comments.length > 0) {
         // Verificar se precisa de nova página
@@ -343,11 +479,34 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const sigWidth = (contentWidth / 2) - 60;
       
       // Assinatura do Colaborador (esquerda)
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(sigCol1X, footerY + 30)
-         .lineTo(sigCol1X + sigWidth, footerY + 30)
-         .stroke();
+      const collaboratorSig = (workOrder as any).collaboratorSignature;
+      if (collaboratorSig) {
+        try {
+          console.log('[PDF] Renderizando assinatura do colaborador, tamanho:', collaboratorSig?.length);
+          // Extrair base64 da assinatura (pode ser data URL ou apenas base64)
+          let base64Data = collaboratorSig;
+          if (collaboratorSig.includes(',')) {
+            base64Data = collaboratorSig.split(',')[1];
+          }
+          const sigBuffer = Buffer.from(base64Data, 'base64');
+          doc.image(sigBuffer, sigCol1X, footerY - 40, { width: sigWidth, height: 60 });
+          console.log('[PDF] Assinatura do colaborador renderizada com sucesso');
+        } catch (e) {
+          console.error('[PDF] Erro ao renderizar assinatura do colaborador:', e);
+          doc.strokeColor('#333333')
+             .lineWidth(0.5)
+             .moveTo(sigCol1X, footerY + 30)
+             .lineTo(sigCol1X + sigWidth, footerY + 30)
+             .stroke();
+        }
+      } else {
+        console.log('[PDF] Nenhuma assinatura do colaborador encontrada');
+        doc.strokeColor('#333333')
+           .lineWidth(0.5)
+           .moveTo(sigCol1X, footerY + 30)
+           .lineTo(sigCol1X + sigWidth, footerY + 30)
+           .stroke();
+      }
       
       doc.fontSize(9)
          .fillColor('#666666')
@@ -362,25 +521,32 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .text('Nome: _______________________', sigCol1X, footerY + 50, { width: sigWidth });
       doc.text('Doc: _______________________', sigCol1X, footerY + 65, { width: sigWidth });
 
-      // Assinatura do Cliente (direita)
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(sigCol2X, footerY + 30)
-         .lineTo(sigCol2X + sigWidth, footerY + 30)
-         .stroke();
-      
-      doc.fontSize(9)
-         .fillColor('#666666')
-         .font('Helvetica')
-         .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
-           width: sigWidth, 
-           align: 'center' 
-         });
-      
-      doc.fontSize(8)
-         .fillColor('#999999')
-         .text('Nome: _______________________', sigCol2X, footerY + 50, { width: sigWidth });
-      doc.text('Doc: _______________________', sigCol2X, footerY + 65, { width: sigWidth });
+      // Assinatura do Cliente (direita) - apenas se existir
+      const clientSig = (workOrder as any).clientSignature;
+      if (clientSig) {
+        doc.strokeColor('#333333')
+           .lineWidth(0.5)
+           .moveTo(sigCol2X, footerY + 30)
+           .lineTo(sigCol2X + sigWidth, footerY + 30)
+           .stroke();
+        
+        doc.fontSize(9)
+           .fillColor('#666666')
+           .font('Helvetica')
+           .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
+             width: sigWidth, 
+             align: 'center' 
+           });
+        
+        try {
+          const sigBuffer = Buffer.from(clientSig.split(',')[1], 'base64');
+          doc.image(sigBuffer, sigCol2X, footerY - 40, { width: sigWidth, height: 60 });
+        } catch (e) {
+          doc.fontSize(8)
+             .fillColor('#999999')
+             .text('Nome: ' + ((workOrder as any).clientName || '_______________________'), sigCol2X, footerY + 50, { width: sigWidth });
+        }
+      }
       
       // Rodapé final
       doc.fontSize(7)
@@ -435,4 +601,23 @@ function translateType(type: string): string {
 
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('pt-BR');
+}
+
+function formatFieldValue(value: any): string {
+  if (value === null || value === undefined) return 'N/A';
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'string') {
+    // Traduzir valores comuns
+    const translations: Record<string, string> = {
+      'ok': 'Ok',
+      'nok': 'NOk',
+      'n_a': 'N/A',
+      'monofasico': 'Monofásico',
+      'bifasico': 'Bifásico',
+      'trifasico': 'Trifásico'
+    };
+    return translations[value.toLowerCase()] || value;
+  }
+  return String(value);
 }

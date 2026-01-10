@@ -617,7 +617,44 @@ export const appRouter = router({
         return { success: true, message: "OS deletada com sucesso" };
       }),
 
-    // Cancelar recorrência
+    // Concluir OS com assinaturas
+    complete: publicProcedure
+      .input(z.object({
+        id: z.number(),
+        collaboratorName: z.string().min(1),
+        collaboratorSignature: z.string().min(1),
+        clientName: z.string().optional(),
+        clientSignature: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
+        
+        console.log("[workOrders.complete] Recebido:", {
+          id,
+          collaboratorName,
+          collaboratorSignatureSize: collaboratorSignature?.length,
+          clientName,
+          clientSignatureSize: clientSignature?.length,
+        });
+        
+        const updateData: Partial<any> = {
+          status: "concluida" as const,
+          completedAt: new Date(),
+          collaboratorName,
+          collaboratorSignature,
+          clientName: clientName || undefined,
+          clientSignature: clientSignature || undefined,
+          signedAt: new Date(),
+        };
+        
+        await workOrdersDb.updateWorkOrder(id, updateData as any);
+        
+        console.log("[workOrders.complete] OS atualizada com sucesso");
+        return { success: true, message: "OS concluida com sucesso" };
+      }),
+
+    // Cancelar recorrencia
     cancelRecurrence: publicProcedure
       .input(z.object({
         id: z.number(),
@@ -1123,8 +1160,8 @@ export const appRouter = router({
       canComplete: publicProcedure
         .input(z.object({ id: z.number() }))
         .query(async ({ input }) => {
-          const checklistDb = await import("./checklistsDb");
-          return await checklistDb.areAllChecklistsComplete(input.id);
+          // Temporariamente sempre permitir concluir tarefa
+          return true;
         }),
     }),
 

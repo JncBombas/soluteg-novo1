@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,13 @@ import WorkOrderAttachments from "@/components/workorder/WorkOrderAttachments";
 import WorkOrderComments from "@/components/workorder/WorkOrderComments";
 import WorkOrderTimeline from "@/components/workorder/WorkOrderTimeline";
 import InspectionTasksTab from "@/components/InspectionTasksTab";
+import CompleteWorkOrderModal from "@/components/CompleteWorkOrderModal";
 
 export default function AdminWorkOrderDetail() {
   const params = useParams();
   const [, navigate] = useLocation();
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const workOrderId = Number(params.id);
 
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
@@ -82,6 +84,32 @@ export default function AdminWorkOrderDetail() {
   const handleExportPDF = async () => {
     setExportingPDF(true);
     exportPDFMutation.mutate({ id: workOrderId });
+  };
+
+  const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
+    onSuccess: () => {
+      toast.success("OS concluida com sucesso!");
+      refetch();
+      setCompleteModalOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`Erro: ${error.message}`);
+    },
+  });
+
+  const handleCompleteWorkOrder = async (data: any) => {
+    console.log("[AdminWorkOrderDetail] handleCompleteWorkOrder chamado com:", {
+      workOrderId,
+      collaboratorName: data.collaboratorName,
+      collaboratorSignatureSize: data.collaboratorSignature?.length,
+      clientName: data.clientName,
+      clientSignatureSize: data.clientSignature?.length,
+    });
+    
+    completeWorkOrderMutation.mutate({
+      id: workOrderId,
+      ...data,
+    });
   };
 
   if (isLoading) {
@@ -187,6 +215,16 @@ export default function AdminWorkOrderDetail() {
             <h1 className="text-xl md:text-3xl font-bold">OS #{workOrder.id}</h1>
             <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
           </div>
+          {workOrder.status !== "concluida" && (
+            <Button
+              size="sm"
+              onClick={() => setCompleteModalOpen(true)}
+              className="gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Concluir OS
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -450,6 +488,13 @@ export default function AdminWorkOrderDetail() {
           <WorkOrderTimeline workOrderId={workOrderId} history={history || []} />
         </TabsContent>
       </Tabs>
+
+      <CompleteWorkOrderModal
+        open={completeModalOpen}
+        onOpenChange={setCompleteModalOpen}
+        onComplete={handleCompleteWorkOrder}
+        isLoading={completeWorkOrderMutation.isPending}
+      />
     </div>
   );
 }

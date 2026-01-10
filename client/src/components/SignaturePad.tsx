@@ -124,7 +124,10 @@ export default function SignaturePad({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dataUrl = canvas.toDataURL("image/png");
+    // Converter para JPEG com qualidade reduzida para economizar espaço
+    // PNG pode ser muito grande para assinaturas
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+    console.log("[SignaturePad] Assinatura salva, tamanho:", dataUrl.length, "bytes");
     onSave(dataUrl);
   };
 
