@@ -536,13 +536,16 @@ function InspectionTaskItem({
   const [power, setPower] = useState("");
   const [isAddingChecklist, setIsAddingChecklist] = useState(false);
 
+  const utils = trpc.useUtils();
+
   const addChecklistMutation = trpc.checklists.instances.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setShowAddChecklistForm(false);
       setSelectedTemplateId("");
       setCustomTitle("");
       setBrand("");
       setPower("");
+      await utils.checklists.instances.listByTask.invalidate({ inspectionTaskId: task.id });
     },
   });
   const { data: checklists, isLoading } = trpc.checklists.instances.listByTask.useQuery(
