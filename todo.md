@@ -720,3 +720,5 @@
 - [ ] Verificar componente que renderiza os campos condicionais
 - [ ] Corrigir lógica para mostrar campos de corrente quando seleciona quantidade de bombas
 - [ ] Testar com 1, 2, 3 e 4 bombas selecionadas
+
+- [x] Corrigir template do Gerador - Inspeção Visual está com itens de bomba ao invés de itens específicos de gerador
