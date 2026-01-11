@@ -512,6 +512,7 @@ interface InspectionTaskItemProps {
   deleteChecklistDialogOpen: number | null;
   setDeleteChecklistDialogOpen: (id: number | null) => void;
   deleteChecklistMutation: { isPending: boolean };
+  onAddChecklistClick?: (taskId: number) => void;
 }
 
 function InspectionTaskItem({
@@ -526,7 +527,24 @@ function InspectionTaskItem({
   deleteChecklistDialogOpen,
   setDeleteChecklistDialogOpen,
   deleteChecklistMutation,
+  onAddChecklistClick,
 }: InspectionTaskItemProps) {
+  const [showAddChecklistForm, setShowAddChecklistForm] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [customTitle, setCustomTitle] = useState("");
+  const [brand, setBrand] = useState("");
+  const [power, setPower] = useState("");
+  const [isAddingChecklist, setIsAddingChecklist] = useState(false);
+
+  const addChecklistMutation = trpc.checklists.instances.create.useMutation({
+    onSuccess: () => {
+      setShowAddChecklistForm(false);
+      setSelectedTemplateId("");
+      setCustomTitle("");
+      setBrand("");
+      setPower("");
+    },
+  });
   const { data: checklists, isLoading } = trpc.checklists.instances.listByTask.useQuery(
     { inspectionTaskId: task.id }
   );
@@ -674,6 +692,96 @@ function InspectionTaskItem({
               </p>
             )}
 
+            {/* Formulário para adicionar checklist */}
+            {showAddChecklistForm && !isCompleted && (
+              <Card className="border-blue-200 bg-blue-50 mt-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Adicionar Novo Checklist</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Checklist *</Label>
+                    <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {templates?.map((template) => (
+                          <SelectItem key={template.id} value={template.id.toString()}>
+                            {template.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customTitle">Título Personalizado *</Label>
+                    <Input
+                      id="customTitle"
+                      placeholder="Ex: Inspeção Mensal"
+                      value={customTitle}
+                      onChange={(e) => setCustomTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="brand">Marca (opcional)</Label>
+                      <Input
+                        id="brand"
+                        placeholder="Ex: Schneider"
+                        value={brand}
+                        onChange={(e) => setBrand(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="power">Potência (opcional)</Label>
+                      <Input
+                        id="power"
+                        placeholder="Ex: 5 HP"
+                        value={power}
+                        onChange={(e) => setPower(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddChecklistForm(false);
+                        setSelectedTemplateId("");
+                        setCustomTitle("");
+                        setBrand("");
+                        setPower("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (!selectedTemplateId || !customTitle) {
+                          toast.error("Selecione o tipo e preencha o título");
+                          return;
+                        }
+                        addChecklistMutation.mutate({
+                          inspectionTaskId: task.id,
+                          templateId: parseInt(selectedTemplateId),
+                          customTitle,
+                          brand: brand || undefined,
+                          power: power || undefined,
+                        });
+                      }}
+                      disabled={addChecklistMutation.isPending}
+                    >
+                      {addChecklistMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Adicionar Checklist
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Botões de ação */}
             {!isCompleted && (
               <div className="flex items-center justify-between pt-4 border-t">
@@ -681,10 +789,10 @@ function InspectionTaskItem({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onAddChecklist(task.id)}
+                    onClick={() => setShowAddChecklistForm(!showAddChecklistForm)}
                   >
                     <Plus className="h-4 w-4 mr-1" />
-                    Adicionar Checklist
+                    {showAddChecklistForm ? "Cancelar" : "Adicionar Checklist"}
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
