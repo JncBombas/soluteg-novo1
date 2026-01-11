@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, name, formStructure FROM checklist_templates ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, name, formStructure FROM checklist_templates ORDER BY id;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'e9d4s3iuourgt5xzt9a7f3.checklist_templates' doesn't exist"
+  ]
+}

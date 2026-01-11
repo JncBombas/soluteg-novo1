@@ -703,3 +703,10 @@
 - [x] Testar login com sucesso
 - [x] Verificar acesso ao dashboard administrativo
 - [x] Sistema 100% funcional
+
+## Correção de Templates de Checklists (Nova)
+- [x] Verificar estrutura atual dos templates no banco de dados
+- [x] Bomba de Incêndio: REMOVER campo Pressão (conforme solicitação do usuário)
+- [x] Verificar todos os 5 templates estão corretos conforme FORMULARIOS_ESQUEMA.md
+- [x] Testar formulários no navegador
+- [x] Atualizar banco de dados com templates corrigidos

@@ -1,4 +1,5 @@
 // Templates de checklists genéricos para bombas e geradores
+// Estrutura conforme documento FORMULARIOS_ESQUEMA.md
 
 export interface ChecklistItem {
   id: string;
@@ -32,20 +33,33 @@ export interface ChecklistTemplateStructure {
   sections: ChecklistSection[];
 }
 
-// Template: Bomba de Recalque
+// Itens de Inspeção Visual padrão para TODAS as bombas (Recalque, Dreno, Piscina, Incêndio)
+const inspecaoVisualBombasPadrao: ChecklistItem[] = [
+  { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
+  { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
+  { id: 'boias', label: 'Boias', type: 'ok_nok_na', required: true },
+  { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
+  { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
+  { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
+];
+
+// Itens de Inspeção Visual para GERADOR (mesma estrutura das bombas conforme documento)
+const inspecaoVisualGerador: ChecklistItem[] = [
+  { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
+  { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
+  { id: 'boias', label: 'Boias', type: 'ok_nok_na', required: true },
+  { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
+  { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
+  { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
+];
+
+// Template: Bomba de Recalque (até 4 bombas)
 export const bombaRecalqueTemplate: ChecklistTemplateStructure = {
   sections: [
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [
-        { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
-        { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
-        { id: 'boias', label: 'Boias', type: 'ok_nok_na', required: true },
-        { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
-        { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
-        { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
-      ]
+      items: [...inspecaoVisualBombasPadrao]
     },
     {
       id: 'dados_tecnicos',
@@ -53,7 +67,7 @@ export const bombaRecalqueTemplate: ChecklistTemplateStructure = {
       fields: [
         { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
         { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Número de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
+        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
         { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
         { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
         { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
@@ -70,20 +84,13 @@ export const bombaRecalqueTemplate: ChecklistTemplateStructure = {
   ]
 };
 
-// Template: Bomba de Dreno
+// Template: Bomba de Dreno (até 4 bombas)
 export const bombaDrenoTemplate: ChecklistTemplateStructure = {
   sections: [
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [
-        { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
-        { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
-        { id: 'boias', label: 'Boias', type: 'ok_nok_na', required: true },
-        { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
-        { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
-        { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
-      ]
+      items: [...inspecaoVisualBombasPadrao]
     },
     {
       id: 'dados_tecnicos',
@@ -91,7 +98,7 @@ export const bombaDrenoTemplate: ChecklistTemplateStructure = {
       fields: [
         { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
         { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Número de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
+        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
         { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
         { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
         { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
@@ -108,19 +115,13 @@ export const bombaDrenoTemplate: ChecklistTemplateStructure = {
   ]
 };
 
-// Template: Bomba de Piscina
+// Template: Bomba de Piscina (até 4 bombas)
 export const bombaPiscinaTemplate: ChecklistTemplateStructure = {
   sections: [
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [
-        { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
-        { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
-        { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
-        { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
-        { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
-      ]
+      items: [...inspecaoVisualBombasPadrao]
     },
     {
       id: 'dados_tecnicos',
@@ -128,7 +129,7 @@ export const bombaPiscinaTemplate: ChecklistTemplateStructure = {
       fields: [
         { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
         { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Número de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
+        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
         { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
         { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
         { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
@@ -145,20 +146,13 @@ export const bombaPiscinaTemplate: ChecklistTemplateStructure = {
   ]
 };
 
-// Template: Bomba de Incêndio
+// Template: Bomba de Incêndio (até 2 bombas, SEM campo Pressão)
 export const bombaIncendioTemplate: ChecklistTemplateStructure = {
   sections: [
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [
-        { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
-        { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
-        { id: 'valvulas', label: 'Válvulas', type: 'ok_nok_na', required: true },
-        { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
-        { id: 'manometro', label: 'Manômetro', type: 'ok_nok_na', required: true },
-        { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
-      ]
+      items: [...inspecaoVisualBombasPadrao]
     },
     {
       id: 'dados_tecnicos',
@@ -166,10 +160,9 @@ export const bombaIncendioTemplate: ChecklistTemplateStructure = {
       fields: [
         { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
         { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Número de Bombas', type: 'select', options: ['1', '2'], required: true },
+        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2'], required: true },
         { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
-        { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
-        { id: 'pressao', label: 'Pressão', type: 'number', unit: 'bar', required: true },
+        { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'eq', value: '2' } },
       ]
     },
     {
@@ -182,21 +175,13 @@ export const bombaIncendioTemplate: ChecklistTemplateStructure = {
   ]
 };
 
-// Template: Gerador
+// Template: Gerador (16 campos técnicos específicos)
 export const geradorTemplate: ChecklistTemplateStructure = {
   sections: [
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [
-        { id: 'oleo', label: 'Óleo', type: 'ok_nok_na', required: true },
-        { id: 'combustivel', label: 'Combustível', type: 'ok_nok_na', required: true },
-        { id: 'bateria', label: 'Bateria', type: 'ok_nok_na', required: true },
-        { id: 'pre_aquecimento', label: 'Pré-aquecimento', type: 'ok_nok_na', required: true },
-        { id: 'filtro_ar', label: 'Filtro de Ar', type: 'ok_nok_na', required: true },
-        { id: 'conexoes', label: 'Conexões', type: 'ok_nok_na', required: true },
-        { id: 'organizacao_sala', label: 'Organização da Sala', type: 'ok_nok_na', required: true },
-      ]
+      items: [...inspecaoVisualGerador]
     },
     {
       id: 'tensao_fases',
