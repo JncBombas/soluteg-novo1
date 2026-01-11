@@ -323,6 +323,15 @@ export default function ChecklistForm({
     }
   };
 
+  // Validar formStructure
+  if (!formStructure || !formStructure.sections || !Array.isArray(formStructure.sections)) {
+    return (
+      <div className="text-sm text-muted-foreground text-center py-4">
+        Nenhuma estrutura de formulário disponível
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {formStructure.sections.map((section) => (
