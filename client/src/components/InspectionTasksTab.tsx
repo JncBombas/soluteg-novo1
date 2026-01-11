@@ -89,7 +89,7 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
     }
   );
 
-  const { data: templates } = trpc.checklists.templates.list.useQuery();
+  const { data: templates = [] } = trpc.checklists.templates.list.useQuery();
 
   // Mutations
   const createTaskMutation = trpc.checklists.inspectionTasks.create.useMutation({
