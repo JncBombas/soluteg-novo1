@@ -710,3 +710,13 @@
 - [x] Verificar todos os 5 templates estão corretos conforme FORMULARIOS_ESQUEMA.md
 - [x] Testar formulários no navegador
 - [x] Atualizar banco de dados com templates corrigidos
+
+## Correção do Template do Gerador
+- [ ] Verificar itens de Inspeção Visual do Gerador no banco
+- [ ] Corrigir para ter os 6 itens padrão (Tubos, Acionamento, Boias, Painel, Sala, Ruído)
+- [ ] Testar formulário do Gerador no navegador
+
+## Correção da Lógica Condicional dos Formulários de Bomba
+- [ ] Verificar componente que renderiza os campos condicionais
+- [ ] Corrigir lógica para mostrar campos de corrente quando seleciona quantidade de bombas
+- [ ] Testar com 1, 2, 3 e 4 bombas selecionadas

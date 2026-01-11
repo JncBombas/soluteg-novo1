@@ -1,0 +1,8 @@
+{
+  "query": "SELECT ci.id, ci.customTitle, ci.templateId, ct.slug, ct.structure FROM checklistInstances ci JOIN checklistTemplates ct ON ci.templateId = ct.id ORDER BY ci.id DESC LIMIT 2;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT ci.id, ci.customTitle, ci.templateId, ct.slug, ct.structure FROM checklistInstances ci JOIN checklistTemplates ct ON ci.templateId = ct.id ORDER BY ci.id DESC LIMIT 2;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'ct.structure' in 'field list'"
+  ]
+}

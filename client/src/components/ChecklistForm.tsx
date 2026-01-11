@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 // Tipos para a estrutura do formulário
 interface ConditionalRule {
   field: string;
-  operator: "eq" | "neq" | "gte" | "lte" | "gt" | "lt";
+  operator: "eq" | "neq" | "gte" | "lte" | "gt" | "lt" | "==" | "!=" | ">=" | "<=" | ">" | "<";
   value: string | number;
 }
 
@@ -124,6 +124,8 @@ function shouldShowField(
   const { field: condField, operator, value } = field.conditional;
   const currentValue = responses[condField];
 
+  console.log(`[shouldShowField] Field: ${field.id}, condField: ${condField}, operator: ${operator}, value: ${value}, currentValue: ${currentValue}, responses:`, responses);
+
   if (currentValue === undefined || currentValue === null) return false;
 
   const numCurrent =
@@ -132,16 +134,22 @@ function shouldShowField(
 
   switch (operator) {
     case "eq":
+    case "==":
       return currentValue === value || numCurrent === numValue;
     case "neq":
+    case "!=":
       return currentValue !== value && numCurrent !== numValue;
     case "gte":
+    case ">=":
       return !isNaN(numCurrent) && !isNaN(numValue) && numCurrent >= numValue;
     case "lte":
+    case "<=":
       return !isNaN(numCurrent) && !isNaN(numValue) && numCurrent <= numValue;
     case "gt":
+    case ">":
       return !isNaN(numCurrent) && !isNaN(numValue) && numCurrent > numValue;
     case "lt":
+    case "<":
       return !isNaN(numCurrent) && !isNaN(numValue) && numCurrent < numValue;
     default:
       return true;
@@ -416,14 +424,30 @@ export default function ChecklistForm({
                 const { field: condField, operator, value } = field.conditional;
                 const condValue = responses[condField];
                 
+                // Se não há valor selecionado ainda, não mostrar campos condicionais
+                if (condValue === undefined || condValue === null || condValue === '') {
+                  return null;
+                }
+                
+                // Converter ambos para número para comparação numérica
+                const numCondValue = Number(condValue);
+                const numValue = Number(value);
+                
                 // Avaliar condição
                 let shouldShow = false;
-                if (operator === 'eq') {
-                  shouldShow = condValue === value;
-                } else if (operator === 'gte') {
-                  shouldShow = Number(condValue) >= Number(value);
-                } else if (operator === 'lte') {
-                  shouldShow = Number(condValue) <= Number(value);
+                if (operator === 'eq' || operator === '==') {
+                  // Comparar como string E como número para garantir
+                  shouldShow = String(condValue) === String(value) || numCondValue === numValue;
+                } else if (operator === 'gte' || operator === '>=') {
+                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue >= numValue;
+                } else if (operator === 'lte' || operator === '<=') {
+                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue <= numValue;
+                } else if (operator === 'gt' || operator === '>') {
+                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue > numValue;
+                } else if (operator === 'lt' || operator === '<') {
+                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue < numValue;
+                } else if (operator === 'neq' || operator === '!=') {
+                  shouldShow = String(condValue) !== String(value) && numCondValue !== numValue;
                 }
                 
                 if (!shouldShow) return null;
