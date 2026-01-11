@@ -410,7 +410,27 @@ export default function ChecklistForm({
             ))}
 
             {/* Renderizar fields */}
-            {section.fields?.map((field) => renderField(field))}
+            {section.fields?.map((field) => {
+              // Verificar se campo tem conditional
+              if (field.conditional) {
+                const { field: condField, operator, value } = field.conditional;
+                const condValue = responses[condField];
+                
+                // Avaliar condição
+                let shouldShow = false;
+                if (operator === 'eq') {
+                  shouldShow = condValue === value;
+                } else if (operator === 'gte') {
+                  shouldShow = Number(condValue) >= Number(value);
+                } else if (operator === 'lte') {
+                  shouldShow = Number(condValue) <= Number(value);
+                }
+                
+                if (!shouldShow) return null;
+              }
+              
+              return renderField(field);
+            })}
           </CardContent>
         </Card>
       ))}
