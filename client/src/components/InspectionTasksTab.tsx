@@ -603,7 +603,7 @@ function InspectionTaskItem({
             {checklists && checklists.length > 0 ? (
               <div className="space-y-3">
                 {checklists.map((checklist) => {
-                  const template = templates.find((t) => t.id === checklist.templateId);
+                  const template = templates && templates.length > 0 ? templates.find((t) => t.id === checklist.templateId) : null;
                   const formStructure = template ? JSON.parse(template.formStructure) : null;
                   const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
 
