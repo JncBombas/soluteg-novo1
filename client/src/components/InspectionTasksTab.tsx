@@ -604,7 +604,32 @@ function InspectionTaskItem({
               <div className="space-y-3">
                 {checklists.map((checklist) => {
                   const template = templates && templates.length > 0 ? templates.find((t) => t.id === checklist.templateId) : null;
-                  const formStructure = template ? JSON.parse(template.formStructure) : null;
+                  
+                  // Parse formStructure com tratamento de erro
+                  let formStructure = null;
+                  if (template && template.formStructure) {
+                    try {
+                      const parsed = JSON.parse(template.formStructure);
+                      // Se tem 'fields', converter para 'sections' para compatibilidade
+                      if (parsed.fields && !parsed.sections) {
+                        formStructure = {
+                          sections: [
+                            {
+                              id: 'default',
+                              title: 'Informações',
+                              fields: parsed.fields
+                            }
+                          ]
+                        };
+                      } else {
+                        formStructure = parsed;
+                      }
+                    } catch (e) {
+                      console.error('Erro ao fazer parse de formStructure:', e);
+                      formStructure = null;
+                    }
+                  }
+                  
                   const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
 
                   return (

@@ -191,10 +191,20 @@ export default function ChecklistForm({
   isSaving = false,
   readOnly = false,
 }: ChecklistFormProps) {
-  const [responses, setResponses] =
-    useState<Record<string, unknown>>(initialResponses);
+  const [responses, setResponses] = useState<Record<string, unknown>>(
+    initialResponses
+  );
 
-  // Atualizar responses quando initialResponses mudar
+  // Parse formStructure se for string JSON
+  let parsedFormStructure: FormStructure | null = formStructure as any;
+  if (typeof formStructure === 'string') {
+    try {
+      parsedFormStructure = JSON.parse(formStructure);
+    } catch (e) {
+      console.error('Erro ao fazer parse de formStructure:', e);
+      parsedFormStructure = null;
+    }
+  }// Atualizar responses quando initialResponses mudar
   useEffect(() => {
     setResponses(initialResponses);
   }, [initialResponses]);
@@ -324,7 +334,7 @@ export default function ChecklistForm({
   };
 
   // Validar formStructure
-  if (!formStructure || !formStructure.sections || !Array.isArray(formStructure.sections)) {
+  if (!parsedFormStructure || !parsedFormStructure.sections || !Array.isArray(parsedFormStructure.sections)) {
     return (
       <div className="text-sm text-muted-foreground text-center py-4">
         Nenhuma estrutura de formulário disponível
@@ -334,7 +344,7 @@ export default function ChecklistForm({
 
   return (
     <div className="space-y-4">
-      {formStructure.sections.map((section) => (
+      {parsedFormStructure.sections.map((section) => (
         <Card key={section.id}>
           <CardHeader className="py-3 px-4 bg-muted/30">
             <CardTitle className="text-sm font-medium">{section.title}</CardTitle>
