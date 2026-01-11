@@ -25,8 +25,9 @@ interface ConditionalRule {
 interface FormField {
   id: string;
   label: string;
-  type: "ok_nok_na" | "text" | "number" | "select" | "textarea";
+  type: "ok_nok_na" | "text" | "number" | "select" | "textarea" | "checkbox_table";
   options?: string[];
+  items?: string[];
   unit?: string;
   required?: boolean;
   conditional?: ConditionalRule;
@@ -325,6 +326,49 @@ export default function ChecklistForm({
               placeholder={`Digite ${field.label.toLowerCase()}`}
               rows={3}
             />
+          </div>
+        );
+
+      case "checkbox_table":
+        return (
+          <div key={field.id} className="space-y-2">
+            <Label className="text-sm font-medium">{field.label}</Label>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-3 py-2 text-left font-medium">Item</th>
+                    {field.options?.map((option) => (
+                      <th key={option} className="px-3 py-2 text-center font-medium">
+                        {option}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {field.items?.map((item, idx) => (
+                    <tr key={item} className="border-b last:border-0">
+                      <td className="px-3 py-2">{item}</td>
+                      {field.options?.map((option) => {
+                        const itemKey = `${field.id}_${item}_${option}`;
+                        const isChecked = responses[itemKey] === true;
+                        return (
+                          <td key={option} className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => handleChange(itemKey, e.target.checked)}
+                              disabled={readOnly}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         );
 
