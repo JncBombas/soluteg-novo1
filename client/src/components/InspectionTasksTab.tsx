@@ -143,13 +143,18 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
     },
   });
 
+  // Estado para rastrear qual checklist está sendo salvo
+  const [savingChecklistId, setSavingChecklistId] = useState<number | null>(null);
+
   const updateResponsesMutation = trpc.checklists.instances.updateResponses.useMutation({
     onSuccess: async () => {
       toast.success("Respostas salvas com sucesso!");
+      setSavingChecklistId(null);
       await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
     },
     onError: (error) => {
       toast.error(`Erro ao salvar respostas: ${error.message}`);
+      setSavingChecklistId(null);
     },
   });
 
@@ -312,13 +317,14 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
               onDeleteTask={(taskId) => deleteTaskMutation.mutate({ id: taskId })}
               onDeleteChecklist={(checklistId) => deleteChecklistMutation.mutate({ id: checklistId })}
               onSaveResponses={(checklistId, responses, isComplete) => {
+                setSavingChecklistId(checklistId);
                 updateResponsesMutation.mutate({ id: checklistId, responses, isComplete });
               }}
               onCompleteTask={(taskId) => {
                 setSelectedTaskId(taskId);
                 setIsCompleteTaskOpen(true);
               }}
-              isSavingResponses={updateResponsesMutation.isPending}
+              isSavingResponses={savingChecklistId === task.id && updateResponsesMutation.isPending}
               deleteChecklistDialogOpen={deleteChecklistDialogOpen}
               setDeleteChecklistDialogOpen={setDeleteChecklistDialogOpen}
               deleteChecklistMutation={deleteChecklistMutation}

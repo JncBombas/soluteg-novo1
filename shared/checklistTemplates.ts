@@ -43,14 +43,18 @@ const inspecaoVisualBombasPadrao: ChecklistItem[] = [
   { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
 ];
 
-// Itens de Inspeção Visual para GERADOR (mesma estrutura das bombas conforme documento)
+// Itens de Inspeção Visual para GERADOR (específicos para gerador diesel)
 const inspecaoVisualGerador: ChecklistItem[] = [
-  { id: 'tubos', label: 'Tubos', type: 'ok_nok_na', required: true },
-  { id: 'acionamento', label: 'Acionamento', type: 'ok_nok_na', required: true },
-  { id: 'boias', label: 'Boias', type: 'ok_nok_na', required: true },
-  { id: 'painel', label: 'Painel', type: 'ok_nok_na', required: true },
-  { id: 'sala', label: 'Sala', type: 'ok_nok_na', required: true },
-  { id: 'ruido', label: 'Ruído', type: 'ok_nok_na', required: true },
+  { id: 'vazamentos', label: 'Vazamentos', type: 'ok_nok_na', required: true },
+  { id: 'corrosao', label: 'Corrosão', type: 'ok_nok_na', required: true },
+  { id: 'conexoes_soltas', label: 'Conexões Soltas', type: 'ok_nok_na', required: true },
+  { id: 'radiador', label: 'Radiador', type: 'ok_nok_na', required: true },
+  { id: 'mangueiras', label: 'Mangueiras', type: 'ok_nok_na', required: true },
+  { id: 'bateria_visual', label: 'Bateria (Visual)', type: 'ok_nok_na', required: true },
+  { id: 'cabos_eletricos', label: 'Cabos Elétricos', type: 'ok_nok_na', required: true },
+  { id: 'escapamento', label: 'Escapamento', type: 'ok_nok_na', required: true },
+  { id: 'filtros', label: 'Filtros', type: 'ok_nok_na', required: true },
+  { id: 'painel_controle', label: 'Painel de Controle', type: 'ok_nok_na', required: true },
 ];
 
 // Template: Bomba de Recalque (até 4 bombas)
