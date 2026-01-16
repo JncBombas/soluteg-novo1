@@ -50,6 +50,8 @@ import {
   AlertCircle,
   FileText,
   PenTool,
+  Edit2,
+  X,
 } from "lucide-react";
 import ChecklistForm from "./ChecklistForm";
 import SignaturePad from "./SignaturePad";
@@ -541,6 +543,7 @@ function InspectionTaskItem({
   const [brand, setBrand] = useState("");
   const [power, setPower] = useState("");
   const [isAddingChecklist, setIsAddingChecklist] = useState(false);
+  const [editingChecklistId, setEditingChecklistId] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
 
@@ -576,6 +579,10 @@ function InspectionTaskItem({
   };
 
   const isCompleted = task.status === "concluida";
+
+  const toggleEditChecklist = (checklistId: number) => {
+    setEditingChecklistId(editingChecklistId === checklistId ? null : checklistId);
+  };
 
   return (
     <AccordionItem value={task.id.toString()} className="border rounded-lg">
@@ -654,6 +661,26 @@ function InspectionTaskItem({
                             <Badge variant={checklist.isComplete ? "default" : "secondary"}>
                               {checklist.isComplete ? "Completo" : "Incompleto"}
                             </Badge>
+                            {checklist.isComplete && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleEditChecklist(checklist.id)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                {editingChecklistId === checklist.id ? (
+                                  <>
+                                    <X className="h-3 w-3 mr-1" />
+                                    Cancelar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Edit2 className="h-3 w-3 mr-1" />
+                                    Editar
+                                  </>
+                                )}
+                              </Button>
+                            )}
                             {!isCompleted && (
                               <AlertDialog 
                                 open={deleteChecklistDialogOpen === checklist.id}
@@ -710,9 +737,10 @@ function InspectionTaskItem({
                             initialResponses={responses}
                             onSave={(newResponses, isComplete) => {
                               onSaveResponses(checklist.id, newResponses, isComplete);
+                              setEditingChecklistId(null);
                             }}
                             isSaving={isSavingResponses}
-                            readOnly={isCompleted}
+                            readOnly={isCompleted && editingChecklistId !== checklist.id}
                           />
                         )}
                       </CardContent>

@@ -722,3 +722,5 @@
 - [ ] Testar com 1, 2, 3 e 4 bombas selecionadas
 
 - [x] Corrigir template do Gerador - Inspeção Visual está com itens de bomba ao invés de itens específicos de gerador
+
+- [x] Implementar funcionalidade de edição de respostas de checklists após salvamento
