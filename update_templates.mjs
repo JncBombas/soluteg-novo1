@@ -81,7 +81,7 @@ const gerador = JSON.stringify({
       id: 'visual',
       title: 'Inspeção Visual',
       fields: [
-        { id: 'visual_items', type: 'checkbox_table', label: 'Itens', items: ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'], options: ['OK', 'NOK', 'N/A'] }
+        { id: 'visual_items', type: 'checkbox_table', label: 'Itens', items: ['Vazamentos', 'Acionamento', 'USCA', 'Limpeza', 'Sala', 'Ruído'], options: ['OK', 'NOK', 'N/A'] }
       ]
     },
     {
