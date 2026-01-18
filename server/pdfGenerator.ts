@@ -335,21 +335,53 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
           // Listar checklists da tarefa
           if (task.checklists && task.checklists.length > 0) {
             for (const checklist of task.checklists) {
+              // Verificar se precisa de nova página
+              if (currentY > doc.page.height - 150) {
+                doc.addPage();
+                currentY = 40;
+              }
+
+              // === CARD DO CHECKLIST ===
+              const cardX = leftMargin;
+              const cardWidth = contentWidth;
+              const cardBorderColor = '#D4A84B';
+              
+              // Borda superior do card
+              doc.strokeColor(cardBorderColor)
+                 .lineWidth(3)
+                 .moveTo(cardX, currentY)
+                 .lineTo(cardX + cardWidth, currentY)
+                 .stroke();
+              
+              currentY += 8;
+              
+              // Fundo do header do card
+              doc.rect(cardX, currentY, cardWidth, 20)
+                 .fill('#F5F5F5');
+              
               // Título do checklist
-              doc.fontSize(9)
+              doc.fontSize(10)
                  .fillColor('#D4A84B')
                  .font('Helvetica-Bold')
-                 .text(`• ${checklist.customTitle}`, leftMargin + 10, currentY);
-              currentY += 12;
-
-              // Dados técnicos
+                 .text(`${checklist.customTitle}`, cardX + 8, currentY + 4, { width: cardWidth - 16 });
+              
+              currentY += 25;
+              
+              // Dados técnicos básicos
               if (checklist.brand || checklist.power) {
                 doc.fontSize(8)
                    .fillColor('#666666')
-                   .font('Helvetica')
-                   .text(`Marca: ${checklist.brand || 'N/A'} | Potência: ${checklist.power || 'N/A'}`, leftMargin + 20, currentY);
-                currentY += 12;
+                   .font('Helvetica');
+                
+                const brandText = `Marca: ${checklist.brand || 'N/A'}`;
+                const powerText = `Potência: ${checklist.power || 'N/A'}`;
+                
+                doc.text(brandText, cardX + 8, currentY, { width: cardWidth / 2 - 8 });
+                doc.text(powerText, cardX + cardWidth / 2, currentY, { width: cardWidth / 2 - 8 });
+                currentY += 14;
               }
+              
+              currentY += 5;
 
               // Respostas do checklist
               if (checklist.responses) {
@@ -358,39 +390,62 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   
                   // === SEÇÃO: INSPEÇÃO VISUAL ===
                   if (responses.visual_items) {
-                    doc.fontSize(8)
-                       .fillColor('#D4A84B')
+                    // Título da seção
+                    doc.rect(cardX + 5, currentY, cardWidth - 10, 16)
+                       .fill('#E8E8E8');
+                    
+                    doc.fontSize(9)
+                       .fillColor('#333333')
                        .font('Helvetica-Bold')
-                       .text('Inspeção Visual', leftMargin + 20, currentY);
-                    currentY += 12;
+                       .text('Inspeção Visual', cardX + 10, currentY + 3);
+                    
+                    currentY += 20;
                     
                     const visualData = typeof responses.visual_items === 'string' ? JSON.parse(responses.visual_items) : responses.visual_items;
                     const items = ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'];
                     
+                    // Tabela com melhor formatação
+                    const tableX = cardX + 10;
+                    const tableWidth = cardWidth - 20;
+                    const colWidths = [tableWidth * 0.45, tableWidth * 0.18, tableWidth * 0.18, tableWidth * 0.18];
+                    
                     // Cabeçalho da tabela
-                    const tableX = leftMargin + 25;
-                    const colWidths = [100, 30, 40, 30];
+                    doc.rect(tableX, currentY, tableWidth, 14)
+                       .fill('#D4A84B');
                     
                     doc.fontSize(7)
-                       .fillColor('#666666')
+                       .fillColor('#FFFFFF')
                        .font('Helvetica-Bold');
-                    doc.text('Item', tableX, currentY, { width: colWidths[0] });
-                    doc.text('OK', tableX + colWidths[0], currentY, { width: colWidths[1], align: 'center' });
-                    doc.text('NOK', tableX + colWidths[0] + colWidths[1], currentY, { width: colWidths[2], align: 'center' });
-                    doc.text('N/A', tableX + colWidths[0] + colWidths[1] + colWidths[2], currentY, { width: colWidths[3], align: 'center' });
-                    currentY += 10;
+                    
+                    doc.text('Item', tableX + 3, currentY + 3, { width: colWidths[0] });
+                    doc.text('OK', tableX + colWidths[0], currentY + 3, { width: colWidths[1], align: 'center' });
+                    doc.text('NÃO OK', tableX + colWidths[0] + colWidths[1], currentY + 3, { width: colWidths[2], align: 'center' });
+                    doc.text('N/A', tableX + colWidths[0] + colWidths[1] + colWidths[2], currentY + 3, { width: colWidths[3], align: 'center' });
+                    
+                    currentY += 16;
                     
                     // Linhas da tabela
                     doc.font('Helvetica');
-                    for (const item of items) {
+                    items.forEach((item, idx) => {
                       const itemData = visualData[item] || {};
-                      doc.fillColor('#333333').text(item, tableX, currentY, { width: colWidths[0] });
-                      doc.text(itemData.OK ? '✓' : '', tableX + colWidths[0], currentY, { width: colWidths[1], align: 'center' });
-                      doc.text(itemData.NOK ? '✓' : '', tableX + colWidths[0] + colWidths[1], currentY, { width: colWidths[2], align: 'center' });
-                      doc.text(itemData['N/A'] ? '✓' : '', tableX + colWidths[0] + colWidths[1] + colWidths[2], currentY, { width: colWidths[3], align: 'center' });
-                      currentY += 10;
-                    }
-                    currentY += 5;
+                      
+                      // Fundo alternado
+                      if (idx % 2 === 0) {
+                        doc.rect(tableX, currentY, tableWidth, 12).fill('#FAFAFA');
+                      }
+                      
+                      doc.fontSize(7)
+                         .fillColor('#333333');
+                      
+                      doc.text(item, tableX + 3, currentY + 2, { width: colWidths[0] });
+                      doc.text(itemData.OK ? '✓' : '', tableX + colWidths[0], currentY + 2, { width: colWidths[1], align: 'center' });
+                      doc.text(itemData.NOK ? '✗' : '', tableX + colWidths[0] + colWidths[1], currentY + 2, { width: colWidths[2], align: 'center' });
+                      doc.text(itemData['N/A'] ? '—' : '', tableX + colWidths[0] + colWidths[1] + colWidths[2], currentY + 2, { width: colWidths[3], align: 'center' });
+                      
+                      currentY += 12;
+                    });
+                    
+                    currentY += 8;
                   }
                   
                   // === SEÇÃO: DADOS TÉCNICOS ===
@@ -399,41 +454,73 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   );
                   
                   if (technicalFields.length > 0) {
-                    doc.fontSize(8)
-                       .fillColor('#D4A84B')
-                       .font('Helvetica-Bold')
-                       .text('Dados Técnicos', leftMargin + 20, currentY);
-                    currentY += 12;
+                    doc.rect(cardX + 5, currentY, cardWidth - 10, 16)
+                       .fill('#E8E8E8');
                     
-                    for (const [key, value] of technicalFields) {
+                    doc.fontSize(9)
+                       .fillColor('#333333')
+                       .font('Helvetica-Bold')
+                       .text('Dados Técnicos', cardX + 10, currentY + 3);
+                    
+                    currentY += 20;
+                    
+                    const col1X = cardX + 10;
+                    const col2X = cardX + cardWidth / 2;
+                    const colWidth = cardWidth / 2 - 15;
+                    let col1Y = currentY;
+                    let col2Y = currentY;
+                    
+                    doc.fontSize(7)
+                       .fillColor('#333333')
+                       .font('Helvetica');
+                    
+                    const fieldsArray = Array.from(technicalFields);
+                    for (let i = 0; i < fieldsArray.length; i++) {
+                      const [key, value] = fieldsArray[i];
                       if (value !== null && value !== undefined && value !== '') {
                         const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const formattedValue = formatFieldValue(value);
+                        const fieldText = `${formattedKey}: ${formattedValue}`;
                         
-                        doc.fontSize(8)
-                           .fillColor('#333333')
-                           .font('Helvetica')
-                           .text(`${formattedKey}: ${formattedValue}`, leftMargin + 25, currentY, { width: contentWidth - 25 });
-                        currentY += 10;
+                        if (i % 2 === 0) {
+                          doc.text(fieldText, col1X, col1Y, { width: colWidth });
+                          col1Y += 10;
+                        } else {
+                          doc.text(fieldText, col2X, col2Y, { width: colWidth });
+                          col2Y += 10;
+                        }
                       }
                     }
-                    currentY += 5;
+                    
+                    currentY = Math.max(col1Y, col2Y) + 8;
                   }
                   
                   // === SEÇÃO: OBSERVAÇÕES ===
                   if (responses.observations) {
-                    doc.fontSize(8)
+                    const obsHeight = doc.heightOfString(responses.observations, { width: cardWidth - 20 }) + 16;
+                    doc.rect(cardX + 5, currentY, cardWidth - 10, obsHeight)
+                       .fill('#FFF8E7');
+                    
+                    doc.fontSize(9)
                        .fillColor('#D4A84B')
                        .font('Helvetica-Bold')
-                       .text('Observações', leftMargin + 20, currentY);
-                    currentY += 12;
+                       .text('Observações', cardX + 10, currentY + 5);
                     
                     doc.fontSize(8)
                        .fillColor('#333333')
                        .font('Helvetica')
-                       .text(responses.observations, leftMargin + 25, currentY, { width: contentWidth - 25, align: 'justify' });
-                    currentY += doc.heightOfString(responses.observations, { width: contentWidth - 25 }) + 5;
+                       .text(responses.observations, cardX + 10, currentY + 18, { width: cardWidth - 20, align: 'justify' });
+                    
+                    currentY += obsHeight + 8;
                   }
+                  
+                  doc.strokeColor(cardBorderColor)
+                     .lineWidth(1)
+                     .moveTo(cardX, currentY)
+                     .lineTo(cardX + cardWidth, currentY)
+                     .stroke();
+                  
+                  currentY += 15;
                 } catch (e) {
                   console.error('[PDF] Erro ao parsear respostas do checklist:', e);
                 }

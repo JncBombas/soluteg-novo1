@@ -724,3 +724,5 @@
 - [x] Corrigir template do Gerador - Inspeção Visual está com itens de bomba ao invés de itens específicos de gerador
 
 - [x] Implementar funcionalidade de edição de respostas de checklists após salvamento
+
+- [x] Melhorar layout do PDF dos checklists - renderização mais amigável e estruturada
