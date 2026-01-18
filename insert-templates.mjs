@@ -180,10 +180,10 @@ async function main() {
             title: "Inspeção Visual",
             type: "visual_inspection",
             items: [
-              { label: "Tubos", type: "checkbox" },
-              { label: "Acionamento", type: "checkbox" },
-              { label: "Boias", type: "checkbox" },
-              { label: "Painel", type: "checkbox" },
+              { label: "Vazamentos", type: "checkbox" },
+              { label: "USCA", type: "checkbox" },
+              { label: "Limpeza", type: "checkbox" },
+              { label: "Conexões", type: "checkbox" },
               { label: "Sala", type: "checkbox" },
               { label: "Ruído", type: "checkbox" }
             ]
