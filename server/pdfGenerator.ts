@@ -530,47 +530,8 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
             }
           }
 
-          // Assinaturas da tarefa (se concluída)
-          if (task.status === 'concluida' && (task.collaboratorSignature || task.clientSignature)) {
-            doc.fontSize(9)
-               .fillColor('#D4A84B')
-               .font('Helvetica-Bold')
-               .text('Assinaturas:', leftMargin + 10, currentY);
-            currentY += 15;
-
-            const sigWidth = (contentWidth / 2) - 40;
-            const sigCol1X = leftMargin + 20;
-            const sigCol2X = pageWidth / 2 + 20;
-
-            // Assinatura do Colaborador
-            if (task.collaboratorSignature) {
-              try {
-                doc.image(task.collaboratorSignature, sigCol1X, currentY, { width: sigWidth, height: 60 });
-                doc.fontSize(7)
-                   .fillColor('#666666')
-                   .font('Helvetica')
-                   .text(`${task.collaboratorName || 'Colaborador'}`, sigCol1X, currentY + 65, { width: sigWidth, align: 'center' });
-                doc.text(`${task.collaboratorDocument || ''}`, sigCol1X, currentY + 75, { width: sigWidth, align: 'center' });
-              } catch (e) {
-                console.error('[PDF] Erro ao adicionar assinatura do colaborador:', e);
-              }
-            }
-
-            // Assinatura do Cliente
-            if (task.clientSignature) {
-              try {
-                doc.image(task.clientSignature, sigCol2X, currentY, { width: sigWidth, height: 60 });
-                doc.fontSize(7)
-                   .fillColor('#666666')
-                   .font('Helvetica')
-                   .text(`${task.clientName || 'Cliente'}`, sigCol2X, currentY + 65, { width: sigWidth, align: 'center' });
-              } catch (e) {
-                console.error('[PDF] Erro ao adicionar assinatura do cliente:', e);
-              }
-            }
-
-            currentY += 95;
-          }
+          // Assinaturas removidas do final de cada tarefa
+          // Agora as assinaturas aparecem apenas no final da OS
 
           currentY += 15;
         }

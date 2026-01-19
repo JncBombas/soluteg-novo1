@@ -726,3 +726,6 @@
 - [x] Implementar funcionalidade de edição de respostas de checklists após salvamento
 
 - [x] Melhorar layout do PDF dos checklists - renderização mais amigável e estruturada
+
+- [x] Remover assinaturas do final de cada tarefa/checklist
+- [x] Adicionar assinatura apenas no final da OS (obrigatória do colaborador, opcional do cliente)
