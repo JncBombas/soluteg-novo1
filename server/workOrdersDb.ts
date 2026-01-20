@@ -94,6 +94,8 @@ export async function getWorkOrderById(id: number) {
       recurrenceDay: workOrders.recurrenceDay,
       createdAt: workOrders.createdAt,
       updatedAt: workOrders.updatedAt,
+      collaboratorSignature: workOrders.collaboratorSignature,
+      clientSignature: workOrders.clientSignature,
       // Dados do cliente
       clientName: clients.name,
       clientAddress: clients.address,
