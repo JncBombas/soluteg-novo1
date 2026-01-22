@@ -599,101 +599,93 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-      // === RODAPÉ COM ASSINATURAS ===
-      // Verificar se precisa de nova página para as assinaturas
-      if (currentY > doc.page.height - 180) {
+      // === SEÇÃO DE ASSINATURAS ===
+      // Ajuste de altura para o título não ficar escondido
+      currentY += 40;
+      
+      if (currentY > doc.page.height - 150) {
         doc.addPage();
         currentY = 40;
       }
-
-      const footerY = Math.max(currentY + 30, doc.page.height - 150);
       
-      // Título da seção de assinaturas
-      doc.fontSize(11)
+      // Título da Seção (Ajustado para não ser sobreposto)
+      doc.fontSize(12)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
-         .text('Assinaturas', leftMargin, footerY - 30);
-
-      // Duas colunas para assinaturas
-      const sigCol1X = leftMargin + 30;
-      const sigCol2X = pageWidth / 2 + 30;
-      const sigWidth = (contentWidth / 2) - 60;
+         .text('Assinaturas', leftMargin, currentY);
       
-      // Assinatura do Colaborador (esquerda)
+      currentY += 50; // Espaço para a imagem da assinatura ficar acima da linha
+      
+      const signatureWidth = 180;
+      const sigLineY = currentY;
+      
+      // --- Coluna 1: Assinatura do Colaborador ---
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(leftMargin, sigLineY)
+         .lineTo(leftMargin + signatureWidth, sigLineY)
+         .stroke();
+      
+      doc.fontSize(8)
+         .fillColor('#666666')
+         .font('Helvetica')
+         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { width: signatureWidth, align: 'center' });
+      
+      // Renderizar imagem da assinatura do colaborador se existir
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       if (collaboratorSig) {
         try {
           console.log('[PDF] Renderizando assinatura do colaborador, tamanho:', collaboratorSig?.length);
-          // Extrair base64 da assinatura (pode ser data URL ou apenas base64)
           let base64Data = collaboratorSig;
           if (collaboratorSig.includes(',')) {
             base64Data = collaboratorSig.split(',')[1];
           }
           const sigBuffer = Buffer.from(base64Data, 'base64');
-          doc.image(sigBuffer, sigCol1X, footerY - 40, { width: sigWidth, height: 60 });
+          doc.image(sigBuffer, leftMargin, sigLineY - 50, { width: signatureWidth, height: 45 });
           console.log('[PDF] Assinatura do colaborador renderizada com sucesso');
         } catch (e) {
           console.error('[PDF] Erro ao renderizar assinatura do colaborador:', e);
-          doc.strokeColor('#333333')
-             .lineWidth(0.5)
-             .moveTo(sigCol1X, footerY + 30)
-             .lineTo(sigCol1X + sigWidth, footerY + 30)
-             .stroke();
         }
-      } else {
-        console.log('[PDF] Nenhuma assinatura do colaborador encontrada');
-        doc.strokeColor('#333333')
-           .lineWidth(0.5)
-           .moveTo(sigCol1X, footerY + 30)
-           .lineTo(sigCol1X + sigWidth, footerY + 30)
-           .stroke();
       }
       
-      doc.fontSize(9)
-         .fillColor('#666666')
-         .font('Helvetica')
-         .text('Assinatura do Colaborador', sigCol1X, footerY + 35, { 
-           width: sigWidth, 
-           align: 'center' 
-         });
+      // --- Coluna 2: Assinatura do Cliente ---
+      const clientSigX = rightMargin - signatureWidth;
+      
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(clientSigX, sigLineY)
+         .lineTo(rightMargin, sigLineY)
+         .stroke();
       
       doc.fontSize(8)
-         .fillColor('#999999')
-         .text(`Nome: ${(workOrder as any).collaboratorName || '_______________________'}`, sigCol1X, footerY + 50, { width: sigWidth });
-
-      // Assinatura do Cliente (direita) - apenas se existir
+         .fillColor('#666666')
+         .font('Helvetica')
+         .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { width: signatureWidth, align: 'center' });
+      
+      // Renderizar imagem da assinatura do cliente se existir
       const clientSig = (workOrder as any).clientSignature;
       if (clientSig) {
-        doc.strokeColor('#333333')
-           .lineWidth(0.5)
-           .moveTo(sigCol2X, footerY + 30)
-           .lineTo(sigCol2X + sigWidth, footerY + 30)
-           .stroke();
-        
-        doc.fontSize(9)
-           .fillColor('#666666')
-           .font('Helvetica')
-           .text('Assinatura do Cliente', sigCol2X, footerY + 35, { 
-             width: sigWidth, 
-             align: 'center' 
-           });
-        
         try {
-          const sigBuffer = Buffer.from(clientSig.split(',')[1], 'base64');
-          doc.image(sigBuffer, sigCol2X, footerY - 40, { width: sigWidth, height: 60 });
+          let base64Data = clientSig;
+          if (clientSig.includes(',')) {
+            base64Data = clientSig.split(',')[1];
+          }
+          const sigBuffer = Buffer.from(base64Data, 'base64');
+          doc.image(sigBuffer, clientSigX, sigLineY - 50, { width: signatureWidth, height: 45 });
         } catch (e) {
-          doc.fontSize(8)
-             .fillColor('#999999')
-             .text('Nome: ' + ((workOrder as any).clientName || '_______________________'), sigCol2X, footerY + 50, { width: sigWidth });
+          console.error('[PDF] Erro ao renderizar assinatura do cliente:', e);
         }
       }
       
-      // Rodapé final
+      // Espaçamento final do rodapé
+      currentY = sigLineY + 40;
+      
+      // Rodapé de Sistema
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', leftMargin, footerY + 90, { 
-           width: contentWidth, 
-           align: 'center' 
+         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', leftMargin, doc.page.height - 30, { 
+           align: 'center', 
+           width: contentWidth 
          });
 
       // Finalizar o documento
