@@ -600,21 +600,27 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       }
 
       // === SEÇÃO DE ASSINATURAS ===
-      // Ajuste de altura para o título não ficar escondido
-      currentY += 40;
+      // Definimos a altura total necessária para o bloco de assinaturas (título + linhas + subtítulos)
+      const heightNeeded = 110;
       
-      if (currentY > doc.page.height - 150) {
+      // Verificamos se há espaço na página atual ANTES de começar a desenhar
+      if (currentY + heightNeeded > doc.page.height - 40) {
         doc.addPage();
         currentY = 40;
+      } else {
+        // Se couber, apenas damos um pequeno espaçamento do conteúdo anterior
+        currentY += 25;
       }
       
-      // Título da Seção (Ajustado para não ser sobreposto)
+      // Título da Seção
       doc.fontSize(12)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text('Assinaturas', leftMargin, currentY);
       
-      currentY += 50; // Espaço para a imagem da assinatura ficar acima da linha
+      // Ajustamos o Y para a posição das assinaturas (espaço para a imagem ficar acima da linha)
+      // Reduzimos um pouco para evitar empurrar para uma nova página sem necessidade
+      currentY += 45;
       
       const signatureWidth = 180;
       const sigLineY = currentY;
@@ -629,7 +635,10 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.fontSize(8)
          .fillColor('#666666')
          .font('Helvetica')
-         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { width: signatureWidth, align: 'center' });
+         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
+         width: signatureWidth, 
+         align: 'center' 
+      });
       
       // Renderizar imagem da assinatura do colaborador se existir
       const collaboratorSig = (workOrder as any).collaboratorSignature;
@@ -660,7 +669,10 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.fontSize(8)
          .fillColor('#666666')
          .font('Helvetica')
-         .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { width: signatureWidth, align: 'center' });
+         .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
+         width: signatureWidth, 
+         align: 'center' 
+      });
       
       // Renderizar imagem da assinatura do cliente se existir
       const clientSig = (workOrder as any).clientSignature;
@@ -676,9 +688,6 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
           console.error('[PDF] Erro ao renderizar assinatura do cliente:', e);
         }
       }
-      
-      // Espaçamento final do rodapé
-      currentY = sigLineY + 40;
       
       // Rodapé de Sistema
       doc.fontSize(7)
