@@ -113,6 +113,9 @@ export async function getWorkOrderById(id: number) {
 /**
  * Listar OS com filtros
  */
+/**
+ * Listar OS com filtros (Versão Corrigida)
+ */
 export async function listWorkOrders(filters: {
   clientId?: number;
   adminId?: number;
@@ -124,13 +127,33 @@ export async function listWorkOrders(filters: {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select().from(workOrders);
+  // Importamos o schema de clientes para garantir o Join
+  const { clients } = await import("../drizzle/schema");
+
+  // Mudamos de .select() para uma seleção explícita para evitar que campos novos 
+  // (como o documento) quebrem a listagem se estiverem nulos
+  let query = db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      status: workOrders.status,
+      type: workOrders.type,
+      priority: workOrders.priority,
+      createdAt: workOrders.createdAt,
+      clientId: workOrders.clientId,
+      clientName: clients.name, // Isso ajuda a mostrar o nome do cliente na lista
+    })
+    .from(workOrders)
+    .leftJoin(clients, eq(workOrders.clientId, clients.id));
 
   const conditions = [];
   if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
   if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
   if (filters.type) conditions.push(eq(workOrders.type, filters.type as any));
   if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
+  
+  // Filtros de data costumam causar sumiço se os fusos horários estiverem errados
   if (filters.startDate) conditions.push(gte(workOrders.createdAt, filters.startDate));
   if (filters.endDate) conditions.push(lte(workOrders.createdAt, filters.endDate));
 
@@ -138,10 +161,10 @@ export async function listWorkOrders(filters: {
     query = query.where(and(...conditions)) as any;
   }
 
+  // Ordenar sempre pela mais recente
   const result = await query.orderBy(desc(workOrders.createdAt));
   return result;
 }
-
 /**
  * Atualizar OS
  */
