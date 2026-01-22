@@ -495,48 +495,59 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     currentY = Math.max(col1Y, col2Y) + 8;
                   }
                   
-                  // === SEÇÃO: OBSERVAÇÕES ===
                   // === SEÇÃO: OBSERVAÇÕES DO CHECKLIST ===
-if (responses.observations && responses.observations.trim() !== '') {
-    // Garante que o texto não bata no final da página
-    if (currentY > doc.page.height - 120) {
-        doc.addPage();
-        currentY = 40;
-    }
+                  if (responses.observations && responses.observations.trim() !== '') {
+                    // Garante que o texto não bata no final da página
+                    if (currentY > doc.page.height - 120) {
+                      doc.addPage();
+                      currentY = 40;
+                    }
+                    const textWidth = cardWidth - 20;
+                    const obsText = responses.observations.trim();
+                    
+                    // Título da Seção
+                    doc.fontSize(9)
+                       .fillColor('#D4A84B')
+                       .font('Helvetica-Bold')
+                       .text('Observações Técnicas:', cardX + 10, currentY + 5);
+                    
+                    currentY += 15;
+                    // Cálculo dinâmico da altura do texto
+                    const textHeight = doc.heightOfString(obsText, { 
+                      width: textWidth, 
+                      align: 'justify' 
+                    });
+                    // Retângulo de fundo para destacar o texto [Melhoria Visual]
+                    doc.rect(cardX + 5, currentY, cardWidth - 10, textHeight + 10)
+                       .fill('#F5F5F5'); 
+                    // Renderização do texto das observações
+                    doc.fontSize(8)
+                       .fillColor('#333333')
+                       .font('Helvetica')
+                       .text(obsText, cardX + 10, currentY + 5, { 
+                         width: textWidth, 
+                         align: 'justify',
+                         lineGap: 2 
+                       });
 
-    const textWidth = cardWidth - 20;
-    const obsText = responses.observations.trim();
-    
-    // Título da Seção
-    doc.fontSize(9)
-       .fillColor('#D4A84B')
-       .font('Helvetica-Bold')
-       .text('Observações Técnicas:', cardX + 10, currentY + 5);
-    
-    currentY += 15;
+                    currentY += textHeight + 20;
+                  }
+                  
+                  doc.strokeColor(cardBorderColor)
+                     .lineWidth(1)
+                     .moveTo(cardX, currentY)
+                     .lineTo(cardX + cardWidth, currentY)
+                     .stroke();
+                  
+                  currentY += 15;
+                } catch (e) {
+                  console.error('[PDF] Erro ao parsear respostas do checklist:', e);
+                }
+              }
 
-    // Cálculo dinâmico da altura do texto
-    const textHeight = doc.heightOfString(obsText, { 
-        width: textWidth, 
-        align: 'justify' 
-    });
-
-    // Retângulo de fundo para destacar o texto [Melhoria Visual]
-    doc.rect(cardX + 5, currentY, cardWidth - 10, textHeight + 10)
-       .fill('#F5F5F5'); 
-
-    // Renderização do texto das observações
-    doc.fontSize(8)
-       .fillColor('#333333')
-       .font('Helvetica')
-       .text(obsText, cardX + 10, currentY + 5, { 
-           width: textWidth, 
-           align: 'justify',
-           lineGap: 2 
-       });
-
-    currentY += textHeight + 20;
-}
+              currentY += 8;
+            }
+          }
           // Assinaturas removidas do final de cada tarefa
           // Agora as assinaturas aparecem apenas no final da OS
 
