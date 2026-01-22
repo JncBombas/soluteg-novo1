@@ -457,46 +457,48 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     key !== 'comments'
                   );
                   
+                  // === DADOS TÉCNICOS EM COLUNAS VERTICAIS ===
                   if (technicalFields.length > 0) {
-                    doc.rect(cardX + 5, currentY, cardWidth - 10, 16)
-                       .fill('#E8E8E8');
-                    
                     doc.fontSize(9)
-                       .fillColor('#333333')
+                       .fillColor('#D4A84B')
                        .font('Helvetica-Bold')
-                       .text('Dados Técnicos', cardX + 10, currentY + 3);
+                       .text('Dados Técnicos', cardX + 10, currentY);
                     
-                    currentY += 20;
+                    currentY += 15;
                     
-                    const col1X = cardX + 10;
-                    const col2X = cardX + cardWidth / 2;
-                    const colWidth = cardWidth / 2 - 15;
-                    let col1Y = currentY;
-                    let col2Y = currentY;
+                    // Calculamos o ponto de divisão para preencher a coluna esquerda primeiro
+                    const midPoint = Math.ceil(technicalFields.length / 2);
+                    const leftColumnFields = technicalFields.slice(0, midPoint);
+                    const rightColumnFields = technicalFields.slice(midPoint);
                     
-                    doc.fontSize(7)
-                       .fillColor('#333333')
-                       .font('Helvetica');
+                    const startY = currentY;
+                    let col1Y = startY;
+                    let col2Y = startY;
                     
-                    const fieldsArray = Array.from(technicalFields);
-                    for (let i = 0; i < fieldsArray.length; i++) {
-                      const [key, value] = fieldsArray[i];
+                    // Renderiza a Coluna da Esquerda (de cima para baixo)
+                    leftColumnFields.forEach(([label, value]) => {
                       if (value !== null && value !== undefined && value !== '') {
-                        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        doc.fontSize(8).fillColor('#333333').font('Helvetica');
+                        const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1).replace(/([A-Z])/g, ' $1');
                         const formattedValue = formatFieldValue(value);
-                        const fieldText = `${formattedKey}: ${formattedValue}`;
-                        
-                        if (i % 2 === 0) {
-                          doc.text(fieldText, col1X, col1Y, { width: colWidth });
-                          col1Y += 10;
-                        } else {
-                          doc.text(fieldText, col2X, col2Y, { width: colWidth });
-                          col2Y += 10;
-                        }
+                        doc.text(`${formattedLabel}: ${formattedValue}`, cardX + 10, col1Y, { width: cardWidth / 2 - 15 });
+                        col1Y += 12; // Espaçamento entre linhas
                       }
-                    }
+                    });
                     
-                    currentY = Math.max(col1Y, col2Y) + 8;
+                    // Renderiza a Coluna da Direita (de cima para baixo)
+                    rightColumnFields.forEach(([label, value]) => {
+                      if (value !== null && value !== undefined && value !== '') {
+                        doc.fontSize(8).fillColor('#333333').font('Helvetica');
+                        const formattedLabel = label.charAt(0).toUpperCase() + label.slice(1).replace(/([A-Z])/g, ' $1');
+                        const formattedValue = formatFieldValue(value);
+                        doc.text(`${formattedLabel}: ${formattedValue}`, cardX + cardWidth / 2 + 5, col2Y, { width: cardWidth / 2 - 15 });
+                        col2Y += 12;
+                      }
+                    });
+                    
+                    // O novo currentY será o maior valor entre as duas colunas para não sobrepor o próximo bloco
+                    currentY = Math.max(col1Y, col2Y) + 10;
                   }
                   
                   // === SEÇÃO: OBSERVAÇÕES DO CHECKLIST ===
