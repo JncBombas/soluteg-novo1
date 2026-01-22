@@ -496,40 +496,47 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   }
                   
                   // === SEÇÃO: OBSERVAÇÕES ===
-                  if (responses.observations) {
-                    const obsHeight = doc.heightOfString(responses.observations, { width: cardWidth - 20 }) + 16;
-                    doc.rect(cardX + 5, currentY, cardWidth - 10, obsHeight)
-                       .fill('#FFF8E7');
-                    
-                    doc.fontSize(9)
-                       .fillColor('#D4A84B')
-                       .font('Helvetica-Bold')
-                       .text('Observações', cardX + 10, currentY + 5);
-                    
-                    doc.fontSize(8)
-                       .fillColor('#333333')
-                       .font('Helvetica')
-                       .text(responses.observations, cardX + 10, currentY + 18, { width: cardWidth - 20, align: 'justify' });
-                    
-                    currentY += obsHeight + 8;
-                  }
-                  
-                  doc.strokeColor(cardBorderColor)
-                     .lineWidth(1)
-                     .moveTo(cardX, currentY)
-                     .lineTo(cardX + cardWidth, currentY)
-                     .stroke();
-                  
-                  currentY += 15;
-                } catch (e) {
-                  console.error('[PDF] Erro ao parsear respostas do checklist:', e);
-                }
-              }
+                  // === SEÇÃO: OBSERVAÇÕES DO CHECKLIST ===
+if (responses.observations && responses.observations.trim() !== '') {
+    // Garante que o texto não bata no final da página
+    if (currentY > doc.page.height - 120) {
+        doc.addPage();
+        currentY = 40;
+    }
 
-              currentY += 8;
-            }
-          }
+    const textWidth = cardWidth - 20;
+    const obsText = responses.observations.trim();
+    
+    // Título da Seção
+    doc.fontSize(9)
+       .fillColor('#D4A84B')
+       .font('Helvetica-Bold')
+       .text('Observações Técnicas:', cardX + 10, currentY + 5);
+    
+    currentY += 15;
 
+    // Cálculo dinâmico da altura do texto
+    const textHeight = doc.heightOfString(obsText, { 
+        width: textWidth, 
+        align: 'justify' 
+    });
+
+    // Retângulo de fundo para destacar o texto [Melhoria Visual]
+    doc.rect(cardX + 5, currentY, cardWidth - 10, textHeight + 10)
+       .fill('#F5F5F5'); 
+
+    // Renderização do texto das observações
+    doc.fontSize(8)
+       .fillColor('#333333')
+       .font('Helvetica')
+       .text(obsText, cardX + 10, currentY + 5, { 
+           width: textWidth, 
+           align: 'justify',
+           lineGap: 2 
+       });
+
+    currentY += textHeight + 20;
+}
           // Assinaturas removidas do final de cada tarefa
           // Agora as assinaturas aparecem apenas no final da OS
 
