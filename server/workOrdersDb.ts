@@ -141,6 +141,9 @@ export async function listWorkOrders(filters: {
       type: workOrders.type,
       priority: workOrders.priority,
       createdAt: workOrders.createdAt,
+      scheduledDate: workOrders.scheduledDate,
+      isRecurring: workOrders.isRecurring,
+      estimatedValue: workOrders.estimatedValue,
       clientId: workOrders.clientId,
       clientName: clients.name, // Isso ajuda a mostrar o nome do cliente na lista
     })

@@ -731,3 +731,5 @@
 - [x] Adicionar assinatura apenas no final da OS (obrigatória do colaborador, opcional do cliente)
 - [x] Remover campo de documento da assinatura no PDF
 - [x] Corrigir renderização de comentários do Gerador no PDF - aparecer igual aos outros checklists
+
+- [ ] Investigar por que as Ordens de Serviço não estão aparecendo na aplicação
