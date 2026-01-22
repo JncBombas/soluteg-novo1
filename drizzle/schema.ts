@@ -263,6 +263,7 @@ export const workOrders = mysqlTable("workOrders", {
   // Assinaturas digitais
   collaboratorSignature: text("collaboratorSignature"),
   collaboratorName: varchar("collaboratorName", { length: 255 }),
+  collaboratorDocument: varchar("collaboratorDocument", { length: 20 }),
   clientSignature: text("clientSignature"),
   clientName: varchar("clientName", { length: 255 }),
   signedAt: timestamp("signedAt"),

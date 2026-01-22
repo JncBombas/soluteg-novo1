@@ -631,8 +631,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       
       doc.fontSize(8)
          .fillColor('#999999')
-         .text('Nome: _______________________', sigCol1X, footerY + 50, { width: sigWidth });
-      doc.text('Doc: _______________________', sigCol1X, footerY + 65, { width: sigWidth });
+         .text(`Nome: ${(workOrder as any).collaboratorName || '_______________________'}`, sigCol1X, footerY + 50, { width: sigWidth });
 
       // Assinatura do Cliente (direita) - apenas se existir
       const clientSig = (workOrder as any).clientSignature;
