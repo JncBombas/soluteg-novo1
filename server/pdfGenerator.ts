@@ -500,35 +500,39 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   }
                   
                   // === SEÇÃO: OBSERVAÇÕES DO CHECKLIST ===
-                  if (responses.observations && responses.observations.trim() !== '') {
+                  // Captura ambas as variações de chave (observations e observacoes)
+                  const obsContent = responses.observations || responses.observacoes;
+                  
+                  if (obsContent && obsContent.trim() !== '') {
                     // Garante que o texto não bata no final da página
                     if (currentY > doc.page.height - 120) {
                       doc.addPage();
                       currentY = 40;
                     }
-                    const textWidth = cardWidth - 20;
-                    const obsText = responses.observations.trim();
+                    const cleanObs = obsContent.trim();
+                    const textWidth = cardWidth - 25;
+                    const textHeight = doc.heightOfString(cleanObs, { 
+                      width: textWidth, 
+                      align: 'justify' 
+                    });
                     
                     // Título da Seção
                     doc.fontSize(9)
                        .fillColor('#D4A84B')
                        .font('Helvetica-Bold')
-                       .text('Observações Técnicas:', cardX + 10, currentY + 5);
+                       .text('Observações Técnicas:', cardX + 10, currentY);
                     
-                    currentY += 15;
-                    // Cálculo dinâmico da altura do texto
-                    const textHeight = doc.heightOfString(obsText, { 
-                      width: textWidth, 
-                      align: 'justify' 
-                    });
+                    currentY += 12;
+                    
                     // Retângulo de fundo para destacar o texto [Melhoria Visual]
-                    doc.rect(cardX + 5, currentY, cardWidth - 10, textHeight + 10)
-                       .fill('#F5F5F5'); 
+                    doc.rect(cardX + 8, currentY, cardWidth - 16, textHeight + 8)
+                       .fill('#F9F9F9'); 
+                    
                     // Renderização do texto das observações
                     doc.fontSize(8)
                        .fillColor('#333333')
                        .font('Helvetica')
-                       .text(obsText, cardX + 10, currentY + 5, { 
+                       .text(cleanObs, cardX + 12, currentY + 4, { 
                          width: textWidth, 
                          align: 'justify',
                          lineGap: 2 
