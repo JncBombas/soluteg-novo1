@@ -450,7 +450,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   
                   // === SEÇÃO: DADOS TÉCNICOS ===
                   const technicalFields = Object.entries(responses).filter(([key]) => 
-                    key !== 'visual_items' && key !== 'observations'
+                    key !== 'visual_items' && 
+                    key !== 'observations' && 
+                    key !== 'observacoes' &&
+                    key !== 'notes' &&
+                    key !== 'comments'
                   );
                   
                   if (technicalFields.length > 0) {
