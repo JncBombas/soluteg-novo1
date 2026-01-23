@@ -114,6 +114,12 @@ export default function AdminCreateWorkOrder() {
     }
 
     try {
+      console.log("[AdminCreateWorkOrder] Enviando dados para criação de OS:", {
+        adminId,
+        clientId: selectedClientId,
+        ...formData
+      });
+
       const result = await createWorkOrderMutation.mutateAsync({
         adminId,
         clientId: selectedClientId,
@@ -126,11 +132,12 @@ export default function AdminCreateWorkOrder() {
         estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : undefined,
       });
 
+      console.log("[AdminCreateWorkOrder] OS criada com sucesso:", result);
       toast.success(`OS ${result.osNumber} criada com sucesso!`);
       navigate("/admin/work-orders");
-    } catch (error) {
-      toast.error("Erro ao criar OS");
-      console.error(error);
+    } catch (error: any) {
+      console.error("[AdminCreateWorkOrder] Erro detalhado ao criar OS:", error);
+      toast.error(`Erro ao criar OS: ${error.message || "Erro desconhecido"}`);
     }
   };
 
@@ -318,6 +325,20 @@ export default function AdminCreateWorkOrder() {
 
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
+                  <label className="block text-sm font-semibold mb-2">Tipo de OS</label>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="emergencial">Emergencial</option>
+                    <option value="rotina">Rotina</option>
+                    <option value="orcamento">Orçamento</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm font-semibold mb-2">Tipo de Serviço</label>
                   <Input
                     type="text"
@@ -327,7 +348,9 @@ export default function AdminCreateWorkOrder() {
                     placeholder="Ex: Manutenção"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <label className="block text-sm font-semibold mb-2">Prioridade</label>
                   <select
