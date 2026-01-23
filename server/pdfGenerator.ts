@@ -599,55 +599,59 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-     // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (REVISADO E FIXO) ===
+    // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (VERSÃO FINAL CORRIGIDA) ===
       
-      const signatureBlockHeight = 110; // Espaço total necessário para as assinaturas
-      const bottomMargin = 40;         // Margem inferior
-      
-      // 1. Calculamos onde a assinatura DEVE começar para ficar no fim da folha
+      const signatureBlockHeight = 130; // Aumentamos um pouco o espaço reservado
+      const bottomMargin = 40;         
       const sigStartY = doc.page.height - bottomMargin - signatureBlockHeight;
 
-      // 2. Verificação de quebra de página:
-      // Se o conteúdo técnico (currentY) invadiu o espaço reservado para a assinatura,
-      // aí sim criamos uma nova página.
+      // 1. Verificação rigorosa de página extra
+      // Se o conteúdo técnico chegou perto do rodapé, pula para a próxima
       if (currentY > sigStartY - 20) {
         doc.addPage();
-        // Não resetamos o sigStartY, pois ele é relativo à folha (seja a 2 ou a 3)
+        currentY = 40; // Reset para o topo da nova página
       }
 
-      // 3. Título "Assinaturas"
+      // 2. Título "Assinaturas" - Subimos um pouco mais (sigStartY)
       doc.fontSize(11)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text('Assinaturas', leftMargin, sigStartY);
 
-      const sigLineY = sigStartY + 45; // Linha da assinatura
+      // 3. Ajuste das posições das imagens e linhas
+      // A imagem da assinatura ficará ENTRE o título e a linha
+      const imageY = sigStartY + 20; 
+      const sigLineY = imageY + 45; // Linha logo abaixo da imagem
       const sigWidth = (contentWidth / 2) - 30;
       const sigCol1X = leftMargin;
       const sigCol2X = pageWidth / 2 + 15;
 
-      // --- Assinatura do Colaborador (Esquerda) ---
+      // --- Assinatura do Colaborador ---
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X, sigStartY + 5, { width: sigWidth, height: 40 });
+          // Desenha a imagem ANTES da linha e do texto
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
         } catch (e) { console.error('Erro assinatura colaborador', e); }
       }
 
       doc.strokeColor('#333333').lineWidth(0.5)
          .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
+      // NOME DO COLABORADOR: Verificamos múltiplas fontes possíveis do banco de dados
+      const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || '________________';
+
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${(workOrder as any).collaboratorName || '________________'}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
+         .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      // --- Assinatura do Cliente (Direita) ---
+      // --- Assinatura do Cliente ---
       const clientSig = (workOrder as any).clientSignature;
       if (clientSig) {
         try {
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X, sigStartY + 5, { width: sigWidth, height: 40 });
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
         } catch (e) { console.error('Erro assinatura cliente', e); }
       }
 
@@ -657,7 +661,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      // === RODAPÉ ELETRÔNICO (Sempre no pé da página) ===
+      // RODAPÉ ELETRÔNICO
       doc.fontSize(7)
          .fillColor('#999999')
          .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
@@ -665,7 +669,6 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                doc.page.height - 25, 
                { align: 'center', width: contentWidth });
 
-      // FINALIZAÇÃO
       doc.end();
       
     } catch (error) {
