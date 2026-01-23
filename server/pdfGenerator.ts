@@ -662,17 +662,25 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
       // === RODAPÉ ELETRÔNICO FINAL (FIXO NO FIM DA FOLHA) ===
-      // Forçamos a escrita em uma posição absoluta, ignorando o "currentY"
-      // doc.page.height (595) - 25 unidades de margem
-      const finalFooterY = doc.page.height - 25;
-
+      // Renderizamos o rodapé na última página do documento
+      // Adicionamos espaço vazio para evitar que o PDFKit force uma nova página
+      const footerY = doc.y;
+      const pageBottom = doc.page.height - doc.page.margins.bottom;
+      
+      // Se estamos muito perto do fim da página, adicionamos espaço
+      if (footerY > pageBottom - 50) {
+        // Deixamos espaço suficiente para o rodapé
+        doc.moveDown(2);
+      }
+      
+      // Renderizamos o rodapé
       doc.fontSize(7)
          .fillColor('#999999')
          .font('Helvetica')
          .text(
            'Este documento foi gerado eletronicamente pelo sistema Soluteg',
            leftMargin,
-           finalFooterY,
+           doc.page.height - 25,
            {
              align: 'center',
              width: contentWidth
