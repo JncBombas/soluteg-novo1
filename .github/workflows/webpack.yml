@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: Deploy Website
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Confirme se a pasta de saída do seu projeto é 'dist'
+          path: ./dist # Pasta onde o Vite gera o site
 
   deploy:
     needs: build
