@@ -95,6 +95,8 @@ export async function getWorkOrderById(id: number) {
       createdAt: workOrders.createdAt,
       updatedAt: workOrders.updatedAt,
       collaboratorSignature: workOrders.collaboratorSignature,
+      collaboratorName: workOrders.collaboratorName,
+      collaboratorDocument: workOrders.collaboratorDocument,
       clientSignature: workOrders.clientSignature,
       // Dados do cliente
       clientName: clients.name,
