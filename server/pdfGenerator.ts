@@ -600,79 +600,68 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       }
 
       // Altura total estimada: Título (20) + Espaço (30) + Linha/Texto (30) = ~80
-// === BLOCO DE FINALIZAÇÃO E ASSINATURAS (VERSÃO À PROVA DE FALHAS) ===
+// === BLOCO DE FINALIZAÇÃO E ASSINATURAS ===
+      const signatureBlockHeight = 120; // Espaço necessário
+      
+      // Verifica se precisa de nova página antes de começar as assinaturas
+      if (currentY + signatureBlockHeight > doc.page.height - 50) {
+        doc.addPage();
+        currentY = 50;
+      } else {
+        currentY += 30; // Respiro maior antes das assinaturas
+      }
 
-const signatureBlockHeight = 100; // Espaço total necessário para o bloco
-const footerHeight = 40; // Espaço reservado para o rodapé
+      // Título da Seção
+      doc.fontSize(12)
+         .fillColor('#D4A84B')
+         .font('Helvetica-Bold')
+         .text('Assinaturas', leftMargin, currentY);
 
-// Verificamos se há espaço para o bloco de assinaturas + rodapé
-// Se a posição atual (currentY) + bloco de assinaturas passar do limite da página menos o rodapé
-if (currentY + signatureBlockHeight > doc.page.height - footerHeight - 20) {
-    doc.addPage();
-    currentY = 40;
-} else {
-    currentY += 20; // Respiro
-}
+      const sigLineY = currentY + 50; 
+      const signatureWidth = 180;
 
-// Desativamos temporariamente o auto-layout para evitar que o PDFKit 
-// crie uma página em branco se o texto "Assinaturas" encostar na borda
-doc.options.layout = 'absolute'; 
+      // --- Assinatura do Colaborador ---
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(leftMargin, sigLineY)
+         .lineTo(leftMargin + signatureWidth, sigLineY)
+         .stroke();
 
-// Título da Seção
-doc.fontSize(12)
-   .fillColor('#D4A84B')
-   .font('Helvetica-Bold')
-   .text('Assinaturas', leftMargin, currentY);
+      doc.fontSize(8)
+         .fillColor('#666666')
+         .font('Helvetica')
+         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
+             width: signatureWidth, 
+             align: 'center' 
+         });
 
-const sigLineY = currentY + 45; 
-const signatureWidth = 180;
+      // --- Assinatura do Cliente ---
+      const clientSigX = rightMargin - signatureWidth;
 
-// --- Assinatura do Colaborador ---
-doc.strokeColor('#333333')
-   .lineWidth(0.5)
-   .moveTo(leftMargin, sigLineY)
-   .lineTo(leftMargin + signatureWidth, sigLineY)
-   .stroke();
+      doc.strokeColor('#333333')
+         .lineWidth(0.5)
+         .moveTo(clientSigX, sigLineY)
+         .lineTo(rightMargin, sigLineY)
+         .stroke();
 
-doc.fontSize(8)
-   .fillColor('#666666')
-   .font('Helvetica')
-   .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
-       width: signatureWidth, 
-       align: 'center' 
-   });
+      doc.text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
+             width: signatureWidth, 
+             align: 'center' 
+         });
 
-// --- Assinatura do Cliente ---
-const clientSigX = rightMargin - signatureWidth;
+      // === RODAPÉ FIXO EM TODAS AS PÁGINAS ===
+      // Usamos o evento 'pageAdded' para garantir que o rodapé apareça em todas, 
+      // mas como já estamos no fim, desenhamos manualmente na última.
+      const bottomPos = doc.page.height - 40;
+      doc.fontSize(7)
+         .fillColor('#999999')
+         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
+               leftMargin, 
+               bottomPos, 
+               { align: 'center', width: contentWidth });
 
-doc.strokeColor('#333333')
-   .lineWidth(0.5)
-   .moveTo(clientSigX, sigLineY)
-   .lineTo(rightMargin, sigLineY)
-   .stroke();
-
-doc.fontSize(8)
-   .fillColor('#666666')
-   .font('Helvetica')
-   .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
-       width: signatureWidth, 
-       align: 'center' 
-   });
-
-// --- RODAPÉ FIXO (USANDO COORDENADA ABSOLUTA) ---
-// Isso garante que o rodapé nunca empurre o cursor para uma nova página
-const bottomPos = doc.page.height - 30;
-
-doc.fontSize(7)
-   .fillColor('#999999')
-   .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
-         leftMargin, 
-         bottomPos, 
-         { align: 'center', width: contentWidth });
-
-// Finaliza o documento IMEDIATAMENTE
-// O PDFKit não terá chance de processar o final da página e criar uma nova
-doc.end();
+      // FINALIZAÇÃO ÚNICA
+      doc.end();
 
     } catch (error) {
       reject(error);
