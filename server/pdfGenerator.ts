@@ -599,69 +599,75 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-      // === BLOCO DE FINALIZAÇÃO E ASSINATURAS ===
-      // 1. Definimos a posição fixa no final da página (ex: 150 unidades antes do fim)
-      const footerTop = doc.page.height - 150;
+     // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (REVISADO E FIXO) ===
+      
+      const signatureBlockHeight = 110; // Espaço total necessário para as assinaturas
+      const bottomMargin = 40;         // Margem inferior
+      
+      // 1. Calculamos onde a assinatura DEVE começar para ficar no fim da folha
+      const sigStartY = doc.page.height - bottomMargin - signatureBlockHeight;
 
-      // 2. Se o conteúdo atual (currentY) já passou desse ponto, precisamos de uma nova página
-      // Caso contrário, ele escreve no final da página atual mesmo.
-      if (currentY > footerTop - 20) {
+      // 2. Verificação de quebra de página:
+      // Se o conteúdo técnico (currentY) invadiu o espaço reservado para a assinatura,
+      // aí sim criamos uma nova página.
+      if (currentY > sigStartY - 20) {
         doc.addPage();
-        // Não reiniciamos o currentY aqui porque vamos usar o footerTop fixo
+        // Não resetamos o sigStartY, pois ele é relativo à folha (seja a 2 ou a 3)
       }
 
-      // 3. Posicionamos o título de assinaturas relativo ao rodapé
-      let sigTitleY = footerTop - 30;
-
-      doc.fontSize(12)
+      // 3. Título "Assinaturas"
+      doc.fontSize(11)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
-         .text('Assinaturas', leftMargin, sigTitleY);
+         .text('Assinaturas', leftMargin, sigStartY);
 
-      const sigLineY = footerTop + 20;
-      const signatureWidth = 180;
+      const sigLineY = sigStartY + 45; // Linha da assinatura
+      const sigWidth = (contentWidth / 2) - 30;
+      const sigCol1X = leftMargin;
+      const sigCol2X = pageWidth / 2 + 15;
 
-      // --- Assinatura do Colaborador ---
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(leftMargin, sigLineY)
-         .lineTo(leftMargin + signatureWidth, sigLineY)
-         .stroke();
+      // --- Assinatura do Colaborador (Esquerda) ---
+      const collaboratorSig = (workOrder as any).collaboratorSignature;
+      if (collaboratorSig) {
+        try {
+          let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X, sigStartY + 5, { width: sigWidth, height: 40 });
+        } catch (e) { console.error('Erro assinatura colaborador', e); }
+      }
 
-      doc.fontSize(8)
-         .fillColor('#666666')
-         .font('Helvetica')
-         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, {
-           width: signatureWidth,
-           align: 'center'
-         });
+      doc.strokeColor('#333333').lineWidth(0.5)
+         .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
-      // --- Assinatura do Cliente ---
-      const clientSigX = rightMargin - signatureWidth;
+      doc.fontSize(8).fillColor('#666666').font('Helvetica')
+         .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
+         .text(`Nome: ${(workOrder as any).collaboratorName || '________________'}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(clientSigX, sigLineY)
-         .lineTo(rightMargin, sigLineY)
-         .stroke();
+      // --- Assinatura do Cliente (Direita) ---
+      const clientSig = (workOrder as any).clientSignature;
+      if (clientSig) {
+        try {
+          let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X, sigStartY + 5, { width: sigWidth, height: 40 });
+        } catch (e) { console.error('Erro assinatura cliente', e); }
+      }
 
-      doc.text('Assinatura do Cliente', clientSigX, sigLineY + 5, {
-           width: signatureWidth,
-           align: 'center'
-         });
+      doc.strokeColor('#333333').lineWidth(0.5)
+         .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
-      // === ROD APÉ ELETRÔNICO FIXO ===
-      const bottomPos = doc.page.height - 40;
+      doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
+         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
+
+      // === RODAPÉ ELETRÔNICO (Sempre no pé da página) ===
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg',
-               leftMargin,
-               bottomPos,
+         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
+               leftMargin, 
+               doc.page.height - 25, 
                { align: 'center', width: contentWidth });
 
       // FINALIZAÇÃO
       doc.end();
-
+      
     } catch (error) {
       reject(error);
     }
