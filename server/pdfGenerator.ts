@@ -640,11 +640,19 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
       // NOME DO COLABORADOR: Verificamos múltiplas fontes possíveis do banco de dados
-      const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || '________________';
+      // Log para debug
+      console.log('[PDF] Dados do colaborador:', {
+        collaboratorName: (workOrder as any).collaboratorName,
+        technicianName: (workOrder as any).technicianName,
+        assignedTo: (workOrder as any).assignedTo,
+        allKeys: Object.keys(workOrder)
+      });
+      
+      const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || (workOrder as any).assignedTo || '________________';
 
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
+         .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center', lineBreak: false });
 
       // --- Assinatura do Cliente ---
       const clientSig = (workOrder as any).clientSignature;
@@ -659,16 +667,26 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
       doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
+         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center', lineBreak: false });
 
-      // RODAPÉ ELETRÔNICO
+      // === RODAPÉ ELETRÔNICO FINAL ===
+      // O rodapé será renderizado usando drawText com posição absoluta
+      // Isso evita que o PDFKit crie uma nova página
+      const footerTextY = doc.page.height - 30;
+      
+      // Usamos a API de baixo nível do PDFKit para renderizar o rodapé sem afetar o fluxo
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
-               leftMargin, 
-               doc.page.height - 25, 
-               { align: 'center', width: contentWidth });
+         .font('Helvetica');
+      
+      // Renderizamos o texto do rodapé na posição absoluta
+      const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
+      const footerWidth = doc.widthOfString(footerText);
+      const footerX = (pageWidth - footerWidth) / 2;
+      
+      doc.text(footerText, footerX, footerTextY, { lineBreak: false });
 
+      // Finaliza o documento
       doc.end();
       
     } catch (error) {
