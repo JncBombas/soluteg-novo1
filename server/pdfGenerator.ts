@@ -661,14 +661,25 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      // RODAPÉ ELETRÔNICO
+      // === RODAPÉ ELETRÔNICO FINAL (FIXO NO FIM DA FOLHA) ===
+      // Forçamos a escrita em uma posição absoluta, ignorando o "currentY"
+      // doc.page.height (595) - 25 unidades de margem
+      const finalFooterY = doc.page.height - 25;
+
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
-               leftMargin, 
-               doc.page.height - 25, 
-               { align: 'center', width: contentWidth });
+         .font('Helvetica')
+         .text(
+           'Este documento foi gerado eletronicamente pelo sistema Soluteg',
+           leftMargin,
+           finalFooterY,
+           {
+             align: 'center',
+             width: contentWidth
+           }
+         );
 
+      // Finaliza o documento logo após escrever o rodapé
       doc.end();
       
     } catch (error) {
