@@ -14,20 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install and Build
-        run: |
-          npm install --legacy-peer-deps
-          npm run build
+      - name: Install Dependencies
+        # Aqui resolvemos aquele erro ERESOLVE do início
+        run: npm install --legacy-peer-deps
+
+      - name: Build Project
+        # Aqui o Vite vai criar a pasta /dist
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist # Pasta onde o Vite gera o site
+          # O Vite sempre gera na 'dist' por padrão. 
+          # Se o erro 404 continuar, verifique se seu vite.config.ts 
+          # não muda o 'outDir' para outro nome.
+          path: ./dist
 
   deploy:
     needs: build
