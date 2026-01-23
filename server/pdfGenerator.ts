@@ -599,25 +599,26 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-      // Altura total estimada: Título (20) + Espaço (30) + Linha/Texto (30) = ~80
-// === BLOCO DE FINALIZAÇÃO E ASSINATURAS ===
-      const signatureBlockHeight = 120; // Espaço necessário
-      
-      // Verifica se precisa de nova página antes de começar as assinaturas
-      if (currentY + signatureBlockHeight > doc.page.height - 50) {
+      // === BLOCO DE FINALIZAÇÃO E ASSINATURAS ===
+      // 1. Definimos a posição fixa no final da página (ex: 150 unidades antes do fim)
+      const footerTop = doc.page.height - 150;
+
+      // 2. Se o conteúdo atual (currentY) já passou desse ponto, precisamos de uma nova página
+      // Caso contrário, ele escreve no final da página atual mesmo.
+      if (currentY > footerTop - 20) {
         doc.addPage();
-        currentY = 50;
-      } else {
-        currentY += 30; // Respiro maior antes das assinaturas
+        // Não reiniciamos o currentY aqui porque vamos usar o footerTop fixo
       }
 
-      // Título da Seção
+      // 3. Posicionamos o título de assinaturas relativo ao rodapé
+      let sigTitleY = footerTop - 30;
+
       doc.fontSize(12)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
-         .text('Assinaturas', leftMargin, currentY);
+         .text('Assinaturas', leftMargin, sigTitleY);
 
-      const sigLineY = currentY + 50; 
+      const sigLineY = footerTop + 20;
       const signatureWidth = 180;
 
       // --- Assinatura do Colaborador ---
@@ -630,9 +631,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.fontSize(8)
          .fillColor('#666666')
          .font('Helvetica')
-         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
-             width: signatureWidth, 
-             align: 'center' 
+         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, {
+           width: signatureWidth,
+           align: 'center'
          });
 
       // --- Assinatura do Cliente ---
@@ -644,23 +645,21 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .lineTo(rightMargin, sigLineY)
          .stroke();
 
-      doc.text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
-             width: signatureWidth, 
-             align: 'center' 
+      doc.text('Assinatura do Cliente', clientSigX, sigLineY + 5, {
+           width: signatureWidth,
+           align: 'center'
          });
 
-      // === RODAPÉ FIXO EM TODAS AS PÁGINAS ===
-      // Usamos o evento 'pageAdded' para garantir que o rodapé apareça em todas, 
-      // mas como já estamos no fim, desenhamos manualmente na última.
+      // === ROD APÉ ELETRÔNICO FIXO ===
       const bottomPos = doc.page.height - 40;
       doc.fontSize(7)
          .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
-               leftMargin, 
-               bottomPos, 
+         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg',
+               leftMargin,
+               bottomPos,
                { align: 'center', width: contentWidth });
 
-      // FINALIZAÇÃO ÚNICA
+      // FINALIZAÇÃO
       doc.end();
 
     } catch (error) {
