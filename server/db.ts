@@ -559,11 +559,13 @@ export async function createWorkOrder(workOrder: InsertWorkOrder) {
   return result;
 }
 
+// ... (mantenha o início do arquivo igual)
+// Procure a função getWorkOrdersByAdminId e substitua por esta:
 export async function getWorkOrdersByAdminId(adminId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const orders = await db
+  return await db
     .select({
       id: workOrders.id,
       osNumber: workOrders.osNumber,
@@ -575,10 +577,11 @@ export async function getWorkOrdersByAdminId(adminId: number) {
       createdAt: workOrders.createdAt,
     })
     .from(workOrders)
-    .innerJoin(clients, eq(workOrders.clientId, clients.id))
+    .leftJoin(clients, eq(workOrders.clientId, clients.id)) // Mudado para leftJoin
     .where(eq(workOrders.adminId, adminId))
     .orderBy(desc(workOrders.createdAt));
-  
+
+
   return orders;
 }
 
