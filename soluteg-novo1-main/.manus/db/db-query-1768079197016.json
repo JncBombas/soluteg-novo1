@@ -1,0 +1,85 @@
+{
+  "query": "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT * FROM __drizzle_migrations ORDER BY created_at DESC;",
+  "rows": [
+    {
+      "id": "3347726",
+      "hash": "b925ec0e195d6729151951b32316df4618d9214165cb36fa853ffcd827b5c455",
+      "created_at": "1764700955272"
+    },
+    {
+      "id": "3137321",
+      "hash": "227ccd30da92950887c62197c96cca26451072af4c52d02a6808982105b34318",
+      "created_at": "1764456337870"
+    },
+    {
+      "id": "2871993",
+      "hash": "014f04b53930d6f33e6faff2cd6e6fedb31cc104be802b283111199610db441b",
+      "created_at": "1764361432817"
+    },
+    {
+      "id": "2702740",
+      "hash": "3acb69953b875d252f29cb4580aee1d9594b60af595e78b360d31a7f06c782ae",
+      "created_at": "1764282511480"
+    },
+    {
+      "id": "2467555",
+      "hash": "538a7d76a5e7778f0e9dc2ec9c442ad823895515a751771789b3418ddd63b7fb",
+      "created_at": "1764281025153"
+    },
+    {
+      "id": "2437555",
+      "hash": "398bf36742f8a8e0a5a16869def45a57d05adaaba1ac62d72aa8f3de6edb5be7",
+      "created_at": "1764208398575"
+    },
+    {
+      "id": "2201149",
+      "hash": "2eeecd45f8a57dcc07ef3d2133db8c7ae4ca7b283061346d251ddb46df48c75f",
+      "created_at": "1764202909359"
+    },
+    {
+      "id": "1945555",
+      "hash": "f1a94f34119f1a5a8ebfba04ae64e15c0d2686f4f3cf91f5365f3888e9be86f8",
+      "created_at": "1764093129085"
+    },
+    {
+      "id": "1782426",
+      "hash": "c481c0625972ed0442aaceacff3c868b5af36c03ae27e3ee33abb0acd05cd40d",
+      "created_at": "1764015068847"
+    },
+    {
+      "id": "1752427",
+      "hash": "58e24ef88f66424235fed15aec975106cc7c5047be756378333aac6574166c54",
+      "created_at": "1764008555736"
+    },
+    {
+      "id": "1752426",
+      "hash": "4fafa9769a057e6017debc367afa248027d90d505790e662ab4aa11b95c54a67",
+      "created_at": "1764008191263"
+    },
+    {
+      "id": "1488811",
+      "hash": "9effde8ef47fcf7de7fb81fb4c3d7cf21f63ad6355b3f55448a49e12c8cd59e6",
+      "created_at": "1763998868227"
+    },
+    {
+      "id": "1223415",
+      "hash": "27c3c56335994584a86a68fecd7c68849dca0d6450e537b385769977d17ee213",
+      "created_at": "1763902867911"
+    },
+    {
+      "id": "2",
+      "hash": "f42048cc884664494d6a9810ba25c564f51926516793f69186f9f4ce498d983a",
+      "created_at": "1763900484137"
+    },
+    {
+      "id": "1",
+      "hash": "814a08e40d7fc2bcfd458759d18319198ca8ae394f2fa15617a78678e9c9c93b",
+      "created_at": "1763900424629"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\thash\tcreated_at\n3347726\tb925ec0e195d6729151951b32316df4618d9214165cb36fa853ffcd827b5c455\t1764700955272\n3137321\t227ccd30da92950887c62197c96cca26451072af4c52d02a6808982105b34318\t1764456337870\n2871993\t014f04b53930d6f33e6faff2cd6e6fedb31cc104be802b283111199610db441b\t1764361432817\n2702740\t3acb69953b875d252f29cb4580aee1d9594b60af595e78b360d31a7f06c782ae\t1764282511480\n2467555\t538a7d76a5e7778f0e9dc2ec9c442ad823895515a751771789b3418ddd63b7fb\t1764281025153\n2437555\t398bf36742f8a8e0a5a16869def45a57d05adaaba1ac62d72aa8f3de6edb5be7\t1764208398575\n2201149\t2eeecd45f8a57dcc07ef3d2133db8c7ae4ca7b283061346d251ddb46df48c75f\t1764202909359\n1945555\tf1a94f34119f1a5a8ebfba04ae64e15c0d2686f4f3cf91f5365f3888e9be86f8\t1764093129085\n1782426\tc481c0625972ed0442aaceacff3c868b5af36c03ae27e3ee33abb0acd05cd40d\t1764015068847\n1752427\t58e24ef88f66424235fed15aec975106cc7c5047be756378333aac6574166c54\t1764008555736\n1752426\t4fafa9769a057e6017debc367afa248027d90d505790e662ab4aa11b95c54a67\t1764008191263\n1488811\t9effde8ef47fcf7de7fb81fb4c3d7cf21f63ad6355b3f55448a49e12c8cd59e6\t1763998868227\n1223415\t27c3c56335994584a86a68fecd7c68849dca0d6450e537b385769977d17ee213\t1763902867911\n2\tf42048cc884664494d6a9810ba25c564f51926516793f69186f9f4ce498d983a\t1763900484137\n1\t814a08e40d7fc2bcfd458759d18319198ca8ae394f2fa15617a78678e9c9c93b\t1763900424629\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

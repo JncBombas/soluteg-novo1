@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, name, address, phone FROM clients WHERE id = 120001;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, name, address, phone FROM clients WHERE id = 120001;",
+  "rows": [
+    {
+      "id": "120001",
+      "name": "Ed Dryade",
+      "address": "",
+      "phone": "(13) 99622-0184"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\taddress\tphone\n120001\tEd Dryade\t\t(13) 99622-0184\n",
+  "stderr": "",
+  "execution_time_ms": 124
+}

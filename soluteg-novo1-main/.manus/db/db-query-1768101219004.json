@@ -1,0 +1,22 @@
+{
+  "query": "SELECT * FROM checklistInstances WHERE templateId = 4 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT * FROM checklistInstances WHERE templateId = 4 LIMIT 1;",
+  "rows": [
+    {
+      "id": "4",
+      "inspectionTaskId": "30001",
+      "templateId": "4",
+      "customTitle": "Bomba de incendio",
+      "brand": "NULL",
+      "power": "NULL",
+      "responses": "{\"pressao\":\"8.5\",\"vazao\":\"120\",\"observacoes\":\"Bomba funcionando normalmente, sem problemas detectados\"}",
+      "isComplete": "1",
+      "createdAt": "2026-01-11 01:29:03",
+      "updatedAt": "2026-01-11 01:45:40"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tinspectionTaskId\ttemplateId\tcustomTitle\tbrand\tpower\tresponses\tisComplete\tcreatedAt\tupdatedAt\n4\t30001\t4\tBomba de incendio\tNULL\tNULL\t{\"pressao\":\"8.5\",\"vazao\":\"120\",\"observacoes\":\"Bomba funcionando normalmente, sem problemas detectados\"}\t1\t2026-01-11 01:29:03\t2026-01-11 01:45:40\n",
+  "stderr": "",
+  "execution_time_ms": 155
+}

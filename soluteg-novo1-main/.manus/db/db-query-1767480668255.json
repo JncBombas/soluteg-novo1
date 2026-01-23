@@ -1,0 +1,28 @@
+{
+  "query": "SELECT id, workOrderId, materialName, quantity, unit, unitCost, totalCost FROM workOrderMaterials WHERE workOrderId = 60002;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute SELECT id, workOrderId, materialName, quantity, unit, unitCost, totalCost FROM workOrderMaterials WHERE workOrderId = 60002;",
+  "rows": [
+    {
+      "id": "1",
+      "workOrderId": "60002",
+      "materialName": "Óleo lubrificante 15W40",
+      "quantity": "2",
+      "unit": "litros",
+      "unitCost": "46",
+      "totalCost": "91"
+    },
+    {
+      "id": "2",
+      "workOrderId": "60002",
+      "materialName": "Filtro de óleo",
+      "quantity": "1",
+      "unit": "un",
+      "unitCost": "35",
+      "totalCost": "35"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tworkOrderId\tmaterialName\tquantity\tunit\tunitCost\ttotalCost\n1\t60002\tÓleo lubrificante 15W40\t2\tlitros\t46\t91\n2\t60002\tFiltro de óleo\t1\tun\t35\t35\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}
