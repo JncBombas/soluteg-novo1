@@ -40,21 +40,30 @@ export async function createWorkOrder(data: Omit<InsertWorkOrder, "osNumber">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  console.log("[workOrdersDb] Iniciando criação de OS com dados:", JSON.stringify(data));
+
   const osNumber = await generateOsNumber();
+  console.log("[workOrdersDb] Número de OS gerado:", osNumber);
   
-  const result = await db.insert(workOrders).values({
-    ...data,
-    osNumber,
-  });
+  try {
+    const result = await db.insert(workOrders).values({
+      ...data,
+      osNumber,
+    });
 
-  // Buscar a OS recém-criada para retornar o ID
-  const newOs = await db
-    .select()
-    .from(workOrders)
-    .where(eq(workOrders.osNumber, osNumber))
-    .limit(1);
+    // Buscar a OS recém-criada para retornar o ID
+    const newOs = await db
+      .select()
+      .from(workOrders)
+      .where(eq(workOrders.osNumber, osNumber))
+      .limit(1);
 
-  return { id: newOs[0]?.id || 0, osNumber };
+    console.log("[workOrdersDb] OS criada com sucesso. ID:", newOs[0]?.id);
+    return { id: newOs[0]?.id || 0, osNumber };
+  } catch (error) {
+    console.error("[workOrdersDb] Erro ao inserir OS no banco:", error);
+    throw error;
+  }
 }
 
 /**
@@ -165,8 +174,12 @@ export async function listWorkOrders(filters: {
     query = query.where(and(...conditions)) as any;
   }
 
+  console.log(`[workOrdersDb] Executando listWorkOrders com filtros:`, JSON.stringify(filters));
+
   // Ordenar sempre pela mais recente
   const result = await query.orderBy(desc(workOrders.createdAt));
+  
+  console.log(`[workOrdersDb] Retornando ${result.length} resultados`);
   return result;
 }
 /**
