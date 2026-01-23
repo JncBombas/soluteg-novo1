@@ -40,30 +40,21 @@ export async function createWorkOrder(data: Omit<InsertWorkOrder, "osNumber">) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  console.log("[workOrdersDb] Iniciando criação de OS com dados:", JSON.stringify(data));
-
   const osNumber = await generateOsNumber();
-  console.log("[workOrdersDb] Número de OS gerado:", osNumber);
   
-  try {
-    const result = await db.insert(workOrders).values({
-      ...data,
-      osNumber,
-    });
+  const result = await db.insert(workOrders).values({
+    ...data,
+    osNumber,
+  });
 
-    // Buscar a OS recém-criada para retornar o ID
-    const newOs = await db
-      .select()
-      .from(workOrders)
-      .where(eq(workOrders.osNumber, osNumber))
-      .limit(1);
+  // Buscar a OS recém-criada para retornar o ID
+  const newOs = await db
+    .select()
+    .from(workOrders)
+    .where(eq(workOrders.osNumber, osNumber))
+    .limit(1);
 
-    console.log("[workOrdersDb] OS criada com sucesso. ID:", newOs[0]?.id);
-    return { id: newOs[0]?.id || 0, osNumber };
-  } catch (error) {
-    console.error("[workOrdersDb] Erro ao inserir OS no banco:", error);
-    throw error;
-  }
+  return { id: newOs[0]?.id || 0, osNumber };
 }
 
 /**
@@ -104,7 +95,6 @@ export async function getWorkOrderById(id: number) {
       createdAt: workOrders.createdAt,
       updatedAt: workOrders.updatedAt,
       collaboratorSignature: workOrders.collaboratorSignature,
-      collaboratorName: workOrders.collaboratorName,
       clientSignature: workOrders.clientSignature,
       // Dados do cliente
       clientName: clients.name,
@@ -123,9 +113,6 @@ export async function getWorkOrderById(id: number) {
 /**
  * Listar OS com filtros
  */
-/**
- * Listar OS com filtros (Versão Corrigida)
- */
 export async function listWorkOrders(filters: {
   clientId?: number;
   adminId?: number;
@@ -137,36 +124,13 @@ export async function listWorkOrders(filters: {
   const db = await getDb();
   if (!db) return [];
 
-  // Importamos o schema de clientes para garantir o Join
-  const { clients } = await import("../drizzle/schema");
-
-  // Mudamos de .select() para uma seleção explícita para evitar que campos novos 
-  // (como o documento) quebrem a listagem se estiverem nulos
-  let query = db
-    .select({
-      id: workOrders.id,
-      osNumber: workOrders.osNumber,
-      title: workOrders.title,
-      status: workOrders.status,
-      type: workOrders.type,
-      priority: workOrders.priority,
-      createdAt: workOrders.createdAt,
-      scheduledDate: workOrders.scheduledDate,
-      isRecurring: workOrders.isRecurring,
-      estimatedValue: workOrders.estimatedValue,
-      clientId: workOrders.clientId,
-      clientName: clients.name, // Isso ajuda a mostrar o nome do cliente na lista
-    })
-    .from(workOrders)
-    .leftJoin(clients, eq(workOrders.clientId, clients.id));
+  let query = db.select().from(workOrders);
 
   const conditions = [];
   if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
   if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
   if (filters.type) conditions.push(eq(workOrders.type, filters.type as any));
   if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
-  
-  // Filtros de data costumam causar sumiço se os fusos horários estiverem errados
   if (filters.startDate) conditions.push(gte(workOrders.createdAt, filters.startDate));
   if (filters.endDate) conditions.push(lte(workOrders.createdAt, filters.endDate));
 
@@ -174,14 +138,10 @@ export async function listWorkOrders(filters: {
     query = query.where(and(...conditions)) as any;
   }
 
-  console.log(`[workOrdersDb] Executando listWorkOrders com filtros:`, JSON.stringify(filters));
-
-  // Ordenar sempre pela mais recente
   const result = await query.orderBy(desc(workOrders.createdAt));
-  
-  console.log(`[workOrdersDb] Retornando ${result.length} resultados`);
   return result;
 }
+
 /**
  * Atualizar OS
  */
