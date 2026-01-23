@@ -600,28 +600,34 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       }
 
       // Altura total estimada: Título (20) + Espaço (30) + Linha/Texto (30) = ~80
-const signatureBlockHeight = 90; 
+// === BLOCO DE FINALIZAÇÃO E ASSINATURAS (VERSÃO À PROVA DE FALHAS) ===
 
-// 1. Verificação de quebra de página ANTES de qualquer incremento
-if (currentY + signatureBlockHeight > doc.page.height - 60) {
+const signatureBlockHeight = 100; // Espaço total necessário para o bloco
+const footerHeight = 40; // Espaço reservado para o rodapé
+
+// Verificamos se há espaço para o bloco de assinaturas + rodapé
+// Se a posição atual (currentY) + bloco de assinaturas passar do limite da página menos o rodapé
+if (currentY + signatureBlockHeight > doc.page.height - footerHeight - 20) {
     doc.addPage();
     currentY = 40;
 } else {
-    currentY += 30; // Pequeno respiro do conteúdo anterior
+    currentY += 20; // Respiro
 }
 
-// 2. Título da Seção
+// Desativamos temporariamente o auto-layout para evitar que o PDFKit 
+// crie uma página em branco se o texto "Assinaturas" encostar na borda
+doc.options.layout = 'absolute'; 
+
+// Título da Seção
 doc.fontSize(12)
    .fillColor('#D4A84B')
    .font('Helvetica-Bold')
    .text('Assinaturas', leftMargin, currentY);
 
-// 3. Espaço para a imagem da assinatura ficar acima da linha
-// Definimos o Y da linha 45 pontos abaixo do título
 const sigLineY = currentY + 45; 
 const signatureWidth = 180;
 
-// --- Coluna 1: Assinatura do Colaborador ---
+// --- Assinatura do Colaborador ---
 doc.strokeColor('#333333')
    .lineWidth(0.5)
    .moveTo(leftMargin, sigLineY)
@@ -636,7 +642,7 @@ doc.fontSize(8)
        align: 'center' 
    });
 
-// --- Coluna 2: Assinatura do Cliente ---
+// --- Assinatura do Cliente ---
 const clientSigX = rightMargin - signatureWidth;
 
 doc.strokeColor('#333333')
@@ -653,16 +659,19 @@ doc.fontSize(8)
        align: 'center' 
    });
 
-// 4. Rodapé do Sistema (Coordenada absoluta para não gerar página extra)
-// Usamos doc.page.height - 30 para fixar no fim físico da folha
+// --- RODAPÉ FIXO (USANDO COORDENADA ABSOLUTA) ---
+// Isso garante que o rodapé nunca empurre o cursor para uma nova página
+const bottomPos = doc.page.height - 30;
+
 doc.fontSize(7)
    .fillColor('#999999')
    .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
          leftMargin, 
-         doc.page.height - 30, 
+         bottomPos, 
          { align: 'center', width: contentWidth });
 
-// Finaliza o documento (após as assinaturas)
+// Finaliza o documento IMEDIATAMENTE
+// O PDFKit não terá chance de processar o final da página e criar uma nova
 doc.end();
 
     } catch (error) {
