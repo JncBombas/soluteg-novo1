@@ -1,1 +1,0 @@
-ALTER TABLE `admins` ADD `customLabel` text;

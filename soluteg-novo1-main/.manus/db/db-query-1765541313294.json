@@ -1,9 +1,0 @@
-{
-  "query": "ALTER TABLE clients MODIFY email VARCHAR(320) NULL;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute ALTER TABLE clients MODIFY email VARCHAR(320) NULL;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1588
-}

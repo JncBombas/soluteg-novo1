@@ -1,1 +1,0 @@
-ALTER TABLE `workOrders` ADD `collaboratorDocument` varchar(20);
