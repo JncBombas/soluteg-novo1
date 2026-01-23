@@ -599,106 +599,71 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-      // === SEÇÃO DE ASSINATURAS ===
-      // Definimos a altura total necessária para o bloco de assinaturas (título + linhas + subtítulos)
-      const heightNeeded = 110;
-      
-      // Verificamos se há espaço na página atual ANTES de começar a desenhar
-      if (currentY + heightNeeded > doc.page.height - 40) {
-        doc.addPage();
-        currentY = 40;
-      } else {
-        // Se couber, apenas damos um pequeno espaçamento do conteúdo anterior
-        currentY += 25;
-      }
-      
-      // Título da Seção
-      doc.fontSize(12)
-         .fillColor('#D4A84B')
-         .font('Helvetica-Bold')
-         .text('Assinaturas', leftMargin, currentY);
-      
-      // Ajustamos o Y para a posição das assinaturas (espaço para a imagem ficar acima da linha)
-      // Reduzimos um pouco para evitar empurrar para uma nova página sem necessidade
-      currentY += 45;
-      
-      const signatureWidth = 180;
-      const sigLineY = currentY;
-      
-      // --- Coluna 1: Assinatura do Colaborador ---
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(leftMargin, sigLineY)
-         .lineTo(leftMargin + signatureWidth, sigLineY)
-         .stroke();
-      
-      doc.fontSize(8)
-         .fillColor('#666666')
-         .font('Helvetica')
-         .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
-         width: signatureWidth, 
-         align: 'center' 
-      });
-      
-      // Renderizar imagem da assinatura do colaborador se existir
-      const collaboratorSig = (workOrder as any).collaboratorSignature;
-      if (collaboratorSig) {
-        try {
-          console.log('[PDF] Renderizando assinatura do colaborador, tamanho:', collaboratorSig?.length);
-          let base64Data = collaboratorSig;
-          if (collaboratorSig.includes(',')) {
-            base64Data = collaboratorSig.split(',')[1];
-          }
-          const sigBuffer = Buffer.from(base64Data, 'base64');
-          doc.image(sigBuffer, leftMargin, sigLineY - 50, { width: signatureWidth, height: 45 });
-          console.log('[PDF] Assinatura do colaborador renderizada com sucesso');
-        } catch (e) {
-          console.error('[PDF] Erro ao renderizar assinatura do colaborador:', e);
-        }
-      }
-      
-      // --- Coluna 2: Assinatura do Cliente ---
-      const clientSigX = rightMargin - signatureWidth;
-      
-      doc.strokeColor('#333333')
-         .lineWidth(0.5)
-         .moveTo(clientSigX, sigLineY)
-         .lineTo(rightMargin, sigLineY)
-         .stroke();
-      
-      doc.fontSize(8)
-         .fillColor('#666666')
-         .font('Helvetica')
-         .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
-         width: signatureWidth, 
-         align: 'center' 
-      });
-      
-      // Renderizar imagem da assinatura do cliente se existir
-      const clientSig = (workOrder as any).clientSignature;
-      if (clientSig) {
-        try {
-          let base64Data = clientSig;
-          if (clientSig.includes(',')) {
-            base64Data = clientSig.split(',')[1];
-          }
-          const sigBuffer = Buffer.from(base64Data, 'base64');
-          doc.image(sigBuffer, clientSigX, sigLineY - 50, { width: signatureWidth, height: 45 });
-        } catch (e) {
-          console.error('[PDF] Erro ao renderizar assinatura do cliente:', e);
-        }
-      }
-      
-      // Rodapé de Sistema
-      doc.fontSize(7)
-         .fillColor('#999999')
-         .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', leftMargin, doc.page.height - 30, { 
-           align: 'center', 
-           width: contentWidth 
-         });
+      // Altura total estimada: Título (20) + Espaço (30) + Linha/Texto (30) = ~80
+const signatureBlockHeight = 90; 
 
-      // Finalizar o documento
-      doc.end();
+// 1. Verificação de quebra de página ANTES de qualquer incremento
+if (currentY + signatureBlockHeight > doc.page.height - 60) {
+    doc.addPage();
+    currentY = 40;
+} else {
+    currentY += 30; // Pequeno respiro do conteúdo anterior
+}
+
+// 2. Título da Seção
+doc.fontSize(12)
+   .fillColor('#D4A84B')
+   .font('Helvetica-Bold')
+   .text('Assinaturas', leftMargin, currentY);
+
+// 3. Espaço para a imagem da assinatura ficar acima da linha
+// Definimos o Y da linha 45 pontos abaixo do título
+const sigLineY = currentY + 45; 
+const signatureWidth = 180;
+
+// --- Coluna 1: Assinatura do Colaborador ---
+doc.strokeColor('#333333')
+   .lineWidth(0.5)
+   .moveTo(leftMargin, sigLineY)
+   .lineTo(leftMargin + signatureWidth, sigLineY)
+   .stroke();
+
+doc.fontSize(8)
+   .fillColor('#666666')
+   .font('Helvetica')
+   .text('Assinatura do Colaborador', leftMargin, sigLineY + 5, { 
+       width: signatureWidth, 
+       align: 'center' 
+   });
+
+// --- Coluna 2: Assinatura do Cliente ---
+const clientSigX = rightMargin - signatureWidth;
+
+doc.strokeColor('#333333')
+   .lineWidth(0.5)
+   .moveTo(clientSigX, sigLineY)
+   .lineTo(rightMargin, sigLineY)
+   .stroke();
+
+doc.fontSize(8)
+   .fillColor('#666666')
+   .font('Helvetica')
+   .text('Assinatura do Cliente', clientSigX, sigLineY + 5, { 
+       width: signatureWidth, 
+       align: 'center' 
+   });
+
+// 4. Rodapé do Sistema (Coordenada absoluta para não gerar página extra)
+// Usamos doc.page.height - 30 para fixar no fim físico da folha
+doc.fontSize(7)
+   .fillColor('#999999')
+   .text('Este documento foi gerado eletronicamente pelo sistema Soluteg', 
+         leftMargin, 
+         doc.page.height - 30, 
+         { align: 'center', width: contentWidth });
+
+// Finaliza o documento (após as assinaturas)
+doc.end();
 
     } catch (error) {
       reject(error);
