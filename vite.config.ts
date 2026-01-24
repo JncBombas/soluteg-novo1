@@ -8,22 +8,27 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
 
 export default defineConfig({
-  // 1. ADICIONE ESSA LINHA: Essencial para GitHub Pages
+  // 1. Mantemos a base correta para o GitHub Pages
   base: '/soluteg-novo1/', 
   
   plugins,
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
+      // 2. Ajustado: Agora aponta para a pasta 'src' na raiz
+      "@": path.resolve(import.meta.dirname, "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
   envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname, "client"),
-  publicDir: path.resolve(import.meta.dirname, "client", "public"),
+  
+  // 3. MUDANÇA CRUCIAL: O root agora é a raiz (onde está o seu index.html atual)
+  root: path.resolve(import.meta.dirname),
+  
+  // 4. MUDANÇA CRUCIAL: O publicDir agora é a pasta 'public' na raiz
+  publicDir: path.resolve(import.meta.dirname, "public"),
+  
   build: {
-    // 2. SIMPLIFIQUE ISSO: Facilita para o GitHub Actions encontrar
     outDir: path.resolve(import.meta.dirname, "dist"), 
     emptyOutDir: true,
   },
