@@ -48,15 +48,22 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname); 
+  // Tenta encontrar o caminho da dist de forma absoluta
+  const distPath = path.resolve(process.cwd(), "dist"); 
 
-  if (!fs.existsSync(path.resolve(distPath, "index.html"))) {
-    console.error(`ERRO CRITICO: index.html nao encontrado em: ${distPath}`);
+  console.log(`Verificando pasta de build em: ${distPath}`);
+
+  if (!fs.existsSync(path.join(distPath, "index.html"))) {
+    console.error(`AVISO: index.html nao encontrado em ${distPath}. Tentando raiz...`);
   }
 
   app.use(express.static(distPath));
 
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  app.use("*", (req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"), (err) => {
+      if (err) {
+        res.status(404).send("Arquivo index.html nao encontrado no servidor.");
+      }
+    });
   });
 }
