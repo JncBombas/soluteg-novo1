@@ -48,16 +48,21 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  // O segredo é apontar para a própria pasta onde o index.js está (que é a dist)
   const distPath = path.resolve(process.cwd(), "dist"); 
 
   if (!fs.existsSync(path.resolve(distPath, "index.html"))) {
     console.error(`ERRO: index.html não encontrado em: ${distPath}`);
   }
 
+  // 1. Serve arquivos estáticos primeiro
   app.use(express.static(distPath));
 
-  app.use("*", (_req, res) => {
+  // 2. Rota curinga (SPA)
+  app.use("*", (req, res, next) => {
+    // Se a requisição for para um arquivo (tem ponto no nome) ou API, ignora essa rota
+    if (req.originalUrl.includes('.') || req.originalUrl.startsWith('/api')) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
