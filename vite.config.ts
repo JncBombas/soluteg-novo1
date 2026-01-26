@@ -9,7 +9,7 @@ const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(
 
 export default defineConfig({
   // 1. Mantemos a base correta para o GitHub Pages
-  base: '/soluteg-novo1/', 
+  base: '/', 
   
   plugins,
   resolve: {
