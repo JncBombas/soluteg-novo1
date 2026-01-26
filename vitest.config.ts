@@ -5,7 +5,7 @@ const templateRoot = path.resolve(import.meta.dirname);
 
 export default defineConfig({
   // ADICIONE ESTA LINHA ABAIXO
-  base: "/soluteg-novo1/", 
+  base: "/", 
   root: templateRoot,
   resolve: {
     alias: {
