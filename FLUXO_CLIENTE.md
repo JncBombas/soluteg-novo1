@@ -306,7 +306,7 @@ export async function deleteClient(id: number) {
 
 ### 5.1 Endpoint REST (não tRPC)
 
-**Arquivo:** `server/_core/index.ts` (linhas 40-85)
+**Arquivo:** `server/index.ts` (linhas 40-85)
 
 ```typescript
 app.post("/api/client-login", async (req, res) => {
