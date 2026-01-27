@@ -4,7 +4,7 @@ import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: ReturnType<typeof drizzle> | null = drizzle("mysql://d5ea2e96_jnc_sistema:d5ea2e96d5ea2e96d5ea2e96@69.6.213.57:3306/d5ea2e96_jncdb");
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {

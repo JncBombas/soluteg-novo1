@@ -27,7 +27,10 @@ export default defineConfig({
   
   // 4. MUDANÇA CRUCIAL: O publicDir agora é a pasta 'public' na raiz
   publicDir: path.resolve(import.meta.dirname, "public"),
-  
+  test: {
+    environment: "node",
+    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"), 
     emptyOutDir: true,
@@ -49,3 +52,4 @@ export default defineConfig({
     },
   },
 });
+ 
