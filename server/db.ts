@@ -761,6 +761,7 @@ export async function getAllDocumentsByAdminId(adminId: number) {
       id: clientDocuments.id,
       title: clientDocuments.title,
       clientId: clientDocuments.clientId,
+      clientName: clients.name,
       adminId: clientDocuments.adminId,
     })
     .from(clientDocuments)
