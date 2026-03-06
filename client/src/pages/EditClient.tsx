@@ -34,6 +34,7 @@ export default function EditClient() {
     phone: "",
     address: "",
     type: "com_portal" as "com_portal" | "sem_portal",
+    newPassword: "",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -114,10 +115,23 @@ export default function EditClient() {
 
     try {
       setSaving(true);
+      const payload: any = {
+        name: formData.name,
+        email: formData.email,
+        username: formData.username,
+        cnpjCpf: formData.cnpjCpf,
+        phone: formData.phone,
+        address: formData.address,
+        type: formData.type,
+      };
+      if (formData.newPassword.trim()) {
+        payload.password = formData.newPassword;
+      }
+
       const response = await fetch(`/api/admin-clients/${clientId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -260,6 +274,17 @@ export default function EditClient() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nova Senha (opcional)</label>
+                <Input
+                  type="password"
+                  placeholder="Deixe em branco para manter a senha atual"
+                  value={formData.newPassword}
+                  onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                />
+                <p className="text-xs text-slate-500">Preencha apenas se quiser alterar a senha do cliente</p>
               </div>
 
               <div className="space-y-2 md:col-span-2">
