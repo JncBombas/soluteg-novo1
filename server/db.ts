@@ -568,18 +568,55 @@ export async function getWorkOrdersByAdminId(adminId: number) {
       id: workOrders.id,
       osNumber: workOrders.osNumber,
       title: workOrders.title,
-      clientName: clients.name,
+      // BUSCA O NOME NA TABELA DE CLIENTES
+      clientName: clients.name, 
       status: workOrders.status,
       priority: workOrders.priority,
       scheduledDate: workOrders.scheduledDate,
       createdAt: workOrders.createdAt,
     })
     .from(workOrders)
-    .innerJoin(clients, eq(workOrders.clientId, clients.id))
+    // ESTA LINHA CONECTA AS DUAS TABELAS
+    .innerJoin(clients, eq(workOrders.clientId, clients.id)) 
     .where(eq(workOrders.adminId, adminId))
     .orderBy(desc(workOrders.createdAt));
   
   return orders;
+}
+
+export async function listWorkOrders(filters: {
+  clientId?: number;
+  adminId?: number;
+  status?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      clientName: clients.name, // Nome do cliente via Join
+      status: workOrders.status,
+      priority: workOrders.priority,
+      scheduledDate: workOrders.scheduledDate,
+      createdAt: workOrders.createdAt,
+      clientId: workOrders.clientId,
+    })
+    .from(workOrders)
+    .innerJoin(clients, eq(workOrders.clientId, clients.id));
+
+  const conditions = [];
+  if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
+  if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
+  if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query.orderBy(desc(workOrders.createdAt));
 }
 
 export async function getWorkOrderById(id: number) {
