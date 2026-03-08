@@ -75,21 +75,25 @@ export default function ClientPortal() {
   };
 
   const getTabDocuments = (tabType: string) => {
-    const search = tabSearches[tabType];
-    const typeMap: Record<string, string[]> = {
-      vistoria: ["vistoria"],
-      visita: ["visita", "relatorio_visita"],
-      nota_fiscal: ["nota_fiscal"],
-      servico: ["servico", "relatorio_servico"]
-    };
-    
-    const allowedTypes = typeMap[tabType] || [];
-    return documents.filter(doc => {
-      const matchesType = allowedTypes.includes(doc.documentType);
-      const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
-      return matchesType && matchesSearch;
-    });
+  const search = tabSearches[tabType];
+  
+  // O segredo está aqui: mapear todos os nomes possíveis para cada aba
+  const typeMap: Record<string, string[]> = {
+    vistoria: ["vistoria"],
+    visita: ["visita", "relatorio_visita", "rel_visita"], // Aceita os 3 nomes
+    nota_fiscal: ["nota_fiscal", "nf"], 
+    servico: ["servico", "relatorio_servico", "rel_servico"] // Aceita os 3 nomes
   };
+  
+  const allowedTypes = typeMap[tabType] || [];
+  
+  return documents.filter(doc => {
+    // Verifica se o tipo do documento (que veio do banco) está na lista permitida da aba
+    const matchesType = allowedTypes.includes(doc.documentType);
+    const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
+    return matchesType && matchesSearch;
+  });
+};
 
   const handleLogout = () => {
     localStorage.removeItem("clientToken");
