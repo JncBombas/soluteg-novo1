@@ -171,10 +171,10 @@ async function startServer() {
         return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
       }
       
-      const { name, email, username, cnpjCpf, phone, address, type } = validation.data;
-      const { updateClient } = await import("./db");
+      const { name, email, username, cnpjCpf, phone, address, type, password } = validation.data;
+      const { updateClient } = await import("../db");
       
-      await updateClient(parseInt(req.params.id), {
+      const updateData: any = {
         name,
         email: email || undefined,
         username,
@@ -182,7 +182,15 @@ async function startServer() {
         phone,
         address,
         type,
-      });
+      };
+
+      // Se uma nova senha foi fornecida, gerar hash bcrypt
+      if (password && password.trim()) {
+        const { hashPassword } = await import("../adminAuth");
+        updateData.password = await hashPassword(password);
+      }
+
+      await updateClient(parseInt(req.params.id), updateData);
       
       res.json({ success: true, message: "Cliente atualizado com sucesso" });
     } catch (error) {

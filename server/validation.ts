@@ -15,12 +15,13 @@ export const createClientSchema = z.object({
 
 export const updateClientSchema = z.object({
   name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
+  email: z.string().email().or(z.literal("")).optional(),
   username: z.string().min(3).optional(),
   cnpjCpf: z.string().min(11).optional(),
   phone: z.string().min(10).optional(),
   address: z.string().optional(),
   type: z.enum(["com_portal", "sem_portal"]).optional(),
+  password: z.string().min(4).optional(),
 });
 
 // Schemas para validação de documentos

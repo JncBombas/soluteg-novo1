@@ -964,10 +964,17 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const pdfGen = await import("./pdfGenerator");
         const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+        // Buscar dados da OS para montar o nome do arquivo
+        const workOrdersDb = await import("./workOrdersDb");
+        const wo = await workOrdersDb.getWorkOrderById(input.id);
+        const osNum = wo?.osNumber || `OS-${input.id}`;
+        const clientSlug = wo?.clientName
+          ? wo.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+          : 'cliente';
         return {
           success: true,
           pdf: pdfBuffer.toString('base64'),
-          filename: `OS-${input.id}.pdf`
+          filename: `${osNum}_${clientSlug}.pdf`
         };
       }),
     
@@ -979,11 +986,18 @@ export const appRouter = router({
         
         const zip = new JSZip();
         
+        // Buscar workOrdersDb para nomes de arquivo
+        const workOrdersDb = await import("./workOrdersDb");
         // Gerar PDF para cada OS
         for (const id of input.ids) {
           try {
             const pdfBuffer = await pdfGen.generateWorkOrderPDF(id);
-            zip.file(`OS-${id}.pdf`, pdfBuffer);
+            const wo = await workOrdersDb.getWorkOrderById(id);
+            const osNum = wo?.osNumber || `OS-${id}`;
+            const clientSlug = wo?.clientName
+              ? wo.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+              : 'cliente';
+            zip.file(`${osNum}_${clientSlug}.pdf`, pdfBuffer);
           } catch (error) {
             console.error(`Erro ao gerar PDF da OS ${id}:`, error);
           }

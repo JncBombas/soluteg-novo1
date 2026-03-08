@@ -47,7 +47,14 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(process.cwd(), "dist");
+  // Tenta encontrar o caminho da dist de forma absoluta
+  const distPath = path.resolve(process.cwd(), "dist"); 
+
+  console.log(`Verificando pasta de build em: ${distPath}`);
+
+  if (!fs.existsSync(path.join(distPath, "index.html"))) {
+    console.error(`AVISO: index.html nao encontrado em ${distPath}. Tentando raiz...`);
+  }
 
   // 1. Servir arquivos da pasta dist/assets explicitamente
   // Isso resolve o erro de 404 nos arquivos .js e .css
@@ -56,15 +63,11 @@ export function serveStatic(app: Express) {
     maxAge: "1y"
   }));
 
-  // 2. Servir os demais arquivos estáticos (favicon, etc)
-  app.use(express.static(distPath, { index: false }));
-
-  // 3. Rota curinga corrigida
-  app.use("*", (req, res, next) => {
-    // Se a URL tiver um ponto (arquivo) ou for API, não entrega o index.html
-    if (req.originalUrl.includes(".") || req.originalUrl.startsWith("/api")) {
-      return next();
-    }
-    res.sendFile(path.resolve(distPath, "index.html"));
+  app.use("*", (req, res) => {
+    res.sendFile(path.resolve(distPath, "index.html"), (err) => {
+      if (err) {
+        res.status(404).send("Arquivo index.html nao encontrado no servidor.");
+      }
+    });
   });
 }
