@@ -209,12 +209,13 @@ export default function AdminDocuments() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="relatorio_servico">Relatório de Serviço</SelectItem>
-                    <SelectItem value="relatorio_visita">Relatório de Visita</SelectItem>
-                    <SelectItem value="nota_fiscal">Nota Fiscal</SelectItem>
-                    <SelectItem value="outro">Outro</SelectItem>
-                  </SelectContent>
+                 <SelectContent>
+                   <SelectItem value="vistoria">Vistoria</SelectItem>
+                   <SelectItem value="visita">Relatório de Visita</SelectItem>
+                   <SelectItem value="servico">Relatório de Serviço</SelectItem>
+                   <SelectItem value="nota_fiscal">Nota Fiscal</SelectItem>
+                   <SelectItem value="outro">Outro</SelectItem>
+                 </SelectContent>
                 </Select>
               </div>
 

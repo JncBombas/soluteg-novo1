@@ -89,16 +89,18 @@ export default function ClientPortal() {
     setActiveTypeFilter(tabName);
   };
 
-  const getTabDocuments = (tabType: string) => {
-    const search = tabSearches[tabType];
-    const typeMap: Record<string, string[]> = {
-      vistoria: ["vistoria"],
-      visita: ["visita"],
-      nota_fiscal: ["nota_fiscal"],
-      servico: ["servico"],
-      rel_servico: ["relatorio_servico"],
-      rel_visita: ["relatorio_visita"]
-    };
+  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+  {/* Deixando apenas as 4 abas principais */}
+  <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-6">
+    <TabsTrigger value="vistoria">Vistoria</TabsTrigger>
+    <TabsTrigger value="visita">Visita</TabsTrigger>
+    <TabsTrigger value="nota_fiscal">Nota Fiscal</TabsTrigger>
+    <TabsTrigger value="servico">Serviço</TabsTrigger>
+  </TabsList>
+
+  {/* Mantenha os TabsContent de vistoria, visita, nota_fiscal e servico */}
+  {/* E PODE APAGAR os TabsContent de "rel_servico" e "rel_visita" */}
+</Tabs>
     
     const allowedTypes = typeMap[tabType] || [];
     
