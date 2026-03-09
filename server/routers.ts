@@ -255,8 +255,15 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         const { id, ...updateData } = input;
-        await db.updateClient(id, updateData);
-        return { success: true, message: "Cliente atualizado com sucesso" };
+        try {
+          await db.updateClient(id, updateData);
+          return { success: true, message: "Cliente atualizado com sucesso" };
+        } catch (error) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: error instanceof Error ? error.message : "Erro ao atualizar cliente",
+          });
+        }
       }),
 
     updatePassword: publicProcedure
@@ -265,9 +272,16 @@ export const appRouter = router({
         newPassword: z.string().min(6),
       }))
       .mutation(async ({ input }) => {
-        const hashedPassword = await hashPassword(input.newPassword);
-        await db.updateClientPassword(input.id, hashedPassword);
-        return { success: true, message: "Senha atualizada com sucesso" };
+        try {
+          const hashedPassword = await hashPassword(input.newPassword);
+          await db.updateClientPassword(input.id, hashedPassword);
+          return { success: true, message: "Senha atualizada com sucesso" };
+        } catch (error) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: error instanceof Error ? error.message : "Erro ao atualizar senha",
+          });
+        }
       }),
 
     delete: publicProcedure

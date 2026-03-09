@@ -7,30 +7,26 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
 
+// Determinar o base path baseado no ambiente
+// Para VPS (produção): usar '/'
+// Para GitHub Pages: usar '/soluteg-novo1/'
+const basePath = process.env.DEPLOY_ENV === 'vps' ? '/' : '/soluteg-novo1/';
+
 export default defineConfig({
-  // 1. Mantemos a base correta para o GitHub Pages
-  base: '/', 
+  // Base path configurável por ambiente
+  base: basePath,
   
   plugins,
   resolve: {
     alias: {
-      // 2. Ajustado: Agora aponta para a pasta 'src' na raiz
       "@": path.resolve(import.meta.dirname, "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
     },
   },
   envDir: path.resolve(import.meta.dirname),
-  
-  // 3. MUDANÇA CRUCIAL: O root agora é a raiz (onde está o seu index.html atual)
   root: path.resolve(import.meta.dirname),
-  
-  // 4. MUDANÇA CRUCIAL: O publicDir agora é a pasta 'public' na raiz
   publicDir: path.resolve(import.meta.dirname, "public"),
-  test: {
-    environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
-  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"), 
     emptyOutDir: true,
@@ -52,4 +48,3 @@ export default defineConfig({
     },
   },
 });
- 
