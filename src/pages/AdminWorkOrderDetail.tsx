@@ -17,8 +17,18 @@ import {
   XCircle,
   Loader2,
   FileDown,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Componentes para cada tab
 import WorkOrderTasks from "@/components/workorder/WorkOrderTasks";
@@ -34,6 +44,7 @@ export default function AdminWorkOrderDetail() {
   const [, navigate] = useLocation();
   const [exportingPDF, setExportingPDF] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const workOrderId = Number(params.id);
 
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
@@ -96,6 +107,21 @@ export default function AdminWorkOrderDetail() {
       toast.error(`Erro: ${error.message}`);
     },
   });
+
+  const deleteWorkOrderMutation = trpc.workOrders.delete.useMutation({
+    onSuccess: () => {
+      toast.success("OS deletada com sucesso!");
+      navigate("/admin/work-orders");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar OS: ${error.message}`);
+    },
+  });
+
+  const handleDeleteWorkOrder = () => {
+    deleteWorkOrderMutation.mutate({ id: workOrderId });
+    setDeleteDialogOpen(false);
+  };
 
   const handleCompleteWorkOrder = async (data: any) => {
     console.log("[AdminWorkOrderDetail] handleCompleteWorkOrder chamado com:", {
@@ -238,6 +264,20 @@ export default function AdminWorkOrderDetail() {
               <FileDown className="h-4 w-4" />
             )}
             {exportingPDF ? "Gerando..." : "Exportar PDF"}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={deleteWorkOrderMutation.isPending}
+            className="gap-2"
+          >
+            {deleteWorkOrderMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            {deleteWorkOrderMutation.isPending ? "Deletando..." : "Deletar OS"}
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -495,6 +535,27 @@ export default function AdminWorkOrderDetail() {
         onComplete={handleCompleteWorkOrder}
         isLoading={completeWorkOrderMutation.isPending}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar Ordem de Serviço?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar a OS #{workOrder?.id}? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteWorkOrder}
+              disabled={deleteWorkOrderMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteWorkOrderMutation.isPending ? "Deletando..." : "Deletar"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
