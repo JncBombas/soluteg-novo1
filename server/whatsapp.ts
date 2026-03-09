@@ -1,4 +1,9 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+// Mude disso:
+// import { Client, LocalAuth } from 'whatsapp-web.js';
+
+// Para isso (Sintaxe compatível com ESM):
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode-terminal';
 
 const client = new Client({
