@@ -4,7 +4,7 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
+import viteConfig from "../vite.config";
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -27,8 +27,7 @@ export async function setupVite(app: Express, server: Server) {
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
-        "../..",
-        "client",
+        "../",
         "index.html"
       );
 
@@ -57,7 +56,12 @@ export function serveStatic(app: Express) {
     console.error(`AVISO: index.html nao encontrado em ${distPath}. Tentando raiz...`);
   }
 
-  app.use(express.static(distPath));
+  // 1. Servir arquivos da pasta dist/assets explicitamente
+  // Isso resolve o erro de 404 nos arquivos .js e .css
+  app.use("/assets", express.static(path.resolve(distPath, "assets"), {
+    immutable: true,
+    maxAge: "1y"
+  }));
 
   app.use("*", (req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"), (err) => {

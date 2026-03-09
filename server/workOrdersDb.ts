@@ -111,7 +111,7 @@ export async function getWorkOrderById(id: number) {
 }
 
 /**
- * Listar OS com filtros
+ * Listar OS com filtros (AGORA COM NOME DO CLIENTE)
  */
 export async function listWorkOrders(filters: {
   clientId?: number;
@@ -124,7 +124,26 @@ export async function listWorkOrders(filters: {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select().from(workOrders);
+  // Importamos os clientes para fazer a ligação
+  const { clients } = await import("../drizzle/schema");
+
+  // Mudamos o select para incluir o nome do cliente
+  let query = db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      adminId: workOrders.adminId,
+      clientId: workOrders.clientId,
+      clientName: clients.name, // <-- O NOME QUE ESTAVA FALTANDO
+      type: workOrders.type,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      title: workOrders.title,
+      scheduledDate: workOrders.scheduledDate,
+      createdAt: workOrders.createdAt,
+    })
+    .from(workOrders)
+    .leftJoin(clients, eq(workOrders.clientId, clients.id)); // Faz a ponte entre as tabelas
 
   const conditions = [];
   if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));

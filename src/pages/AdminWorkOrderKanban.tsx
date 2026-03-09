@@ -290,12 +290,14 @@ function WorkOrderCard({
         <Badge className={`${typeConfig.color} text-xs`}>{typeConfig.label}</Badge>
 
         {/* Client */}
-        {client && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <User className="w-3 h-3" />
-            <span className="truncate">{client.name}</span>
-          </div>
-        )}
+    {client && (
+      <div className="flex items-center gap-2 mt-2 text-sm">
+        <User className="w-4 h-4 text-muted-foreground" />
+        <span className="font-medium">
+          #{workOrder.clientId} - {client.name} {/* Altere para exibir o ID e o Nome [2] */}
+        </span>
+      </div>
+    )}
 
         {/* Date */}
         {workOrder.scheduledDate && (

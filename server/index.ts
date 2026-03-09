@@ -3,29 +3,10 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
-import { appRouter } from "../routers";
-import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
-
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
-
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
+import { registerOAuthRoutes } from "./_core/oauth";
+import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
+import { setupVite, serveStatic } from "./vite";
 
 async function startServer() {
   const app = express();
@@ -39,7 +20,7 @@ async function startServer() {
   // Client login API
   app.post("/api/client-login", async (req, res) => {
     try {
-      const { clientLoginSchema } = await import("../validation");
+      const { clientLoginSchema } = await import("./validation");
       const validation = clientLoginSchema.safeParse(req.body);
       
       if (!validation.success) {
@@ -47,8 +28,8 @@ async function startServer() {
       }
       
       const { username, password } = validation.data;
-      const { getClientByUsername, updateClientLastLogin } = await import("../db");
-      const { comparePassword } = await import("../adminAuth");
+      const { getClientByUsername, updateClientLastLogin } = await import("./db");
+      const { comparePassword } = await import("./adminAuth");
       
       const client = await getClientByUsername(username);
       if (!client) {
@@ -91,7 +72,7 @@ async function startServer() {
         return res.status(400).json({ message: "clientId é obrigatório" });
       }
       
-      const { getDocumentsByClientId } = await import("../db");
+      const { getDocumentsByClientId } = await import("./db");
       const documents = await getDocumentsByClientId(parseInt(clientId));
       res.json(documents);
     } catch (error) {
@@ -103,7 +84,7 @@ async function startServer() {
   // Delete client document
   app.delete("/api/client-documents/:id", async (req, res) => {
     try {
-      const { deleteClientDocument } = await import("../db");
+      const { deleteClientDocument } = await import("./db");
       await deleteClientDocument(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error) {
@@ -120,7 +101,7 @@ async function startServer() {
         return res.status(400).json({ message: "adminId é obrigatório" });
       }
       
-      const { getClientsByAdminId } = await import("../db");
+      const { getClientsByAdminId } = await import("./db");
       const clients = await getClientsByAdminId(parseInt(adminId));
       res.json(clients);
     } catch (error) {
@@ -132,7 +113,7 @@ async function startServer() {
   // Create admin client
   app.post("/api/admin-clients", async (req, res) => {
     try {
-      const { createClientSchema } = await import("../validation");
+      const { createClientSchema } = await import("./validation");
       const validation = createClientSchema.safeParse(req.body);
       
       if (!validation.success) {
@@ -140,8 +121,8 @@ async function startServer() {
       }
       
       const { adminId, name, email, username, password, cnpjCpf, phone, address, type } = validation.data;
-      const { createClient } = await import("../db");
-      const { hashPassword } = await import("../adminAuth");
+      const { createClient } = await import("./db");
+      const { hashPassword } = await import("./adminAuth");
       
       const hashedPassword = await hashPassword(password);
       await createClient({
@@ -166,7 +147,7 @@ async function startServer() {
   // Get admin client by ID
   app.get("/api/admin-clients/:id", async (req, res) => {
     try {
-      const { getClientById } = await import("../db");
+      const { getClientById } = await import("./db");
       const client = await getClientById(parseInt(req.params.id));
       
       if (!client) {
@@ -183,7 +164,7 @@ async function startServer() {
   // Update admin client
   app.put("/api/admin-clients/:id", async (req, res) => {
     try {
-      const { updateClientSchema } = await import("../validation");
+      const { updateClientSchema } = await import("./validation");
       const validation = updateClientSchema.safeParse(req.body);
       
       if (!validation.success) {
@@ -221,7 +202,7 @@ async function startServer() {
   // Delete admin client
   app.delete("/api/admin-clients/:id", async (req, res) => {
     try {
-      const { deleteClient } = await import("../db");
+      const { deleteClient } = await import("./db");
       await deleteClient(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error) {
@@ -233,7 +214,7 @@ async function startServer() {
   // Get work order by ID
   app.get("/api/work-orders/:id", async (req, res) => {
     try {
-      const { getWorkOrderById } = await import("../db");
+      const { getWorkOrderById } = await import("./db");
       const workOrder = await getWorkOrderById(parseInt(req.params.id));
       
       if (!workOrder) {
@@ -267,7 +248,7 @@ async function startServer() {
       }
       
       const { title, description, serviceType, status, priority, estimatedHours, actualHours } = req.body;
-      const { updateWorkOrder } = await import("../db");
+      const { updateWorkOrder } = await import("./db");
       
       await updateWorkOrder(parseInt(req.params.id), {
         title,
@@ -300,7 +281,7 @@ async function startServer() {
       if (isNaN(parseInt(clientId))) {
         return res.status(400).json({ message: "ID do cliente invalido" });
       }
-      const { createWorkOrder, getNextOSNumber } = await import("../db");
+      const { createWorkOrder, getNextOSNumber } = await import("./db");
       
       const osNumber = await getNextOSNumber();
       
@@ -338,8 +319,8 @@ async function startServer() {
       if (!validTypes.includes(documentType)) {
         return res.status(400).json({ message: "Tipo de documento invalido" });
       }
-      const { createClientDocument } = await import("../db");
-      const { storagePut } = await import("../storage");
+      const { createClientDocument } = await import("./db");
+      const { storagePut } = await import("./storage");
       
       const buffer = Buffer.from(fileBase64, "base64");
       const fileKey = `clients/${clientId}/${Date.now()}-${fileName}`;
@@ -373,7 +354,7 @@ async function startServer() {
         return res.status(400).json({ message: "adminId eh obrigatorio" });
       }
       
-      const { getClientsByAdminId, getWorkOrdersByAdminId, getAllDocumentsByAdminId } = await import("../db");
+      const { getClientsByAdminId, getWorkOrdersByAdminId, getAllDocumentsByAdminId } = await import("./db");
       const clients = await getClientsByAdminId(parseInt(adminId));
       const workOrders = await getWorkOrdersByAdminId(parseInt(adminId));
       const documents = await getAllDocumentsByAdminId(parseInt(adminId));
@@ -402,22 +383,22 @@ async function startServer() {
     })
   );
   // development mode uses Vite, production mode uses static files
+ // ... após o if/else do Vite
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  const PORT = 3000;
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log("=========================================");
+    console.log(`🚀 SERVIDOR DISPONÍVEL NA REDE`);
+    console.log(`- No Notebook: http://localhost:${PORT}`);
+    console.log(`- No Celular: Use seu IP (ex: http://192.168.3.12:3000)`);
+    console.log("=========================================");
   });
-}
+} // Fim da função startServer
 
 startServer().catch(console.error);

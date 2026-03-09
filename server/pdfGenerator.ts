@@ -304,7 +304,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       if (tasksWithChecklists && tasksWithChecklists.length > 0) {
 
         // Verificar se precisa de nova página
-        if (currentY > doc.page.height - 200) {
+        if (currentY > doc.page.height - 100) {
           doc.addPage();
           currentY = 40;
         }
@@ -568,7 +568,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       // === OBSERVAÇÕES (Comentários para o cliente) ===
       if (comments && comments.length > 0) {
         // Verificar se precisa de nova página
-        if (currentY > doc.page.height - 200) {
+        if (currentY > doc.page.height - 100) {
           doc.addPage();
           currentY = 40;
         }
@@ -599,29 +599,25 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-    // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (VERSÃO FINAL CORRIGIDA) ===
-      
-      const signatureBlockHeight = 130; // Aumentamos um pouco o espaço reservado
-      const bottomMargin = 40;         
+    // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (OTIMIZADO) ===
+      const bottomMargin = 40;
+      const signatureBlockHeight = 110; 
       const sigStartY = doc.page.height - bottomMargin - signatureBlockHeight;
 
-      // 1. Verificação rigorosa de página extra
-      // Se o conteúdo técnico chegou perto do rodapé, pula para a próxima
-      if (currentY > sigStartY - 20) {
+      // Só cria nova página se o conteúdo técnico invadir o espaço do rodapé
+      if (currentY > sigStartY - 10) {
         doc.addPage();
-        currentY = 40; // Reset para o topo da nova página
+        currentY = 40;
       }
 
-      // 2. Título "Assinaturas" - Subimos um pouco mais (sigStartY)
+      // Título "Assinaturas" no rodapé fixo
       doc.fontSize(11)
          .fillColor('#D4A84B')
          .font('Helvetica-Bold')
          .text('Assinaturas', leftMargin, sigStartY);
 
-      // 3. Ajuste das posições das imagens e linhas
-      // A imagem da assinatura ficará ENTRE o título e a linha
-      const imageY = sigStartY + 20; 
-      const sigLineY = imageY + 45; // Linha logo abaixo da imagem
+      const imageY = sigStartY + 15; 
+      const sigLineY = imageY + 40; 
       const sigWidth = (contentWidth / 2) - 30;
       const sigCol1X = leftMargin;
       const sigCol2X = pageWidth / 2 + 15;
@@ -631,35 +627,25 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
-          // Desenha a imagem ANTES da linha e do texto
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
         } catch (e) { console.error('Erro assinatura colaborador', e); }
       }
 
       doc.strokeColor('#333333').lineWidth(0.5)
          .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
-      // NOME DO COLABORADOR: Verificamos múltiplas fontes possíveis do banco de dados
-      // Log para debug
-      console.log('[PDF] Dados do colaborador:', {
-        collaboratorName: (workOrder as any).collaboratorName,
-        technicianName: (workOrder as any).technicianName,
-        assignedTo: (workOrder as any).assignedTo,
-        allKeys: Object.keys(workOrder)
-      });
-      
       const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || (workOrder as any).assignedTo || '________________';
 
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center', lineBreak: false });
+         .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
       // --- Assinatura do Cliente ---
       const clientSig = (workOrder as any).clientSignature;
       if (clientSig) {
         try {
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
         } catch (e) { console.error('Erro assinatura cliente', e); }
       }
 
@@ -667,28 +653,17 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
       doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center', lineBreak: false });
+         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
       // === RODAPÉ ELETRÔNICO FINAL ===
-      // O rodapé será renderizado usando drawText com posição absoluta
-      // Isso evita que o PDFKit crie uma nova página
       const footerTextY = doc.page.height - 30;
-      
-      // Usamos a API de baixo nível do PDFKit para renderizar o rodapé sem afetar o fluxo
-      doc.fontSize(7)
-         .fillColor('#999999')
-         .font('Helvetica');
-      
-      // Renderizamos o texto do rodapé na posição absoluta
+      doc.fontSize(7).fillColor('#999999').font('Helvetica');
       const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
       const footerWidth = doc.widthOfString(footerText);
       const footerX = (pageWidth - footerWidth) / 2;
-      
       doc.text(footerText, footerX, footerTextY, { lineBreak: false });
 
-      // Finaliza o documento
       doc.end();
-      
     } catch (error) {
       reject(error);
     }

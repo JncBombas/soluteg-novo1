@@ -366,7 +366,10 @@ export default function AdminWorkOrders() {
                     </div>
                     <p className="text-gray-700 mb-3 text-sm md:text-base">{order.title}</p>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm text-gray-600">
-                      <span>Cliente ID: <strong>{order.clientId}</strong></span>
+                       <span>
+                          Cliente: <strong>{order.clientName} - #{order.clientId}</strong>
+                       </span>
+  
                       {order.scheduledDate && (
                         <span>
                           Data: <strong>{new Date(order.scheduledDate).toLocaleDateString("pt-BR")}</strong>

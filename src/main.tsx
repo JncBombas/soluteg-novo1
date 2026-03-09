@@ -40,13 +40,12 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      // 1. Mudamos para a URL completa da sua API na HostGator
-      url: "https://jnc.soluteg.com.br/api/trpc",
+      // Agora ele tenta ler do .env (localhost:3000/3001) ou usa a produção se não houver variável
+      url: `${import.meta.env.VITE_API_URL || 'https://jnc.soluteg.com.br'}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          // 2. Mantemos as credenciais para cookies/sessão funcionarem
           credentials: "include", 
         });
       },

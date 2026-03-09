@@ -4,7 +4,7 @@ import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: ReturnType<typeof drizzle> | null = drizzle("mysql://d5ea2e96_jnc_sistema:d5ea2e96d5ea2e96d5ea2e96@69.6.213.57:3306/d5ea2e96_jncdb");
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -580,18 +580,55 @@ export async function getWorkOrdersByAdminId(adminId: number) {
       id: workOrders.id,
       osNumber: workOrders.osNumber,
       title: workOrders.title,
-      clientName: clients.name,
+      // BUSCA O NOME NA TABELA DE CLIENTES
+      clientName: clients.name, 
       status: workOrders.status,
       priority: workOrders.priority,
       scheduledDate: workOrders.scheduledDate,
       createdAt: workOrders.createdAt,
     })
     .from(workOrders)
-    .innerJoin(clients, eq(workOrders.clientId, clients.id))
+    // ESTA LINHA CONECTA AS DUAS TABELAS
+    .innerJoin(clients, eq(workOrders.clientId, clients.id)) 
     .where(eq(workOrders.adminId, adminId))
     .orderBy(desc(workOrders.createdAt));
   
   return orders;
+}
+
+export async function listWorkOrders(filters: {
+  clientId?: number;
+  adminId?: number;
+  status?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      clientName: clients.name, // Nome do cliente via Join
+      status: workOrders.status,
+      priority: workOrders.priority,
+      scheduledDate: workOrders.scheduledDate,
+      createdAt: workOrders.createdAt,
+      clientId: workOrders.clientId,
+    })
+    .from(workOrders)
+    .innerJoin(clients, eq(workOrders.clientId, clients.id));
+
+  const conditions = [];
+  if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
+  if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
+  if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query.orderBy(desc(workOrders.createdAt));
 }
 
 export async function getWorkOrderById(id: number) {
@@ -773,6 +810,7 @@ export async function getAllDocumentsByAdminId(adminId: number) {
       id: clientDocuments.id,
       title: clientDocuments.title,
       clientId: clientDocuments.clientId,
+      clientName: clients.name,
       adminId: clientDocuments.adminId,
     })
     .from(clientDocuments)
