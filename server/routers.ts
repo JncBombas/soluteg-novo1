@@ -1,3 +1,4 @@
+import { sendWhatsappAlert } from "./whatsapp";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -545,6 +546,18 @@ export const appRouter = router({
         };
         const result = await workOrdersDb.createWorkOrder(convertedInput as any);
         return { success: true, message: "OS criada com sucesso", ...result };
+        // ... dentro de .mutation(async ({ input }) => {
+        const result = await workOrdersDb.createWorkOrder(convertedInput as any);
+
+        // ADICIONE ESTE BLOCO:
+        const msg = `🚨 *NOVA OS NO PORTAL!* \n\n` +
+            `🛠️ *Serviço:* ${input.title}\n` +
+            `👤 *Cliente:* ID ${input.clientId}\n` +
+            `💻 Verifique o sistema para detalhes.`;
+
+          sendWhatsappAlert(msg).catch(e => console.error("Erro Zap:", e));
+
+            return { success: true, message: "OS criada com sucesso", ...result };
       }),
 
     // Atualizar OS
