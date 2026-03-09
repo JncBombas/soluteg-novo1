@@ -7,9 +7,14 @@ import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime()];
 
+// Determinar o base path baseado no ambiente
+// Para VPS (produção): usar '/'
+// Para GitHub Pages: usar '/soluteg-novo1/'
+const basePath = process.env.DEPLOY_ENV === 'vps' ? '/' : '/soluteg-novo1/';
+
 export default defineConfig({
-  // 1. ADICIONE ESSA LINHA: Essencial para GitHub Pages
-  base: '/soluteg-novo1/', 
+  // Base path configurável por ambiente
+  base: basePath,
   
   plugins,
   resolve: {
@@ -23,7 +28,6 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
   build: {
-    // 2. SIMPLIFIQUE ISSO: Facilita para o GitHub Actions encontrar
     outDir: path.resolve(import.meta.dirname, "dist"), 
     emptyOutDir: true,
   },

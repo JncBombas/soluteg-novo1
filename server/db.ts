@@ -433,6 +433,12 @@ export async function updateClient(id: number, data: Partial<InsertClient>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  // Verificar se o cliente existe
+  const existingClient = await getClientById(id);
+  if (!existingClient) {
+    throw new Error("Cliente não encontrado");
+  }
+  
   await db.update(clients).set(data).where(eq(clients.id, id));
 }
 
@@ -488,6 +494,12 @@ export async function deleteClientDocument(id: number) {
 export async function updateClientPassword(id: number, password: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Verificar se o cliente existe
+  const existingClient = await getClientById(id);
+  if (!existingClient) {
+    throw new Error("Cliente não encontrado");
+  }
   
   await db.update(clients).set({ password }).where(eq(clients.id, id));
 }
