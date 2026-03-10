@@ -1,4 +1,5 @@
 import { sendWhatsappAlert } from "./whatsapp";
+import { db } from "./db"; // Certifique-se que o 'db' está importado para buscar o cliente
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
