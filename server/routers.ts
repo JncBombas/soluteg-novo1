@@ -1,3 +1,4 @@
+import { sendWhatsappAlert } from "./whatsapp";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -534,7 +535,7 @@ export const appRouter = router({
         return await workOrdersDb.getWorkOrderById(input.id);
       }),
 
-    // Criar nova OS
+   // Criar nova OS
     create: publicProcedure
       .input(z.object({
         adminId: z.number(),
@@ -543,13 +544,7 @@ export const appRouter = router({
         priority: z.enum(["normal", "alta", "critica"]).default("normal"),
         title: z.string().min(1),
         description: z.string().optional(),
-        serviceType: z.string().optional(),
-        scheduledDate: z.string().optional(),
-        estimatedHours: z.number().optional(),
-        estimatedValue: z.number().optional(),
-        isRecurring: z.number().default(0),
-        recurrenceType: z.enum(["mensal_fixo", "mensal_inicio"]).optional(),
-        recurrenceDay: z.number().optional(),
+        // ... outros campos
       }))
       .mutation(async ({ input }) => {
         const workOrdersDb = await import("./workOrdersDb");
@@ -557,9 +552,35 @@ export const appRouter = router({
           ...input,
           scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : undefined,
         };
+
+        // 1. Cria a OS no banco
         const result = await workOrdersDb.createWorkOrder(convertedInput as any);
-        return { success: true, message: "OS criada com sucesso", ...result };
-      }),
+        const osId = result.insertId;
+
+        // 2. Busca o nome do cliente para a mensagem (melhora o aviso)
+        const cliente = await db.getClientById(input.clientId);
+        const nomeCliente = cliente?.name || `ID ${input.clientId}`;
+
+        // 3. Configura os links corretos da JNC / Soluteg
+        const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+        
+        const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
+                    `🛠️ *Serviço:* ${input.title}\n` +
+                    `🏢 *Condomínio:* ${nomeCliente}\n` +
+                    `📅 *Tipo:* ${input.type.toUpperCase()}\n` +
+                    `⚡ *Prioridade:* ${input.priority.toUpperCase()}\n\n` +
+                    `🔗 *Acesse os detalhes aqui:* ${portalUrl}`;
+
+        // 4. Envia o alerta (Zap)
+        sendWhatsappAlert(msg).catch(e => console.error("Erro no Zap JNC:", e));
+
+        return { 
+            success: true, 
+            message: "OS criada com sucesso", 
+            id: osId 
+        };
+    }),
+      
 
     // Atualizar OS
     update: publicProcedure
