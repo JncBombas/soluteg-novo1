@@ -172,7 +172,8 @@ async function startServer() {
       }
       
       const { name, email, username, cnpjCpf, phone, address, type, password } = validation.data;
-      const { updateClient } = await import("../db");
+      const { updateClient } = await import("./db");
+      const { hashPassword } = await import("./adminAuth");
       
       const updateData: any = {
         name,
@@ -186,7 +187,6 @@ async function startServer() {
 
       // Se uma nova senha foi fornecida, gerar hash bcrypt
       if (password && password.trim()) {
-        const { hashPassword } = await import("../adminAuth");
         updateData.password = await hashPassword(password);
       }
 
