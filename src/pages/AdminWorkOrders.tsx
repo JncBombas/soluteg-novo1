@@ -3,7 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Eye, Edit2, Trash2, ChevronDown, Search, Filter, Download, CheckSquare, Square } from "lucide-react";
+import { Plus, Eye, Edit2, Trash2, ChevronDown, Search, Filter, Download, CheckSquare, Square, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 
@@ -23,12 +33,31 @@ export default function AdminWorkOrders() {
   // Seleção múltipla
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: workOrders = [], isLoading } = trpc.workOrders.list.useQuery({
     adminId,
   });
   
   const exportBatchMutation = trpc.workOrders.exportBatch.useMutation();
+  const deleteBatchMutation = trpc.workOrders.deleteBatch.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message);
+      setSelectedIds([]);
+      setDeleteDialogOpen(false);
+      setIsDeleting(false);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao deletar: ${error.message}`);
+      setIsDeleting(false);
+    },
+  });
+
+  const handleDeleteBatch = () => {
+    setIsDeleting(true);
+    deleteBatchMutation.mutate({ ids: selectedIds });
+  };
 
   const handleCreateOS = () => {
     navigate("/admin/work-orders/create");
@@ -183,16 +212,30 @@ export default function AdminWorkOrders() {
             <h1 className="text-2xl md:text-3xl font-bold mb-2">Ordens de Serviço</h1>
             <p className="text-gray-600 text-sm md:text-base">Gerencie todas as ordens de serviço</p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             {selectedIds.length > 0 && (
-              <Button
-                onClick={handleExportBatch}
-                disabled={isExporting}
-                className="bg-green-600 hover:bg-green-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2"
-              >
-                <Download className="w-4 md:w-5 h-4 md:h-5" />
-                {isExporting ? 'Exportando...' : `Exportar ${selectedIds.length} OS`}
-              </Button>
+              <>
+                <Button
+                  onClick={handleExportBatch}
+                  disabled={isExporting}
+                  className="bg-green-600 hover:bg-green-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2"
+                >
+                  <Download className="w-4 md:w-5 h-4 md:h-5" />
+                  {isExporting ? 'Exportando...' : `Exportar ${selectedIds.length}`}
+                </Button>
+                <Button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 h-10 md:h-12 px-4 md:px-6 flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="w-4 md:w-5 h-4 md:h-5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 md:w-5 h-4 md:h-5" />
+                  )}
+                  {isDeleting ? 'Deletando...' : `Deletar ${selectedIds.length}`}
+                </Button>
+              </>
             )}
             <Button
               onClick={handleCreateOS}
@@ -418,6 +461,28 @@ export default function AdminWorkOrders() {
           </Button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar Ordens de Servico?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar {selectedIds.length} OS? Esta acao nao pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBatch}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deletando..." : "Deletar"}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -660,6 +660,15 @@ export const appRouter = router({
         return { success: true, message: "OS deletada com sucesso" };
       }),
 
+    // Deletar multiplas OS
+    deleteBatch: publicProcedure
+      .input(z.object({ ids: z.array(z.number()).min(1) }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        await workOrdersDb.deleteMultipleWorkOrders(input.ids);
+        return { success: true, message: `${input.ids.length} OS deletadas com sucesso` };
+      }),
+
     // Concluir OS com assinaturas
     complete: publicProcedure
       .input(z.object({

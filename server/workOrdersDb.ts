@@ -188,6 +188,19 @@ export async function deleteWorkOrder(id: number) {
 }
 
 /**
+ * Deletar múltiplas OS
+ */
+export async function deleteMultipleWorkOrders(ids: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (ids.length === 0) throw new Error("Nenhuma OS selecionada");
+
+  await db.delete(workOrders).where(sql`${workOrders.id} IN (${ids.join(",")})`);
+  return true;
+}
+
+/**
  * Adicionar entrada no histórico de mudanças
  */
 export async function addWorkOrderHistory(data: Omit<InsertWorkOrderHistory, "createdAt">) {
