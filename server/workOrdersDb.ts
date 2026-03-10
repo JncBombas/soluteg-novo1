@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte, like, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, like, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { workOrders, workOrderHistory, InsertWorkOrder, InsertWorkOrderHistory } from "../drizzle/schema";
 
@@ -196,7 +196,8 @@ export async function deleteMultipleWorkOrders(ids: number[]) {
 
   if (ids.length === 0) throw new Error("Nenhuma OS selecionada");
 
-  await db.delete(workOrders).where(sql`${workOrders.id} IN (${ids.join(",")})`);
+  // Usar inArray para passar os IDs corretamente como parâmetros individuais
+  await db.delete(workOrders).where(inArray(workOrders.id, ids));
   return true;
 }
 
