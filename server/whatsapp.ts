@@ -46,7 +46,7 @@ export const sendWhatsappAlert = async (message: string) => {
 
     try {
         // DICA: Se não chegar no final 1010, tente tirar o "9" (551381301010)
-        const meuNumero = "5513981301010@c.us"; 
+        const meuNumero = "551381301010@c.us"; 
         await client.sendMessage(meuNumero, message);
         console.log('🚀 Mensagem enviada com sucesso para a JNC!');
     } catch (err) {
