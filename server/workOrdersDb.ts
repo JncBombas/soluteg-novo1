@@ -111,30 +111,55 @@ export async function getWorkOrderById(id: number) {
 }
 
 /**
- * Listar OS com filtros (AGORA COM NOME DO CLIENTE)
+ * Listar OS com filtros, busca, ordenação e PAGINAÇÃO
  */
 export async function listWorkOrders(filters: {
   clientId?: number;
   adminId?: number;
   type?: string;
   status?: string;
-  startDate?: Date;
-  endDate?: Date;
+  priority?: string;
+  search?: string;     // <-- Novo
+  page?: number;       // <-- Novo
+  limit?: number;      // <-- Novo
+  sortBy?: string;     // <-- Novo
+  sortOrder?: "asc" | "desc"; // <-- Novo
 }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return { items: [], totalCount: 0 };
 
-  // Importamos os clientes para fazer a ligação
   const { clients } = await import("../drizzle/schema");
 
-  // Mudamos o select para incluir o nome do cliente
+  // Parâmetros de paginação padrão
+  const page = filters.page || 1;
+  const limit = filters.limit || 10;
+  const offset = (page - 1) * limit;
+
+  // 1. Construir as condições (Filtros e Busca)
+  const conditions = [];
+  if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
+  if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
+  if (filters.type) conditions.push(eq(workOrders.type, filters.type as any));
+  if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
+  if (filters.priority) conditions.push(eq(workOrders.priority, filters.priority as any));
+
+  // Lógica de busca por título ou número da OS
+  if (filters.search) {
+    conditions.push(
+      sql`(${like(workOrders.title, `%${filters.search}%`)} OR ${like(workOrders.osNumber, `%${filters.search}%`)})`
+    );
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  // 2. Query para buscar os itens paginados
   let query = db
     .select({
       id: workOrders.id,
       osNumber: workOrders.osNumber,
       adminId: workOrders.adminId,
       clientId: workOrders.clientId,
-      clientName: clients.name, // <-- O NOME QUE ESTAVA FALTANDO
+      clientName: clients.name,
       type: workOrders.type,
       status: workOrders.status,
       priority: workOrders.priority,
@@ -143,22 +168,23 @@ export async function listWorkOrders(filters: {
       createdAt: workOrders.createdAt,
     })
     .from(workOrders)
-    .leftJoin(clients, eq(workOrders.clientId, clients.id)); // Faz a ponte entre as tabelas
+    .leftJoin(clients, eq(workOrders.clientId, clients.id))
+    .where(whereClause);
 
-  const conditions = [];
-  if (filters.clientId) conditions.push(eq(workOrders.clientId, filters.clientId));
-  if (filters.adminId) conditions.push(eq(workOrders.adminId, filters.adminId));
-  if (filters.type) conditions.push(eq(workOrders.type, filters.type as any));
-  if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
-  if (filters.startDate) conditions.push(gte(workOrders.createdAt, filters.startDate));
-  if (filters.endDate) conditions.push(lte(workOrders.createdAt, filters.endDate));
+  // Ordenação dinâmica
+  const orderColumn = filters.sortBy === "title" ? workOrders.title : workOrders.createdAt;
+  const orderDir = filters.sortOrder === "asc" ? sql`asc` : desc(orderColumn);
+  
+  // 3. Executar as duas operações (Contagem e Busca)
+  const [result, totalResult] = await Promise.all([
+    query.limit(limit).offset(offset).orderBy(orderDir),
+    db.select({ count: sql<number>`count(*)` }).from(workOrders).where(whereClause)
+  ]);
 
-  if (conditions.length > 0) {
-    query = query.where(and(...conditions)) as any;
-  }
-
-  const result = await query.orderBy(desc(workOrders.createdAt));
-  return result;
+  return {
+    items: result,
+    totalCount: Number(totalResult[0]?.count || 0)
+  };
 }
 
 /**
