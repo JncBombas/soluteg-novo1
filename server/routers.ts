@@ -563,14 +563,18 @@ export const appRouter = router({
         const nomeCliente = cliente?.name || `ID ${input.clientId}`;
 
         // 3. Configura os links corretos da JNC / Soluteg
-        const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
-        
-        const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
-                    `🛠️ *Serviço:* ${input.title}\n` +
-                    `🏢 *Condomínio:* ${nomeCliente}\n` +
-                    `📅 *Tipo:* ${input.type.toUpperCase()}\n` +
-                    `⚡ *Prioridade:* ${input.priority.toUpperCase()}\n\n` +
-                    `🔗 *Acesse os detalhes aqui:* ${portalUrl}`;
+        // 1. Garanta que o insertId existe
+const osId = result.insertId; 
+
+// 2. Monte a URL completa (Verifique se o caminho /admin/work-orders/ é o correto no seu sistema)
+const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+
+const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
+            `🛠️ *Serviço:* ${input.title}\n` +
+            `🏢 *Condomínio:* ${nomeCliente}\n` +
+            `📅 *Tipo:* ${input.type.toUpperCase()}\n` +
+            `⚡ *Prioridade:* ${input.priority.toUpperCase()}\n\n` +
+            `🔗 *Acesse os detalhes aqui:* \n${portalUrl}`; // Adicionei uma quebra de linha para facilitar o clique
 
         // 4. Envia o alerta (Zap)
         sendWhatsappAlert(msg).catch(e => console.error("Erro no Zap JNC:", e));
