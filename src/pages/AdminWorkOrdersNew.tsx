@@ -57,14 +57,14 @@ export default function AdminWorkOrdersNew() {
   const [selectedOsId, setSelectedOsId] = useState<number | null>(null);
 
   // Query
-  const { data: workOrders = [], isLoading, refetch } = trpc.workOrders.list.useQuery({
+  const { data, isLoading, refetch } = trpc.workOrders.list.useQuery({
     adminId,
     type: typeFilter !== "all" ? typeFilter as OSType : undefined,
     status: statusFilter !== "all" ? statusFilter : undefined,
+    limit: 50,
   });
 
-  // Buscar clientes para mostrar nomes
-  const { data: clients = [] } = trpc.clients.list.useQuery({ adminId });
+  const workOrders = data?.items ?? [];
 
   const deleteMutation = trpc.workOrders.delete.useMutation({
     onSuccess: () => {
@@ -426,4 +426,6 @@ export default function AdminWorkOrdersNew() {
       </div>
     </div>
   );
+
+
 }
