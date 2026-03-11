@@ -453,74 +453,99 @@ export default function AdminWorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Actions Card - Focado no Técnico */}
-<Card className="border-t-4 border-t-primary shadow-md">
-  <CardHeader>
-    <CardTitle className="text-lg flex items-center gap-2">
-      <AlertCircle className="h-5 w-5 text-primary" />
-      Controle de Execução
-    </CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="flex flex-col gap-4">
+          {/* Actions Card - Estilo Industrial / Alta Visibilidade */}
+<Card className="border-none shadow-2xl overflow-hidden bg-white">
+  {/* Cabeçalho Robusto - Preenche até o topo */}
+  <div className={`px-4 py-4 flex justify-between items-center ${
+    workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'
+  }`}>
+    <div className="flex items-center gap-2">
+      <AlertCircle className="h-5 w-5 text-white animate-pulse" />
+      <span className="text-white text-sm font-black uppercase tracking-widest">
+        {workOrder.type === 'emergencial' ? 'Emergência Ativa' : 'Controle de Fluxo'}
+      </span>
+    </div>
+    <Badge variant="outline" className="text-white border-white/40 bg-black/20 font-mono">
+      STATUS: {getStatusLabel(workOrder.status).toUpperCase()}
+    </Badge>
+  </div>
+
+  <CardContent className="p-6">
+    <div className="flex flex-col gap-5">
       
-      {/* BOTÃO PARA INICIAR (Fluxo Emergencial ou Rotina) */}
+      {/* SE ESTIVER ABERTA: BOTÃO DE INICIAR GIGANTE */}
       {workOrder.status === "aberta" && (
         <Button 
           size="lg" 
-          className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-xl font-black shadow-lg animate-in fade-in zoom-in duration-300"
+          className="w-full bg-blue-600 hover:bg-blue-700 h-24 text-2xl font-black shadow-xl border-b-4 border-blue-800 active:border-b-0 transition-all"
           onClick={() => handleStatusChange("em_andamento")}
         >
-          <Play className="mr-3 h-6 w-6 fill-current" />
-          INICIAR ATENDIMENTO AGORA
+          <Play className="mr-4 h-10 w-10 fill-current" />
+          INICIAR AGORA
         </Button>
       )}
 
-      {/* BOTÃO PARA CONCLUIR (Aparece quando está em andamento) */}
+      {/* SE ESTIVER EM ANDAMENTO: FINALIZAR OU CANCELAR */}
       {workOrder.status === "em_andamento" && (
-        <Button 
-          size="lg" 
-          variant="default"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 h-16 text-xl font-black shadow-lg animate-in fade-in zoom-in duration-300"
-          onClick={() => setCompleteModalOpen(true)}
-        >
-          <CheckCircle2 className="mr-3 h-6 w-6" />
-          FINALIZAR E COLETAR ASSINATURA
-        </Button>
+        <div className="space-y-4">
+          <Button 
+            size="lg" 
+            className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl border-b-4 border-emerald-800 active:border-b-0 transition-all"
+            onClick={() => setCompleteModalOpen(true)}
+          >
+            <CheckCircle2 className="mr-4 h-10 w-10" />
+            FINALIZAR SERVIÇO
+          </Button>
+
+          {/* Opção de Cancelar o Início (Estorno) */}
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="w-full text-slate-500 hover:text-red-600 hover:bg-red-50 font-bold uppercase text-xs tracking-tighter"
+            onClick={() => handleStatusChange("aberta")}
+          >
+            <XCircle className="mr-2 h-4 w-4" />
+            Cometi um erro, voltar para status "Aberta"
+          </Button>
+        </div>
       )}
 
-      {/* OUTRAS AÇÕES SECUNDÁRIAS */}
-      <div className="flex flex-wrap gap-2 pt-2 border-t">
+      {/* SEÇÃO DE AÇÕES DE ESCRITÓRIO (MENORES) */}
+      <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
         {workOrder.status === "aguardando_aprovacao" && (
           <>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange("aprovada")}>
-              Aprovar Orçamento
+            <Button size="sm" className="bg-green-600" onClick={() => handleStatusChange("aprovada")}>
+              Aprovar
             </Button>
-            <Button variant="destructive" onClick={() => handleStatusChange("rejeitada")}>
-              Rejeitar Orçamento
+            <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejeitada")}>
+              Rejeitar
             </Button>
           </>
         )}
         
         {workOrder.status === "concluida" && (
-          <Button variant="outline" onClick={() => handleStatusChange("aguardando_pagamento")}>
-            Marcar como Aguardando Pagamento
+          <Button size="sm" variant="outline" className="col-span-2" onClick={() => handleStatusChange("aguardando_pagamento")}>
+            Aguardando Pagamento
           </Button>
         )}
 
         <Button
           variant="secondary"
-          className="flex-1 md:flex-none"
+          size="sm"
+          className="col-span-2 font-bold text-slate-600"
           onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
         >
-          Editar Dados da OS
+          Editar Informações da OS
         </Button>
       </div>
 
       {workOrder.type === 'emergencial' && workOrder.status === 'aberta' && (
-        <p className="text-[11px] text-center text-red-600 font-bold uppercase animate-pulse">
-          Atenção: Esta é uma Ordem Emergencial. Inicie o atendimento o mais rápido possível.
-        </p>
+        <div className="bg-red-50 p-3 rounded-lg border border-red-100">
+          <p className="text-[12px] text-center text-red-700 font-black uppercase leading-tight">
+            ⚠️ Ordem Prioritária <br/> 
+            O tempo de resposta está sendo contabilizado.
+          </p>
+        </div>
       )}
     </div>
   </CardContent>
