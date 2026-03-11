@@ -186,7 +186,7 @@ async function startServer() {
       };
 
       // Se uma nova senha foi fornecida, gerar hash bcrypt
-      if (password && password.trim()) {
+      if (password && typeof password === 'string' && password.trim()) {
         updateData.password = await hashPassword(password);
       }
 
