@@ -18,6 +18,8 @@ import {
   Loader2,
   FileDown,
   Trash2,
+  Play,      // <--- ADICIONE ESTE
+  FileText   // <--- ADICIONE ESTE TAMBÉM
 } from "lucide-react";
 import { toast } from "sonner";
 import {
