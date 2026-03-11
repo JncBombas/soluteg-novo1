@@ -572,9 +572,6 @@ const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
 
         //  Configura os links corretos da JNC / Soluteg
 
-// 2. Monte a URL completa (Verifique se o caminho /admin/work-orders/ é o correto no seu sistema)
-const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
-
 const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
             `🛠️ *Serviço:* ${input.title}\n` +
             `🏢 *Condomínio:* ${nomeCliente}\n` +
