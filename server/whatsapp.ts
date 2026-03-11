@@ -74,8 +74,8 @@ client.initialize();
 /**
  * Função exportada para enviar alertas de OS do sistema
  */
-export const sendWhatsappAlert = async (message: string) => {
-    console.log(`--- GATILHO: Iniciando envio de alerta ---`);
+eexport const sendWhatsappAlert = async (message: string) => {
+    console.log(`--- GATILHO: Iniciando busca de ID para envio ---`);
     
     if (!isReady) {
         console.error('❌ ERRO: O cliente ainda não está pronto.');
@@ -83,11 +83,21 @@ export const sendWhatsappAlert = async (message: string) => {
     }
 
     try {
-        // Forçar a busca do chat antes de enviar (mais estável em VPS)
-        const chat = await client.getChatById(meuNumero);
-        await chat.sendMessage(message);
-        console.log('✅ ALERTA: Mensagem de OS enviada com sucesso!');
+        // Tentamos validar o número com o 9 primeiro (padrão novo)
+        const numeroCom9 = "5513981301010@c.us";
+        const numeroSem9 = "551381301010@c.us";
+
+        // Testamos qual ID o WhatsApp reconhece como válido
+        const idValidado = await client.getNumberId(numeroCom9) || await client.getNumberId(numeroSem9);
+
+        if (idValidado) {
+            console.log(`✅ ID Encontrado pelo WhatsApp: ${idValidado._serialized}`);
+            await client.sendMessage(idValidado._serialized, message);
+            console.log('🚀 SUCESSO: Alerta enviado para a JNC!');
+        } else {
+            console.error('❌ ERRO: O WhatsApp não encontrou esse número (LID não gerado).');
+        }
     } catch (err) {
-        console.error('❌ ERRO CRÍTICO no envio da OS:', err.message);
+        console.error('❌ ERRO CRÍTICO no envio:', err.message);
     }
 };
