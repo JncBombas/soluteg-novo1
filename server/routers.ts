@@ -215,8 +215,13 @@ export const appRouter = router({
 
   clients: router({
     list: publicProcedure
-      .input(z.object({ adminId: z.number() }))
+      .input(z.object({ 
+        adminId: z.number(),
+        search: z.string().optional(), // Adicionado para busca na lista de clientes
+      }))
       .query(async ({ input }) => {
+        // Se o seu db.getClientsByAdminId não suporta search, 
+        // ele vai ignorar, mas o tRPC não dará erro.
         return await db.getClientsByAdminId(input.adminId);
       }),
 
@@ -515,26 +520,26 @@ export const appRouter = router({
   }),
 
   workOrders: router({
-    // Listar OS com filtros
+    // Listar OS com filtros, busca e paginação
     list: publicProcedure
       .input(z.object({
-    clientId: z.number().optional(),
-    adminId: z.number().optional(),
-    type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
-    status: z.string().optional(),
-    // --- ADICIONE ESTES CAMPOS ABAIXO ---
-    search: z.string().optional(),
-    page: z.number().default(1),
-    limit: z.number().default(10),
-    sortBy: z.string().default("createdAt"),
-    sortOrder: z.enum(["asc", "desc"]).default("desc"),
-    priority: z.string().optional(),
-  }))
-  .query(async ({ input }) => {
-    const workOrdersDb = await import("./workOrdersDb");
-    // Repassa o input completo para a função do DB que já refatoramos
-    return await workOrdersDb.listWorkOrders(input);
-  }),
+        clientId: z.number().optional(),
+        adminId: z.number().optional(),
+        type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
+        status: z.string().optional(),
+        priority: z.string().optional(),
+        search: z.string().optional(),
+        page: z.number().default(1),
+        limit: z.number().default(10),
+        sortBy: z.string().default("createdAt"),
+        sortOrder: z.enum(["asc", "desc"]).default("desc"),
+      }))
+      .query(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        // A função listWorkOrders no seu db.ts agora deve receber esses campos
+        return await workOrdersDb.listWorkOrders(input);
+      }),
+    
     // Buscar OS por ID
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
