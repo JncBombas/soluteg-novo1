@@ -518,16 +518,23 @@ export const appRouter = router({
     // Listar OS com filtros
     list: publicProcedure
       .input(z.object({
-        clientId: z.number().optional(),
-        adminId: z.number().optional(),
-        type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
-        status: z.string().optional(),
-      }))
-      .query(async ({ input }) => {
-        const workOrdersDb = await import("./workOrdersDb");
-        return await workOrdersDb.listWorkOrders(input);
-      }),
-
+    clientId: z.number().optional(),
+    adminId: z.number().optional(),
+    type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
+    status: z.string().optional(),
+    // --- ADICIONE ESTES CAMPOS ABAIXO ---
+    search: z.string().optional(),
+    page: z.number().default(1),
+    limit: z.number().default(10),
+    sortBy: z.string().default("createdAt"),
+    sortOrder: z.enum(["asc", "desc"]).default("desc"),
+    priority: z.string().optional(),
+  }))
+  .query(async ({ input }) => {
+    const workOrdersDb = await import("./workOrdersDb");
+    // Repassa o input completo para a função do DB que já refatoramos
+    return await workOrdersDb.listWorkOrders(input);
+  }),
     // Buscar OS por ID
     getById: publicProcedure
       .input(z.object({ id: z.number() }))
