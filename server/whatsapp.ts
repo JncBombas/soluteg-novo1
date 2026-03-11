@@ -75,29 +75,36 @@ client.initialize();
  * Função exportada para enviar alertas de OS do sistema
  */
 export const sendWhatsappAlert = async (message: string) => {
-    console.log(`--- GATILHO: Iniciando busca de ID para envio ---`);
+    console.log(`--- GATILHO: Buscando identificador real para JNC ---`);
     
     if (!isReady) {
-        console.error('❌ ERRO: O cliente ainda não está pronto.');
+        console.error('❌ ERRO: Zap não está pronto.');
         return;
     }
 
     try {
-        // Tentamos validar o número com o 9 primeiro (padrão novo)
-        const numeroCom9 = "5513981301010@c.us";
-        const numeroSem9 = "551381301010@c.us";
+        // Tentamos os dois formatos possíveis do litoral
+        const formatos = ["5513981301010@c.us", "551381301010@c.us"];
+        let idFinal = null;
 
-        // Testamos qual ID o WhatsApp reconhece como válido
-        const idValidado = await client.getNumberId(numeroCom9) || await client.getNumberId(numeroSem9);
+        for (const f of formatos) {
+            const check = await client.getNumberId(f);
+            if (check) {
+                idFinal = check._serialized;
+                break;
+            }
+        }
 
-        if (idValidado) {
-            console.log(`✅ ID Encontrado pelo WhatsApp: ${idValidado._serialized}`);
-            await client.sendMessage(idValidado._serialized, message);
-            console.log('🚀 SUCESSO: Alerta enviado para a JNC!');
+        if (idFinal) {
+            console.log(`✅ ID Localizado: ${idFinal}`);
+            // Usamos o objeto 'chat' para garantir a entrega
+            const chat = await client.getChatById(idFinal);
+            await chat.sendMessage(message);
+            console.log('🚀 SUCESSO: Mensagem enviada para a JNC!');
         } else {
-            console.error('❌ ERRO: O WhatsApp não encontrou esse número (LID não gerado).');
+            console.error('❌ ERRO: O WhatsApp não encontrou o número 13-98130-1010 em nenhum formato.');
         }
     } catch (err) {
-        console.error('❌ ERRO CRÍTICO no envio:', err.message);
+        console.error('❌ ERRO CRÍTICO:', err.message);
     }
 };
