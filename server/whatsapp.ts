@@ -30,13 +30,15 @@ client.on('ready', async () => {
     isReady = true;
     console.log('✅ WHATSAPP DA JNC ELÉTRICA e BOMBAS ON!');
     
-    // Pequeno delay para estabilizar a conexão antes da primeira mensagem
+    // Teste de envio com log detalhado
     setTimeout(async () => {
         try {
-            await client.sendMessage(meuNumero, "🚀 *SISTEMA JNC ONLINE*\nO portal foi reiniciado com sucesso e as notificações estão ativas.");
-            console.log('🚀 Mensagem de inicialização enviada com sucesso!');
+            console.log('--- Tentando enviar mensagem inicial para:', meuNumero);
+            const chat = await client.getChatById(meuNumero);
+            await chat.sendMessage("🚀 *SISTEMA JNC ONLINE*\nNotificações de OS ativadas.");
+            console.log('🚀 Mensagem de inicialização ENVIADA!');
         } catch (err) {
-            console.error('❌ Erro ao enviar mensagem de boas-vindas:', err);
+            console.error('❌ Erro no envio inicial:', err.message);
         }
     }, 5000);
 });
@@ -73,19 +75,19 @@ client.initialize();
  * Função exportada para enviar alertas de OS do sistema
  */
 export const sendWhatsappAlert = async (message: string) => {
-    console.log(`--- Tentativa de disparo: ${message.substring(0, 30)}... ---`);
+    console.log(`--- GATILHO: Iniciando envio de alerta ---`);
     
     if (!isReady) {
-        console.error('❌ ERRO: O cliente WhatsApp não está pronto (isReady = false).');
+        console.error('❌ ERRO: O cliente ainda não está pronto.');
         return;
     }
 
     try {
-        const response = await client.sendMessage(meuNumero, message);
-        if (response.id) {
-            console.log('✅ SUCESSO: Mensagem entregue ao servidor do Zap!');
-        }
+        // Forçar a busca do chat antes de enviar (mais estável em VPS)
+        const chat = await client.getChatById(meuNumero);
+        await chat.sendMessage(message);
+        console.log('✅ ALERTA: Mensagem de OS enviada com sucesso!');
     } catch (err) {
-        console.error('❌ ERRO crítico no envio do Zap:', err);
+        console.error('❌ ERRO CRÍTICO no envio da OS:', err.message);
     }
 };
