@@ -451,51 +451,78 @@ export default function AdminWorkOrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Actions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ações Rápidas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {workOrder.status === "aberta" && (
-                  <Button onClick={() => handleStatusChange("em_andamento")}>
-                    Iniciar Atendimento
-                  </Button>
-                )}
-                {workOrder.status === "aguardando_aprovacao" && (
-                  <>
-                    <Button onClick={() => handleStatusChange("aprovada")}>
-                      Aprovar Orçamento
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => handleStatusChange("rejeitada")}
-                    >
-                      Rejeitar Orçamento
-                    </Button>
-                  </>
-                )}
-                {workOrder.status === "em_andamento" && (
-                  <Button onClick={() => handleStatusChange("concluida")}>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Concluir OS
-                  </Button>
-                )}
-                {workOrder.status === "concluida" && (
-                  <Button onClick={() => handleStatusChange("aguardando_pagamento")}>
-                    Marcar como Aguardando Pagamento
-                  </Button>
-                )}
-                <Button
-                  variant="outline"
-                  onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
-                >
-                  Editar OS
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Actions Card - Focado no Técnico */}
+<Card className="border-t-4 border-t-primary shadow-md">
+  <CardHeader>
+    <CardTitle className="text-lg flex items-center gap-2">
+      <AlertCircle className="h-5 w-5 text-primary" />
+      Controle de Execução
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="flex flex-col gap-4">
+      
+      {/* BOTÃO PARA INICIAR (Fluxo Emergencial ou Rotina) */}
+      {workOrder.status === "aberta" && (
+        <Button 
+          size="lg" 
+          className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-xl font-black shadow-lg animate-in fade-in zoom-in duration-300"
+          onClick={() => handleStatusChange("em_andamento")}
+        >
+          <Play className="mr-3 h-6 w-6 fill-current" />
+          INICIAR ATENDIMENTO AGORA
+        </Button>
+      )}
+
+      {/* BOTÃO PARA CONCLUIR (Aparece quando está em andamento) */}
+      {workOrder.status === "em_andamento" && (
+        <Button 
+          size="lg" 
+          variant="default"
+          className="w-full bg-emerald-600 hover:bg-emerald-700 h-16 text-xl font-black shadow-lg animate-in fade-in zoom-in duration-300"
+          onClick={() => setCompleteModalOpen(true)}
+        >
+          <CheckCircle2 className="mr-3 h-6 w-6" />
+          FINALIZAR E COLETAR ASSINATURA
+        </Button>
+      )}
+
+      {/* OUTRAS AÇÕES SECUNDÁRIAS */}
+      <div className="flex flex-wrap gap-2 pt-2 border-t">
+        {workOrder.status === "aguardando_aprovacao" && (
+          <>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange("aprovada")}>
+              Aprovar Orçamento
+            </Button>
+            <Button variant="destructive" onClick={() => handleStatusChange("rejeitada")}>
+              Rejeitar Orçamento
+            </Button>
+          </>
+        )}
+        
+        {workOrder.status === "concluida" && (
+          <Button variant="outline" onClick={() => handleStatusChange("aguardando_pagamento")}>
+            Marcar como Aguardando Pagamento
+          </Button>
+        )}
+
+        <Button
+          variant="secondary"
+          className="flex-1 md:flex-none"
+          onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
+        >
+          Editar Dados da OS
+        </Button>
+      </div>
+
+      {workOrder.type === 'emergencial' && workOrder.status === 'aberta' && (
+        <p className="text-[11px] text-center text-red-600 font-bold uppercase animate-pulse">
+          Atenção: Esta é uma Ordem Emergencial. Inicie o atendimento o mais rápido possível.
+        </p>
+      )}
+    </div>
+  </CardContent>
+</Card>
         </TabsContent>
 
         {/* Tarefas Tab */}
