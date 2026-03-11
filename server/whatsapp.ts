@@ -74,7 +74,7 @@ client.initialize();
 /**
  * Função exportada para enviar alertas de OS do sistema
  */
-eexport const sendWhatsappAlert = async (message: string) => {
+export const sendWhatsappAlert = async (message: string) => {
     console.log(`--- GATILHO: Iniciando busca de ID para envio ---`);
     
     if (!isReady) {
