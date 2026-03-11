@@ -555,14 +555,22 @@ export const appRouter = router({
         };
 
         // 1. Cria a OS no banco
-        const result = await workOrdersDb.createWorkOrder(convertedInput as any);
-        const osId = result.insertId;
+const result = await workOrdersDb.createWorkOrder(convertedInput as any);
 
-        // 2. Busca o nome do cliente para a mensagem (melhora o aviso)
-        const cliente = await db.getClientById(input.clientId);
-        const nomeCliente = cliente?.name || `ID ${input.clientId}`;
+// Tenta capturar o ID de todas as formas possíveis que o banco costuma retornar
+const osId = result?.insertId || result?.id || (Array.isArray(result) ? result[0] : result);
 
-        // 3. Configura os links corretos da JNC / Soluteg
+// Log para conferência na VPS (pm2 logs)
+console.log(`--- DEBUG JNC: OS criada com ID ${osId} ---`);
+
+//  Busca o nome do cliente para a mensagem (melhora o aviso)
+const cliente = await db.getClientById(input.clientId);
+const nomeCliente = cliente?.name || `ID ${input.clientId}`;
+
+//  Monta a URL (agora com o ID capturado corretamente)
+const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+
+        //  Configura os links corretos da JNC / Soluteg
 
 // 2. Monte a URL completa (Verifique se o caminho /admin/work-orders/ é o correto no seu sistema)
 const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
