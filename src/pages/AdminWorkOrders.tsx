@@ -60,7 +60,7 @@ export default function AdminWorkOrders() {
   };
 
   const handleCreateOS = () => {
-    navigate("/admin/work-orders/create");
+    navigate("/admin/work-orders/new");
   };
 
   const handleViewOS = (id: number) => {
