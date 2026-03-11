@@ -190,6 +190,29 @@ export default function AdminWorkOrders() {
             </Select>
           </div>
         </Card>
+            {/* ALERTA DE ORÇAMENTO PENDENTE */}
+{workOrders.some(os => os.type === 'orcamento' && os.status === 'aguardando_aprovacao') && (
+  <div className="bg-amber-50 border-l-4 border-amber-400 p-4 mb-4 rounded-r-lg shadow-sm flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <div className="bg-amber-400 p-1.5 rounded-full">
+        <Filter className="w-4 h-4 text-white" />
+      </div>
+      <div>
+        <p className="text-sm font-bold text-amber-800">Orçamentos Pendentes!</p>
+        <p className="text-xs text-amber-700">Existem serviços aguardando sua aprovação ou do cliente.</p>
+      </div>
+    </div>
+    <Button 
+      variant="outline" 
+      size="sm" 
+      className="border-amber-300 text-amber-800 hover:bg-amber-100"
+      onClick={() => { setTypeFilter('orcamento'); setStatusFilter('aguardando_aprovacao'); }}
+    >
+      Filtrar agora
+    </Button>
+  </div>
+)}
+
 
         {/* LISTA */}
         <div className="space-y-3">
@@ -227,11 +250,22 @@ export default function AdminWorkOrders() {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold text-slate-400">#{order.osNumber}</span>
-                      <StatusBadge status={order.status} />
-                      <PriorityBadge priority={order.priority} />
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-slate-400">#{order.osNumber}</span>
+    
+                   {/* BADGE DE TIPO - ADICIONADO AQUI */}
+                    <Badge variant="outline" className={`text-[10px] font-bold ${
+                     order.type === 'emergencial' ? 'border-red-200 text-red-700 bg-red-50' :
+                      order.type === 'orcamento' ? 'border-purple-200 text-purple-700 bg-purple-50' :
+                     order.type === 'rotina' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' :
+                      'border-slate-200 text-slate-700 bg-slate-50'
+                }`}>
+                      {order.type?.toUpperCase() || 'GERAL'}
+                      </Badge>
+
+                       <StatusBadge status={order.status} />
+                        <PriorityBadge priority={order.priority} />
+                </div>
                     
                     <h3 className="text-slate-900 font-bold truncate md:text-lg mb-2">{order.title}</h3>
                     
