@@ -236,12 +236,13 @@ export default function AdminWorkOrders() {
       </div>
     </div>
   ))} {/* <--- FECHAMENTO DO MAP (AQUI TAVA O ERRO) */}
-</div>
+</div> 
+  ) // <--- ESTE PARÊNTESE FECHA O CONTEÚDO DO TERNÁRIO
+} 
 
-
-        {/* PAGINAÇÃO */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between pt-6">
+{/* PAGINAÇÃO - FORA DO BLOCO DE LOADING OU DENTRO DO WRAPPER */}
+{totalPages > 1 && (
+  <div className="flex items-center justify-between pt-6">
             <p className="text-sm text-slate-500 font-medium">Mostrando {workOrders.length} de {totalCount}</p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
