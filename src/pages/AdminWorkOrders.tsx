@@ -235,9 +235,10 @@ export default function AdminWorkOrders() {
           </div>
         </div>
       </div>
-    ))}
+    ))
   </div> 
 )}
+
 
         {/* PAGINAÇÃO */}
         {totalPages > 1 && (
