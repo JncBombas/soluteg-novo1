@@ -94,7 +94,7 @@ export default function AdminWorkOrders() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* HEADER */}
@@ -170,75 +170,97 @@ export default function AdminWorkOrders() {
           </div>
         </Card>
 
-        {/* LISTA DE CARDS */}
-        <div className="space-y-4">
-         {isLoading ? (
-  <div className="flex justify-center p-12">
-    <Loader2 className="animate-spin text-blue-600" />
-  </div>
-) : (
-  <div className="space-y-4"> {/* Wrapper necessário para o React */}
-  {workOrders?.map((order) => (
-    <div 
-      key={order.id} 
-      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
-    >
-      {/* CABEÇALHO SÓLIDO */}
-      <div className={`px-4 py-2 flex justify-between items-center ${
-        order.type === 'emergencial' ? 'bg-red-600' : 
-        order.type === 'orcamento' ? 'bg-purple-700' : 
-        'bg-emerald-600'
-      }`}>
-        <span className="text-[11px] font-black uppercase tracking-widest text-white">
-          OS {order.type}
-        </span>
-        <span className="text-[10px] font-bold text-white/80">
-          #{order.osNumber || order.id}
-        </span>
-      </div>
+        {/* LISTAGEM PRINCIPAL */}
+        <div className="mt-6">
+          {isLoading ? (
+            <div className="flex justify-center p-12">
+              <Loader2 className="animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4">
+                {workOrders?.length > 0 ? (
+                  workOrders.map((order) => (
+                    <div 
+                      key={order.id} 
+                      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
+                      onClick={() => navigate(`/admin/work-orders/${order.id}`)}
+                    >
+                      {/* CABEÇALHO SÓLIDO */}
+                      <div className={`px-4 py-2 flex justify-between items-center ${
+                        order.type === 'emergencial' ? 'bg-red-600' : 
+                        order.type === 'orcamento' ? 'bg-purple-700' : 
+                        'bg-emerald-600'
+                      }`}>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-white">
+                          OS {order.type}
+                        </span>
+                        <span className="text-[10px] font-bold text-white/80">
+                          #{order.osNumber || order.id}
+                        </span>
+                      </div>
 
-      {/* CONTEÚDO */}
-      <div className="p-4 flex items-start gap-4">
-        <Checkbox 
-          checked={selectedIds.includes(order.id)} 
-          onCheckedChange={() => 
-            setSelectedIds(prev => 
-              prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
-            )
-          }
-          className="mt-1 border-slate-300"
-        />
-        
-        <div className="flex-1 min-w-0">
-          <div className="mb-2">
-            <StatusBadge status={order.status} />
-          </div>
-          
-          <h3 className="text-slate-900 font-black text-xl mb-2 leading-tight tracking-tight">
-            {order.title}
-          </h3>
-          
-          <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-            <div className="flex items-center gap-1.5">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className="font-bold text-slate-800">
-                {order.clientName || 'Cliente não definido'}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span className="font-semibold">
-                {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-              </span>
-            </div>
-          </div>
+                      {/* CONTEÚDO */}
+                      <div className="p-4 flex items-start gap-4">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox 
+                            checked={selectedIds.includes(order.id)} 
+                            onCheckedChange={() => 
+                              setSelectedIds(prev => 
+                                prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+                              )
+                            }
+                            className="mt-1 border-slate-300"
+                          />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="mb-2">
+                            <StatusBadge status={order.status} />
+                          </div>
+                          
+                          <h3 className="text-slate-900 font-black text-xl mb-2 leading-tight tracking-tight">
+                            {order.title}
+                          </h3>
+                          
+                          <div className="flex flex-wrap gap-4 text-xs text-slate-600">
+                            <div className="flex items-center gap-1.5">
+                              <User className="w-4 h-4 text-slate-400" />
+                              <span className="font-bold text-slate-800">
+                                {order.clientName || 'Cliente não definido'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-4 h-4 text-slate-400" />
+                              <span className="font-semibold">
+                                {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                    <p className="text-slate-500 font-medium">Nenhuma ordem de serviço encontrada.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* PAGINAÇÃO */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-6 border-t mt-6">
+                   {/* Coloque aqui seus botões de paginação, se houver */}
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
-    </div>
-  ))} {/* <--- FECHAMENTO DO MAP (AQUI TAVA O ERRO) */}
-</div> 
-  ) // <--- ESTE PARÊNTESE FECHA O CONTEÚDO DO TERNÁRIO
-} 
+      </div> {/* FECHA max-w-6xl */}
+    </div> // FECHA p-4 sm:p-6
+  );
+}
 
 {/* PAGINAÇÃO - FORA DO BLOCO DE LOADING OU DENTRO DO WRAPPER */}
 {totalPages > 1 && (
