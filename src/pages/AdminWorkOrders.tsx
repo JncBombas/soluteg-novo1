@@ -178,66 +178,65 @@ export default function AdminWorkOrders() {
   </div>
 ) : (
   <div className="space-y-4"> {/* Wrapper necessário para o React */}
-    {workOrders?.map((order) => (
-      <div 
-        key={order.id} 
-        className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
-      >
-        {/* CABEÇALHO SÓLIDO */}
-        <div className={`px-4 py-2 flex justify-between items-center ${
-          order.type === 'emergencial' ? 'bg-red-600' : 
-          order.type === 'orcamento' ? 'bg-purple-700' : 
-          'bg-emerald-600'
-        }`}>
-          <span className="text-[11px] font-black uppercase tracking-widest text-white">
-            OS {order.type}
-          </span>
-          <span className="text-[10px] font-bold text-white/80">
-            #{order.osNumber || order.id}
-          </span>
-        </div>
+  {workOrders?.map((order) => (
+    <div 
+      key={order.id} 
+      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
+    >
+      {/* CABEÇALHO SÓLIDO */}
+      <div className={`px-4 py-2 flex justify-between items-center ${
+        order.type === 'emergencial' ? 'bg-red-600' : 
+        order.type === 'orcamento' ? 'bg-purple-700' : 
+        'bg-emerald-600'
+      }`}>
+        <span className="text-[11px] font-black uppercase tracking-widest text-white">
+          OS {order.type}
+        </span>
+        <span className="text-[10px] font-bold text-white/80">
+          #{order.osNumber || order.id}
+        </span>
+      </div>
 
-        {/* CONTEÚDO */}
-        <div className="p-4 flex items-start gap-4">
-          <Checkbox 
-            checked={selectedIds.includes(order.id)} 
-            onCheckedChange={() => 
-              setSelectedIds(prev => 
-                prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
-              )
-            }
-            className="mt-1 border-slate-300"
-          />
+      {/* CONTEÚDO */}
+      <div className="p-4 flex items-start gap-4">
+        <Checkbox 
+          checked={selectedIds.includes(order.id)} 
+          onCheckedChange={() => 
+            setSelectedIds(prev => 
+              prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+            )
+          }
+          className="mt-1 border-slate-300"
+        />
+        
+        <div className="flex-1 min-w-0">
+          <div className="mb-2">
+            <StatusBadge status={order.status} />
+          </div>
           
-          <div className="flex-1 min-w-0">
-            <div className="mb-2">
-              <StatusBadge status={order.status} />
+          <h3 className="text-slate-900 font-black text-xl mb-2 leading-tight tracking-tight">
+            {order.title}
+          </h3>
+          
+          <div className="flex flex-wrap gap-4 text-xs text-slate-600">
+            <div className="flex items-center gap-1.5">
+              <User className="w-4 h-4 text-slate-400" />
+              <span className="font-bold text-slate-800">
+                {order.clientName || 'Cliente não definido'}
+              </span>
             </div>
-            
-            <h3 className="text-slate-900 font-black text-xl mb-2 leading-tight tracking-tight">
-              {order.title}
-            </h3>
-            
-            <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-              <div className="flex items-center gap-1.5">
-                <User className="w-4 h-4 text-slate-400" />
-                <span className="font-bold text-slate-800">
-                  {order.clientName || 'Cliente não definido'}
-                </span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <span className="font-semibold">
-                  {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-                </span>
-              </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span className="font-semibold">
+                {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+              </span>
             </div>
           </div>
         </div>
       </div>
-    ))
-  </div> 
-)}
+    </div>
+  ))} {/* <--- FECHAMENTO DO MAP (AQUI TAVA O ERRO) */}
+</div>
 
 
         {/* PAGINAÇÃO */}
