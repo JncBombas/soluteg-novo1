@@ -183,10 +183,9 @@ export default function AdminWorkOrders() {
                   workOrders.map((order) => (
                     <div 
                       key={order.id} 
-                      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white"
+                      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white cursor-pointer"
                       onClick={() => navigate(`/admin/work-orders/${order.id}`)}
                     >
-                      {/* CABEÇALHO SÓLIDO */}
                       <div className={`px-4 py-2 flex justify-between items-center ${
                         order.type === 'emergencial' ? 'bg-red-600' : 
                         order.type === 'orcamento' ? 'bg-purple-700' : 
@@ -200,7 +199,6 @@ export default function AdminWorkOrders() {
                         </span>
                       </div>
 
-                      {/* CONTEÚDO */}
                       <div className="p-4 flex items-start gap-4">
                         <div onClick={(e) => e.stopPropagation()}>
                           <Checkbox 
@@ -251,39 +249,39 @@ export default function AdminWorkOrders() {
               {/* PAGINAÇÃO */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between pt-6 border-t mt-6">
-                   {/* Coloque aqui seus botões de paginação, se houver */}
+                  <p className="text-sm text-slate-500 font-medium">
+                    Mostrando {workOrders.length} de {totalCount}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                      <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+                      Próximo <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </>
           )}
         </div>
-      </div> {/* FECHA max-w-6xl */}
-    </div> // FECHA p-4 sm:p-6
-  );
-}
-
-{/* PAGINAÇÃO - FORA DO BLOCO DE LOADING OU DENTRO DO WRAPPER */}
-{totalPages > 1 && (
-  <div className="flex items-center justify-between pt-6">
-            <p className="text-sm text-slate-500 font-medium">Mostrando {workOrders.length} de {totalCount}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
-              </Button>
-              <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
-                Próximo <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* DIÁLOGO DE EXCLUSÃO */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão?</AlertDialogTitle></AlertDialogHeader>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão?</AlertDialogTitle>
+          </AlertDialogHeader>
           <div className="flex justify-end gap-3 mt-4">
             <AlertDialogCancel>Voltar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setIsDeleting(true); deleteBatchMutation.mutate({ ids: selectedIds }); }} className="bg-red-600">
+            <AlertDialogAction 
+              onClick={() => { 
+                setIsDeleting(true); 
+                deleteBatchMutation.mutate({ ids: selectedIds }); 
+              }} 
+              className="bg-red-600"
+            >
               Sim, excluir
             </AlertDialogAction>
           </div>
