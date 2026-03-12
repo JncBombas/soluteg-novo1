@@ -175,66 +175,65 @@ export default function AdminWorkOrders() {
           {isLoading ? (
             <div className="flex justify-center p-12"><Loader2 className="animate-spin text-blue-600" /></div>
           ) : (
-            workOrders.map((order) => (
-              <Card 
-                key={order.id} 
-                className={`group transition-all hover:shadow-md border-slate-200 overflow-hidden bg-white ${getPriorityBorder(order.priority)}`}
-              >
-                {/* CABEÇALHO DO TIPO */}
-                <div className={`px-4 py-1 flex justify-between items-center border-b ${
-                  order.type === 'emergencial' ? 'bg-red-50' : 
-                  order.type === 'orcamento' ? 'bg-purple-50' : 
-                  'bg-emerald-50'
-                }`}>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${
-                    order.type === 'emergencial' ? 'text-red-600' : 
-                    order.type === 'orcamento' ? 'text-purple-600' : 
-                    'text-emerald-600'
-                  }`}>
-                    OS {order.type}
-                  </span>
-                  <span className="text-[10px] font-bold text-slate-400">#{order.osNumber}</span>
-                </div>
+           {workOrders.map((order) => (
+  <div 
+    key={order.id} 
+    className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all mb-4 bg-white"
+  >
+    {/* CABEÇALHO DO TIPO - SÓLIDO E SEM BORDAS SOBRANDO */}
+    <div className={`px-4 py-2 flex justify-between items-center ${
+      order.type === 'emergencial' ? 'bg-red-600' : 
+      order.type === 'orcamento' ? 'bg-purple-700' : 
+      'bg-emerald-600'
+    }`}>
+      <span className="text-[11px] font-black uppercase tracking-widest text-white">
+        OS {order.type}
+      </span>
+      <span className="text-[10px] font-bold text-white/80">
+        #{order.osNumber || order.id}
+      </span>
+    </div>
 
-                <div className="p-4 flex items-start gap-4">
-                  <Checkbox 
-                    checked={selectedIds.includes(order.id)} 
-                    onCheckedChange={() => setSelectedIds(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])}
-                    className="mt-1"
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="mb-2">
-                      <StatusBadge status={order.status} />
-                    </div>
-                    
-                    <h3 className="text-slate-900 font-bold text-lg mb-2 leading-tight">{order.title}</h3>
-                    
-                    <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" />
-                        <span className="font-semibold">{order.clientName || 'Cliente não definido'}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5" />
-                        <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1 self-center">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/work-orders/${order.id}`)} className="hover:text-blue-600">
-                      <Eye className="w-5 h-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)} className="hover:text-amber-600">
-                      <Edit2 className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
+    {/* CORPO DO CARD */}
+    <div className="p-4 flex items-start gap-4">
+      <Checkbox 
+        checked={selectedIds.includes(order.id)} 
+        onCheckedChange={() => 
+          setSelectedIds(prev => 
+            prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+          )
+        }
+        className="mt-1 border-slate-300"
+      />
+      
+      <div className="flex-1 min-w-0">
+        <div className="mb-2">
+          <StatusBadge status={order.status} />
         </div>
+        
+        {/* Título com máximo impacto visual */}
+        <h3 className="text-slate-900 font-black text-xl mb-2 leading-tight tracking-tight">
+          {order.title}
+        </h3>
+        
+        <div className="flex flex-wrap gap-4 text-xs text-slate-600">
+          <div className="flex items-center gap-1.5">
+            <User className="w-4 h-4 text-slate-400" />
+            <span className="font-bold text-slate-800">
+              {order.clientName || 'Cliente não definido'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <span className="font-semibold">
+              {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+))}
 
         {/* PAGINAÇÃO */}
         {totalPages > 1 && (

@@ -487,28 +487,28 @@ export default function AdminWorkOrderDetail() {
 
       {/* SE ESTIVER EM ANDAMENTO: FINALIZAR OU CANCELAR */}
       {workOrder.status === "em_andamento" && (
-        <div className="space-y-4">
-          <Button 
-            size="lg" 
-            className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl border-b-4 border-emerald-800 active:border-b-0 transition-all"
-            onClick={() => setCompleteModalOpen(true)}
-          >
-            <CheckCircle2 className="mr-4 h-10 w-10" />
-            FINALIZAR SERVIÇO
-          </Button>
+  <div className="space-y-4">
+    <Button 
+      size="lg" 
+      className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all"
+      onClick={() => setCompleteModalOpen(true)}
+    >
+      <CheckCircle2 className="mr-4 h-10 w-10" />
+      FINALIZAR SERVIÇO
+    </Button>
 
-          {/* Opção de Cancelar o Início (Estorno) */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="w-full text-slate-500 hover:text-red-600 hover:bg-red-50 font-bold uppercase text-xs tracking-tighter"
-            onClick={() => handleStatusChange("aberta")}
-          >
-            <XCircle className="mr-2 h-4 w-4" />
-            Cometi um erro, voltar para status "Aberta"
-          </Button>
-        </div>
-      )}
+    {/* Opção de Cancelar - Mais discreta mas com área de clique boa */}
+    <button 
+      onClick={() => handleStatusChange("aberta")}
+      className="w-full py-2 flex items-center justify-center gap-2 text-slate-400 hover:text-red-600 transition-colors group"
+    >
+      <XCircle className="h-4 w-4 group-hover:animate-pulse" />
+      <span className="text-[10px] font-black uppercase tracking-tighter">
+        Cometi um erro, voltar para status "Aberta"
+      </span>
+    </button>
+  </div>
+)}
 
       {/* SEÇÃO DE AÇÕES DE ESCRITÓRIO (MENORES) */}
       <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
