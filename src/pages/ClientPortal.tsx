@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion } from "lucide-react";
+import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion, Calendar } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 
 interface Document {
   id: number;
@@ -18,6 +20,12 @@ interface Document {
   documentType: string;
   fileUrl: string;
   uploadedAt: Date;
+  month?: number | null;
+  year?: number | null;
+}
+
+interface GroupedDocuments {
+  [key: string]: Document[];
 }
 
 export default function ClientPortal() {
@@ -75,25 +83,61 @@ export default function ClientPortal() {
   };
 
   const getTabDocuments = (tabType: string) => {
-  const search = tabSearches[tabType];
-  
-  // O segredo está aqui: mapear todos os nomes possíveis para cada aba
-  const typeMap: Record<string, string[]> = {
-    vistoria: ["vistoria"],
-    visita: ["visita", "relatorio_visita", "rel_visita"], // Aceita os 3 nomes
-    nota_fiscal: ["nota_fiscal", "nf"], 
-    servico: ["servico", "relatorio_servico", "rel_servico"] // Aceita os 3 nomes
+    const search = tabSearches[tabType];
+    
+    const typeMap: Record<string, string[]> = {
+      vistoria: ["vistoria"],
+      visita: ["visita", "relatorio_visita", "rel_visita"],
+      nota_fiscal: ["nota_fiscal", "nf"], 
+      servico: ["servico", "relatorio_servico", "rel_servico"]
+    };
+    
+    const allowedTypes = typeMap[tabType] || [];
+    
+    return documents.filter(doc => {
+      const matchesType = allowedTypes.includes(doc.documentType);
+      const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
+      return matchesType && matchesSearch;
+    });
   };
-  
-  const allowedTypes = typeMap[tabType] || [];
-  
-  return documents.filter(doc => {
-    // Verifica se o tipo do documento (que veio do banco) está na lista permitida da aba
-    const matchesType = allowedTypes.includes(doc.documentType);
-    const matchesSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase());
-    return matchesType && matchesSearch;
-  });
-};
+
+  const groupDocumentsByPeriod = (docs: Document[]): GroupedDocuments => {
+    const grouped: GroupedDocuments = {};
+    
+    docs.forEach(doc => {
+      let key: string;
+      
+      if (doc.year && doc.month) {
+        const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        key = `${monthNames[doc.month]} ${doc.year}`;
+      } else {
+        const date = new Date(doc.uploadedAt);
+        const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+        key = `${monthNames[date.getMonth() + 1]} ${date.getFullYear()}`;
+      }
+      
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(doc);
+    });
+    
+    return grouped;
+  };
+
+  const sortedPeriods = (grouped: GroupedDocuments): string[] => {
+    return Object.keys(grouped).sort((a, b) => {
+      const parseDate = (str: string) => {
+        const [month, year] = str.split(" ");
+        const monthMap: Record<string, number> = {
+          "Jan": 1, "Fev": 2, "Mar": 3, "Abr": 4, "Mai": 5, "Jun": 6,
+          "Jul": 7, "Ago": 8, "Set": 9, "Out": 10, "Nov": 11, "Dez": 12
+        };
+        return new Date(parseInt(year), (monthMap[month] || 1) - 1);
+      };
+      return parseDate(b).getTime() - parseDate(a).getTime();
+    });
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("clientToken");
@@ -217,7 +261,7 @@ export default function ClientPortal() {
         <Card>
           <CardHeader>
             <CardTitle>Seus Documentos</CardTitle>
-            <CardDescription>Acesse seus documentos por categoria.</CardDescription>
+            <CardDescription>Acesse seus documentos organizados por período.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -228,31 +272,54 @@ export default function ClientPortal() {
                 <TabsTrigger value="servico">Serviço</TabsTrigger>
               </TabsList>
 
-              {["vistoria", "visita", "nota_fiscal", "servico"].map((tab) => (
-                <TabsContent key={tab} value={tab} className="space-y-4">
-                  <div className="flex gap-2 bg-slate-50 p-4 rounded-lg">
-                    <div className="relative flex-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input 
-                        className="pl-10" 
-                        placeholder="Buscar..." 
-                        value={tabSearches[tab]} 
-                        onChange={(e) => handleTabSearch(tab, e.target.value)}
-                      />
+              {["vistoria", "visita", "nota_fiscal", "servico"].map((tab) => {
+                const tabDocs = getTabDocuments(tab);
+                const grouped = groupDocumentsByPeriod(tabDocs);
+                const periods = sortedPeriods(grouped);
+
+                return (
+                  <TabsContent key={tab} value={tab} className="space-y-4">
+                    <div className="flex gap-2 bg-slate-50 p-4 rounded-lg">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <Input 
+                          className="pl-10" 
+                          placeholder="Buscar..." 
+                          value={tabSearches[tab]} 
+                          onChange={(e) => handleTabSearch(tab, e.target.value)}
+                        />
+                      </div>
+                      <Button onClick={() => handleTabFilter(tab)} className="bg-orange-500">
+                        <Filter className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button onClick={() => handleTabFilter(tab)} className="bg-orange-500">
-                      <Filter className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="grid gap-4">
-                    {getTabDocuments(tab).length > 0 ? (
-                      getTabDocuments(tab).map(doc => <DocumentCard key={doc.id} doc={doc} />)
-                    ) : (
-                      <p className="text-center py-10 text-slate-500">Nenhum documento encontrado.</p>
-                    )}
-                  </div>
-                </TabsContent>
-              ))}
+
+                    <div className="space-y-3">
+                      {periods.length > 0 ? (
+                        periods.map((period) => (
+                          <Collapsible key={period} defaultOpen={true}>
+                            <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
+                              <ChevronDown className="w-4 h-4 transition-transform" />
+                              <Calendar className="w-4 h-4 text-orange-500" />
+                              <span className="font-semibold text-slate-900">{period}</span>
+                              <span className="ml-auto text-sm text-slate-600">
+                                {grouped[period].length} documento{grouped[period].length !== 1 ? "s" : ""}
+                              </span>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="pt-3 pl-6 space-y-3">
+                              {grouped[period].map(doc => (
+                                <DocumentCard key={doc.id} doc={doc} />
+                              ))}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        ))
+                      ) : (
+                        <p className="text-center py-10 text-slate-500">Nenhum documento encontrado.</p>
+                      )}
+                    </div>
+                  </TabsContent>
+                );
+              })}
             </Tabs>
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 import { eq, desc, sql, like, and, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument, workOrders, InsertWorkOrder, WorkOrder } from "../drizzle/schema";
+import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite, admins, InsertAdmin, Admin, inspectionReports, InsertInspectionReport, InspectionReport, clients, InsertClient, Client, clientDocuments, InsertClientDocument, ClientDocument, workOrders, InsertWorkOrder, WorkOrder, waterTankMonitoring, InsertWaterTankMonitoring, WaterTankMonitoring } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
@@ -817,4 +817,73 @@ export async function getAllDocumentsByAdminId(adminId: number) {
     .where(eq(clientDocuments.adminId, adminId));
 
   return results;
+}
+
+// Water Tank Monitoring queries
+export async function createWaterTankMonitoring(data: InsertWaterTankMonitoring) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(waterTankMonitoring).values(data);
+  return result;
+}
+
+export async function getWaterTankMonitoringByClientId(clientId: number): Promise<WaterTankMonitoring[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return await db
+    .select()
+    .from(waterTankMonitoring)
+    .where(eq(waterTankMonitoring.clientId, clientId))
+    .orderBy(desc(waterTankMonitoring.recordedAt));
+}
+
+export async function getLatestWaterTankMonitoring(clientId: number): Promise<WaterTankMonitoring[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // Retorna o registro mais recente de cada tanque
+  const results = await db
+    .select()
+    .from(waterTankMonitoring)
+    .where(eq(waterTankMonitoring.clientId, clientId))
+    .orderBy(desc(waterTankMonitoring.recordedAt));
+  
+  // Agrupar por tankName e pegar o mais recente de cada um
+  const latestByTank = new Map<string, WaterTankMonitoring>();
+  results.forEach(record => {
+    if (!latestByTank.has(record.tankName)) {
+      latestByTank.set(record.tankName, record);
+    }
+  });
+  
+  return Array.from(latestByTank.values());
+}
+
+export async function getWaterTankMonitoringHistory(clientId: number, tankName: string, days: number = 30): Promise<WaterTankMonitoring[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  
+  return await db
+    .select()
+    .from(waterTankMonitoring)
+    .where(
+      and(
+        eq(waterTankMonitoring.clientId, clientId),
+        eq(waterTankMonitoring.tankName, tankName),
+        gte(waterTankMonitoring.recordedAt, startDate)
+      )
+    )
+    .orderBy(desc(waterTankMonitoring.recordedAt));
+}
+
+export async function deleteWaterTankMonitoring(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(waterTankMonitoring).where(eq(waterTankMonitoring.id, id));
 }

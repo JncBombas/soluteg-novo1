@@ -341,6 +341,8 @@ export const appRouter = router({
         fileKey: z.string(),
         fileSize: z.number().optional(),
         mimeType: z.string().optional(),
+        month: z.number().min(1).max(12).optional(),
+        year: z.number().min(2000).optional(),
       }))
       .mutation(async ({ input }) => {
         const result = await db.createClientDocument(input);
@@ -1293,6 +1295,46 @@ export const appRouter = router({
           return { success: true, message: "Checklist deletado com sucesso" };
         }),
     }),
+  }),
+  waterTankMonitoring: router({
+    list: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getWaterTankMonitoringByClientId(input.clientId);
+      }),
+
+    getLatest: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getLatestWaterTankMonitoring(input.clientId);
+      }),
+
+    getHistory: publicProcedure
+      .input(z.object({ clientId: z.number(), tankName: z.string(), days: z.number().optional() }))
+      .query(async ({ input }) => {
+        return await db.getWaterTankMonitoringHistory(input.clientId, input.tankName, input.days);
+      }),
+
+    create: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        adminId: z.number(),
+        tankName: z.string().min(1),
+        levelPercentage: z.number().min(0).max(100),
+        capacity: z.number().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.createWaterTankMonitoring(input);
+        return { success: true, message: "Registro de monitoramento criado com sucesso" };
+      }),
+
+    delete: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteWaterTankMonitoring(input.id);
+        return { success: true, message: "Registro deletado com sucesso" };
+      }),
   }),
 });
 
