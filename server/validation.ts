@@ -21,7 +21,7 @@ export const updateClientSchema = z.object({
   phone: z.string().min(10).optional(),
   address: z.string().optional(),
   type: z.enum(["com_portal", "sem_portal"]).optional(),
-  password: z.string().min(4).optional(),
+  password: z.string().min(4).optional().nullable(),
 });
 
 // Schemas para validação de documentos

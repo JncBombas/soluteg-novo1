@@ -186,8 +186,11 @@ async function startServer() {
       };
 
       // Se uma nova senha foi fornecida, gerar hash bcrypt
-      if (password && typeof password === 'string' && password.trim()) {
-        updateData.password = await hashPassword(password);
+      if (password && password !== null) {
+        const trimmedPassword = String(password).trim();
+        if (trimmedPassword.length >= 4) {
+          updateData.password = await hashPassword(trimmedPassword);
+        }
       }
 
       await updateClient(parseInt(req.params.id), updateData);
