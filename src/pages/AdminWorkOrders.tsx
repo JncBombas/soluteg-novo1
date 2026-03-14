@@ -84,6 +84,14 @@ export default function AdminWorkOrders() {
                 Excluir ({selectedIds.length})
               </Button>
             )}
+            <Button
+          variant="ghost"
+          onClick={() => setLocation("/admin/dashboard")}
+          className="gap-2 text-slate-600 hover:text-slate-900"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar ao Dashboard
+        </Button>
             <Button onClick={() => navigate("/admin/work-orders/new")} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4 mr-2" /> Nova OS
             </Button>

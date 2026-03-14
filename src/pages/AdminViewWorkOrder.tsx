@@ -1,17 +1,21 @@
 import { useState } from "react";
+// COMPONENTES DE INTERFACE (UI): Peças visuais prontas como botões, cards e etiquetas
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// ÍCONES: Biblioteca Lucide para desenhar os símbolos na tela
 import { 
   ArrowLeft, Edit2, RefreshCw, AlertCircle, DollarSign, 
   Calendar, Clock, User, FileText, History, CheckCircle,
   XCircle, Play
 } from "lucide-react";
+// NAVEGAÇÃO E REQUISIÇÕES: Ferramentas para mudar de página e falar com o servidor
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Avisos flutuantes (sucesso/erro)
+// DIALOG: Janelas pop-up (modais)
 import {
   Dialog,
   DialogContent,
@@ -21,30 +25,34 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+// DEFINIÇÃO DE TIPOS: Lista de status permitidos para o sistema
 type OSStatus = "aberta" | "aguardando_aprovacao" | "aprovada" | "rejeitada" | "em_andamento" | "concluida" | "aguardando_pagamento" | "cancelada";
 
 export default function AdminViewWorkOrder() {
-  const [, navigate] = useLocation();
-  const params = useParams();
+  // --- CONTROLES DE NAVEGAÇÃO ---
+  const [, navigate] = useLocation(); // Função para mudar de página
+  const params = useParams(); // Pega o ID da OS na URL (ex: /admin/work-orders/123)
   const osId = parseInt(params.id || "0");
 
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<OSStatus>("aberta");
-  const [statusNotes, setStatusNotes] = useState("");
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [cancelFuture, setCancelFuture] = useState(false);
+  // --- ESTADOS DA TELA (STATE): Controlam o que está aberto ou selecionado agora ---
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false); // Janela de mudar status
+  const [newStatus, setNewStatus] = useState<OSStatus>("aberta");  // O status escolhido no seletor
+  const [statusNotes, setStatusNotes] = useState("");              // Texto de observação do status
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false); // Janela de cancelar recorrência
+  const [cancelFuture, setCancelFuture] = useState(false);         // Opção de cancelar o futuro ou só esta
 
-  // Queries
+  // --- BUSCA DE DADOS (QUERIES): Pegando informações do banco de dados ---
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: osId });
   const { data: history = [] } = trpc.workOrders.getHistory.useQuery({ workOrderId: osId });
   const { data: clients = [] } = trpc.clients.list.useQuery({ adminId: workOrder?.adminId || 1 });
 
+  // --- AÇÕES DE SALVAMENTO (MUTATIONS): Enviando mudanças para o banco de dados ---
   const updateStatusMutation = trpc.workOrders.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Status atualizado com sucesso!");
-      refetch();
-      setStatusDialogOpen(false);
-      setStatusNotes("");
+      refetch(); // Recarrega os dados da tela
+      setStatusDialogOpen(false); // Fecha o pop-up
+      setStatusNotes(""); // Limpa o texto digitado
     },
     onError: () => {
       toast.error("Erro ao atualizar status");
@@ -62,6 +70,7 @@ export default function AdminViewWorkOrder() {
     },
   });
 
+  // --- TELA DE CARREGAMENTO: Exibida enquanto os dados não chegam do servidor ---
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -70,6 +79,7 @@ export default function AdminViewWorkOrder() {
     );
   }
 
+  // --- TELA DE ERRO: Exibida se o ID da OS não existir ---
   if (!workOrder) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -82,8 +92,10 @@ export default function AdminViewWorkOrder() {
     );
   }
 
+  // Encontra o cliente dono desta OS na lista de clientes
   const client = clients.find(c => c.id === workOrder.clientId);
 
+  // --- CONFIGURAÇÕES VISUAIS: Definem cores e ícones baseados no tipo/status ---
   const getTypeConfig = (type: string) => {
     const configs: Record<string, { label: string; color: string; icon: any }> = {
       rotina: { label: "Rotina", color: "bg-blue-100 text-blue-800", icon: RefreshCw },
@@ -116,12 +128,14 @@ export default function AdminViewWorkOrder() {
     return configs[priority] || configs.normal;
   };
 
+  // Preparação das variáveis de estilo para usar no HTML abaixo
   const typeConfig = getTypeConfig(workOrder.type);
   const statusConfig = getStatusConfig(workOrder.status);
   const priorityConfig = getPriorityConfig(workOrder.priority);
   const TypeIcon = typeConfig.icon;
   const StatusIcon = statusConfig.icon;
 
+  // Funções disparadas pelos botões de "Salvar" nos pop-ups
   const handleUpdateStatus = () => {
     updateStatusMutation.mutate({
       id: osId,
@@ -139,7 +153,7 @@ export default function AdminViewWorkOrder() {
     });
   };
 
-  // Status disponíveis baseado no tipo de OS
+  // Regra de negócio: Orçamentos têm mais opções de status que uma OS comum
   const getAvailableStatuses = (): OSStatus[] => {
     if (workOrder.type === "orcamento") {
       return ["aberta", "aguardando_aprovacao", "aprovada", "rejeitada", "em_andamento", "concluida", "aguardando_pagamento", "cancelada"];
@@ -147,10 +161,12 @@ export default function AdminViewWorkOrder() {
     return ["aberta", "em_andamento", "concluida", "aguardando_pagamento", "cancelada"];
   };
 
+  // --- ESTRUTURA VISUAL (O QUE O USUÁRIO VÊ) ---
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        
+        {/* TOPO: Botão voltar e Cabeçalho da OS */}
         <div className="mb-8">
           <Button variant="ghost" onClick={() => navigate("/admin/work-orders")} className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -174,17 +190,12 @@ export default function AdminViewWorkOrder() {
               </div>
               <h1 className="text-2xl font-bold">{workOrder.title}</h1>
             </div>
+            {/* Botões de Ação Superior */}
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setStatusDialogOpen(true)}
-              >
+              <Button variant="outline" onClick={() => setStatusDialogOpen(true)}>
                 Alterar Status
               </Button>
-              <Button
-                onClick={() => navigate(`/admin/work-orders/${osId}/edit`)}
-                className="gap-2"
-              >
+              <Button onClick={() => navigate(`/admin/work-orders/${osId}/edit`)} className="gap-2">
                 <Edit2 className="w-4 h-4" />
                 Editar
               </Button>
@@ -192,20 +203,21 @@ export default function AdminViewWorkOrder() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          {/* Coluna principal */}
-          <div className="col-span-2 space-y-6">
-            {/* Detalhes */}
+        {/* CORPO DA PÁGINA: Dividido em 3 colunas (2 principais, 1 lateral) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* COLUNA DA ESQUERDA: Detalhes principais */}
+          <div className="md:col-span-2 space-y-6">
+            
+            {/* CARD: Detalhes Técnicos */}
             <Card className="p-6">
               <h2 className="text-lg font-semibold mb-4">Detalhes</h2>
-              
               {workOrder.description && (
                 <div className="mb-4">
                   <label className="text-sm text-gray-600">Descrição</label>
                   <p className="mt-1">{workOrder.description}</p>
                 </div>
               )}
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-600">Tipo de Serviço</label>
@@ -218,9 +230,7 @@ export default function AdminViewWorkOrder() {
                 <div>
                   <label className="text-sm text-gray-600">Data Agendada</label>
                   <p className="font-medium">
-                    {workOrder.scheduledDate 
-                      ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR")
-                      : "-"}
+                    {workOrder.scheduledDate ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR") : "-"}
                   </p>
                 </div>
                 <div>
@@ -229,23 +239,20 @@ export default function AdminViewWorkOrder() {
                 </div>
               </div>
 
+              {/* Seção de Valores (Só aparece se for Orçamento) */}
               {workOrder.type === "orcamento" && (
                 <div className="mt-4 pt-4 border-t">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm text-gray-600">Valor Estimado</label>
                       <p className="font-medium text-lg">
-                        {workOrder.estimatedValue 
-                          ? `R$ ${workOrder.estimatedValue.toFixed(2)}`
-                          : "-"}
+                        {workOrder.estimatedValue ? `R$ ${workOrder.estimatedValue.toFixed(2)}` : "-"}
                       </p>
                     </div>
                     <div>
                       <label className="text-sm text-gray-600">Valor Final</label>
                       <p className="font-medium text-lg">
-                        {workOrder.finalValue 
-                          ? `R$ ${workOrder.finalValue.toFixed(2)}`
-                          : "-"}
+                        {workOrder.finalValue ? `R$ ${workOrder.finalValue.toFixed(2)}` : "-"}
                       </p>
                     </div>
                   </div>
@@ -253,7 +260,7 @@ export default function AdminViewWorkOrder() {
               )}
             </Card>
 
-            {/* Recorrência */}
+            {/* CARD: Recorrência (Configuração de repetição automática) */}
             {workOrder.isRecurring === 1 && (
               <Card className="p-6">
                 <div className="flex items-center justify-between">
@@ -270,31 +277,24 @@ export default function AdminViewWorkOrder() {
                       </p>
                     </div>
                   </div>
-                  {(workOrder as any).recurrenceCanceled === 0 && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setCancelDialogOpen(true)}
-                      className="text-red-600 hover:text-red-700"
-                    >
+                  {/* Botão de cancelar repetição */}
+                  {(workOrder as any).recurrenceCanceled === 0 ? (
+                    <Button variant="outline" onClick={() => setCancelDialogOpen(true)} className="text-red-600">
                       Cancelar Recorrência
                     </Button>
-                  )}
-                  {(workOrder as any).recurrenceCanceled === 1 && (
-                    <Badge variant="outline" className="text-red-600">
-                      Recorrência Cancelada
-                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-red-600">Recorrência Cancelada</Badge>
                   )}
                 </div>
               </Card>
             )}
 
-            {/* Histórico */}
+            {/* CARD: Histórico (Log de quem mudou o status) */}
             <Card className="p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <History className="w-5 h-5" />
                 Histórico de Alterações
               </h2>
-              
               {history.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">Nenhuma alteração registrada</p>
               ) : (
@@ -305,24 +305,15 @@ export default function AdminViewWorkOrder() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium">{entry.changedBy}</span>
-                          <span className="text-gray-400">•</span>
                           <span className="text-sm text-gray-600">
                             {new Date(entry.createdAt).toLocaleString("pt-BR")}
                           </span>
                         </div>
                         <p className="text-sm">
-                          Status alterado de{" "}
-                          <Badge variant="outline" className="mx-1">
-                            {getStatusConfig(entry.previousStatus).label}
-                          </Badge>
-                          para{" "}
-                          <Badge className={getStatusConfig(entry.newStatus).color}>
-                            {getStatusConfig(entry.newStatus).label}
-                          </Badge>
+                          Mudou de <Badge variant="outline" className="mx-1">{getStatusConfig(entry.previousStatus).label}</Badge>
+                          para <Badge className={getStatusConfig(entry.newStatus).color}>{getStatusConfig(entry.newStatus).label}</Badge>
                         </p>
-                        {entry.notes && (
-                          <p className="text-sm text-gray-600 mt-1 italic">"{entry.notes}"</p>
-                        )}
+                        {entry.notes && <p className="text-sm text-gray-600 mt-1 italic">"{entry.notes}"</p>}
                       </div>
                     </div>
                   ))}
@@ -331,13 +322,11 @@ export default function AdminViewWorkOrder() {
             </Card>
           </div>
 
-          {/* Sidebar */}
+          {/* COLUNA DA DIREITA: Informações de contato e datas */}
           <div className="space-y-6">
-            {/* Cliente */}
             <Card className="p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Cliente
+                <User className="w-5 h-5" /> Cliente
               </h2>
               <div className="space-y-2">
                 <p className="font-medium">{client?.name || `Cliente #${workOrder.clientId}`}</p>
@@ -346,39 +335,31 @@ export default function AdminViewWorkOrder() {
               </div>
             </Card>
 
-            {/* Datas */}
             <Card className="p-6">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Datas
+                <Calendar className="w-5 h-5" /> Datas
               </h2>
               <div className="space-y-3">
                 <div>
                   <label className="text-sm text-gray-600">Criada em</label>
-                  <p className="font-medium">
-                    {new Date(workOrder.createdAt).toLocaleString("pt-BR")}
-                  </p>
+                  <p className="font-medium">{new Date(workOrder.createdAt).toLocaleString("pt-BR")}</p>
                 </div>
                 {workOrder.startedAt && (
                   <div>
                     <label className="text-sm text-gray-600">Iniciada em</label>
-                    <p className="font-medium">
-                      {new Date(workOrder.startedAt).toLocaleString("pt-BR")}
-                    </p>
+                    <p className="font-medium">{new Date(workOrder.startedAt).toLocaleString("pt-BR")}</p>
                   </div>
                 )}
                 {workOrder.completedAt && (
                   <div>
                     <label className="text-sm text-gray-600">Concluída em</label>
-                    <p className="font-medium">
-                      {new Date(workOrder.completedAt).toLocaleString("pt-BR")}
-                    </p>
+                    <p className="font-medium">{new Date(workOrder.completedAt).toLocaleString("pt-BR")}</p>
                   </div>
                 )}
               </div>
             </Card>
 
-            {/* Notas */}
+            {/* CARD: Notas Internas e para o Cliente */}
             {(workOrder.internalNotes || workOrder.clientNotes) && (
               <Card className="p-6">
                 <h2 className="text-lg font-semibold mb-4">Notas</h2>
@@ -399,106 +380,60 @@ export default function AdminViewWorkOrder() {
           </div>
         </div>
 
-        {/* Dialog de alteração de status */}
+        {/* --- POP-UP: MUDAR STATUS --- */}
         <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Alterar Status da OS</DialogTitle>
-              <DialogDescription>
-                Selecione o novo status e adicione uma observação se necessário.
-              </DialogDescription>
+              <DialogDescription>Escolha o novo status e adicione uma nota se desejar.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Novo Status</label>
                 <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OSStatus)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {getAvailableStatuses().map((status) => (
-                      <SelectItem key={status} value={status}>
-                        {getStatusConfig(status).label}
-                      </SelectItem>
+                    {getAvailableStatuses().map((s) => (
+                      <SelectItem key={s} value={s}>{getStatusConfig(s).label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Observação (opcional)</label>
-                <Textarea
-                  value={statusNotes}
-                  onChange={(e) => setStatusNotes(e.target.value)}
-                  placeholder="Adicione uma observação sobre esta alteração..."
-                  rows={3}
-                />
+                <label className="text-sm font-medium mb-2 block">Observação</label>
+                <Textarea value={statusNotes} onChange={(e) => setStatusNotes(e.target.value)} placeholder="O que aconteceu?" rows={3} />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleUpdateStatus}
-                disabled={updateStatusMutation.isPending}
-              >
+              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleUpdateStatus} disabled={updateStatusMutation.isPending}>
                 {updateStatusMutation.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de cancelamento de recorrência */}
+        {/* --- POP-UP: CANCELAR RECORRÊNCIA --- */}
         <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Cancelar Recorrência</DialogTitle>
-              <DialogDescription>
-                Escolha como deseja cancelar a recorrência desta OS.
-              </DialogDescription>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>Cancelar Recorrência</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
-              <div className="space-y-3">
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="cancelType"
-                    checked={!cancelFuture}
-                    onChange={() => setCancelFuture(false)}
-                  />
-                  <div>
-                    <p className="font-medium">Cancelar apenas esta OS</p>
-                    <p className="text-sm text-gray-600">A recorrência continua para os próximos meses</p>
-                  </div>
-                </label>
-                <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    name="cancelType"
-                    checked={cancelFuture}
-                    onChange={() => setCancelFuture(true)}
-                  />
-                  <div>
-                    <p className="font-medium">Cancelar esta e futuras OS</p>
-                    <p className="text-sm text-gray-600">Nenhuma OS será criada automaticamente nos próximos meses</p>
-                  </div>
-                </label>
-              </div>
+              <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer">
+                <input type="radio" checked={!cancelFuture} onChange={() => setCancelFuture(false)} />
+                <div><p className="font-medium">Apenas esta OS</p></div>
+              </label>
+              <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer">
+                <input type="radio" checked={cancelFuture} onChange={() => setCancelFuture(true)} />
+                <div><p className="font-medium">Esta e as futuras</p></div>
+              </label>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
-                Voltar
-              </Button>
-              <Button 
-                onClick={handleCancelRecurrence}
-                disabled={cancelRecurrenceMutation.isPending}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {cancelRecurrenceMutation.isPending ? "Cancelando..." : "Confirmar Cancelamento"}
-              </Button>
+              <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>Voltar</Button>
+              <Button onClick={handleCancelRecurrence} disabled={cancelRecurrenceMutation.isPending} className="bg-red-600">Confirmar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
     </div>
   );
