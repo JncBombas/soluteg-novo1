@@ -308,7 +308,7 @@ async function startServer() {
   app.post("/api/admin-documents/upload", async (req, res) => {
     try {
       // Validacao basica dos campos obrigatorios
-      const { clientId, adminId, title, description, documentType, fileBase64, fileName, mimeType } = req.body;
+      const { clientId, adminId, title, description, documentType, month, year, fileBase64, fileName, mimeType } = req.body;
       
       if (!clientId || !adminId || !title || !documentType || !fileBase64 || !fileName) {
         return res.status(400).json({ message: "Campos obrigatorios faltando" });
@@ -333,6 +333,8 @@ async function startServer() {
         title,
         description,
         documentType,
+        month: month ? parseInt(month.toString()) : null,
+        year: year ? parseInt(year.toString()) : null,
         fileUrl: url,
         fileKey,
         fileSize: buffer.length,

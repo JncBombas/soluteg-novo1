@@ -27,6 +27,8 @@ export default function AdminDocuments() {
     description: "",
     documentType: "relatorio_servico",
     file: null as File | null,
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
   });
 
   useEffect(() => {
@@ -89,6 +91,8 @@ export default function AdminDocuments() {
             title: formData.title,
             description: formData.description,
             documentType: formData.documentType,
+            month: formData.month,
+            year: formData.year,
             fileBase64: base64Data,
             fileName: file.name,
             mimeType: file.type,
@@ -106,6 +110,8 @@ export default function AdminDocuments() {
           description: "",
           documentType: "relatorio_servico",
           file: null,
+          month: new Date().getMonth() + 1,
+          year: new Date().getFullYear(),
         });
         setSelectedClientId("");
         setIsOpen(false);
@@ -238,6 +244,46 @@ export default function AdminDocuments() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Mês de Referência</label>
+                  <Select value={formData.month.toString()} onValueChange={(value) => setFormData({ ...formData, month: parseInt(value) })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Janeiro</SelectItem>
+                      <SelectItem value="2">Fevereiro</SelectItem>
+                      <SelectItem value="3">Março</SelectItem>
+                      <SelectItem value="4">Abril</SelectItem>
+                      <SelectItem value="5">Maio</SelectItem>
+                      <SelectItem value="6">Junho</SelectItem>
+                      <SelectItem value="7">Julho</SelectItem>
+                      <SelectItem value="8">Agosto</SelectItem>
+                      <SelectItem value="9">Setembro</SelectItem>
+                      <SelectItem value="10">Outubro</SelectItem>
+                      <SelectItem value="11">Novembro</SelectItem>
+                      <SelectItem value="12">Dezembro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Ano de Referência</label>
+                  <Select value={formData.year.toString()} onValueChange={(value) => setFormData({ ...formData, year: parseInt(value) })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="2024">2024</SelectItem>
+                      <SelectItem value="2025">2025</SelectItem>
+                      <SelectItem value="2026">2026</SelectItem>
+                      <SelectItem value="2027">2027</SelectItem>
+                      <SelectItem value="2028">2028</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Arquivo PDF</label>
                 <Input
@@ -295,24 +341,31 @@ export default function AdminDocuments() {
               <p className="text-sm text-slate-500">Crie clientes na seção de Gerenciamento de Clientes</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="divide-y divide-slate-100">
               {clients.map((client) => (
-                <Card key={client.id} className="border-slate-200">
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold text-slate-900">{client.name}</h3>
-                    <p className="text-sm text-slate-600 mt-1">{client.email}</p>
-                    <Button
-                      size="sm"
-                      className="mt-4 w-full bg-orange-500 hover:bg-orange-600"
-                      onClick={() => {
-                        setSelectedClientId(client.id.toString());
-                        setIsOpen(true);
-                      }}
-                    >
-                      Enviar Documento
-                    </Button>
-                  </CardContent>
-                </Card>
+                <div key={client.id} className="flex items-center justify-between py-4 hover:bg-slate-50/50 px-2 rounded-lg transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold">
+                      {client.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{client.name}</h3>
+                      <p className="text-sm text-slate-500">{client.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                    title="Enviar Documento"
+                    onClick={() => {
+                      setSelectedClientId(client.id.toString());
+                      setIsOpen(true);
+                    }}
+                  >
+                    <FileUp className="w-5 h-5" />
+                  </Button>
+                </div>
               ))}
             </div>
           )}
