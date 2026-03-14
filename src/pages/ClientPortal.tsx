@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion, Calendar } from "lucide-react";
+import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion, Calendar, Droplet } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -221,6 +221,9 @@ export default function ClientPortal() {
             <p className="text-slate-600">Bem-vindo, {clientName}</p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => window.location.href = "/client/water-tank"} className="bg-blue-500 hover:bg-blue-600" size="sm">
+              <Droplet className="w-4 h-4 mr-1" /> Monitoramento
+            </Button>
             <Button onClick={() => { setOsType("emergencial"); setIsOpenDialogOpen(true); }} className="bg-red-500 hover:bg-red-600" size="sm">
               <AlertCircle className="w-4 h-4 mr-1" /> Atendimento
             </Button>
