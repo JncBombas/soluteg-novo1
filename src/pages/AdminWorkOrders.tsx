@@ -180,84 +180,79 @@ export default function AdminWorkOrders() {
     <>
       <div className="space-y-4">
 {workOrders?.length > 0 ? (
-  workOrders.map((order) => (
-    <div 
-      key={order.id} 
-      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer"
-      onClick={() => navigate(`/admin/work-orders/${order.id}`)}
-    >
-      {/* 1. CABEÇALHO COM COR DE FUNDO */}
-      <div className={`px-4 py-2 flex justify-between items-center ${
-        order.type === 'emergencial' ? 'bg-red-600' : 
-        order.type === 'orcamento' ? 'bg-purple-700' : 
-        'bg-emerald-600'
-      }`}>
-        <span className="text-[10px] font-black uppercase tracking-widest text-white">
-          OS {order.type}
-        </span>
-        <span className="text-[10px] font-bold text-white/80">
-          #{order.osNumber || order.id}
-        </span>
-      </div>
+  workOrders.map((order) => {
+    // Definindo as cores manualmente para garantir que funcionem
+    const typeColor = order.type === 'emergencial' ? '#dc2626' : order.type === 'orcamento' ? '#7e22ce' : '#059669';
+    const priorityColor = order.priority === 'critica' || order.priority === 'urgente' ? '#dc2626' : order.priority === 'alta' ? '#f97316' : order.priority === 'media' ? '#3b82f6' : '#10b981';
 
-      {/* 2. CONTEÚDO PRINCIPAL (LAYOUT SIMPLIFICADO) */}
-      <div className="p-4 flex items-center justify-between gap-4">
-        
-        <div className="flex items-center gap-4 flex-1">
-          {/* CHECKBOX */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <Checkbox 
-              checked={selectedIds.includes(order.id)} 
-              onCheckedChange={() => 
-                setSelectedIds(prev => 
-                  prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
-                )
-              }
-            />
+    return (
+      <div 
+        key={order.id} 
+        className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer flex flex-col relative"
+        style={{ borderLeft: `8px solid ${priorityColor}`, overflow: 'visible' }}
+        onClick={() => navigate(`/admin/work-orders/${order.id}`)}
+      >
+        {/* CABEÇALHO */}
+        <div 
+          className="px-4 py-1.5 flex justify-between items-center rounded-t-sm"
+          style={{ backgroundColor: typeColor }}
+        >
+          <span className="text-[10px] font-black uppercase tracking-widest text-white">
+            OS {order.type}
+          </span>
+          <span className="text-[10px] font-bold text-white/80 font-mono">
+            #{order.osNumber || order.id}
+          </span>
+        </div>
+
+        {/* CONTEÚDO */}
+        <div className="p-4 flex items-center justify-between w-full">
+          <div className="flex items-center gap-4 flex-1">
+            <div onClick={(e) => e.stopPropagation()}>
+              <Checkbox 
+                checked={selectedIds.includes(order.id)} 
+                onCheckedChange={() => 
+                  setSelectedIds(prev => 
+                    prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+                  )
+                }
+              />
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <StatusBadge status={order.status} />
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                  {order.priority || 'Normal'}
+                </span>
+              </div>
+              <h3 className="text-slate-900 font-black text-lg leading-tight truncate">
+                {order.title}
+              </h3>
+              <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500 font-semibold">
+                <span className="flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-slate-400" /> {order.clientName || 'Sem Cliente'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" /> {new Date(order.createdAt).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* TEXTOS */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <StatusBadge status={order.status} />
-              {/* BORDA DE PRIORIDADE EM FORMATO DE TAG PARA NÃO SUMIR */}
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                order.priority === 'urgente' || order.priority === 'critica' ? 'bg-red-100 text-red-700' :
-                order.priority === 'alta' ? 'bg-orange-100 text-orange-700' :
-                'bg-slate-100 text-slate-600'
-              }`}>
-                {order.priority || 'Normal'}
-              </span>
+          {/* AÇÕES NA DIREITA - USANDO FLEX FIXO */}
+          <div className="flex items-center gap-3 ml-4" onClick={(e) => e.stopPropagation()}>
+            <div className="p-2 bg-slate-50 hover:bg-blue-50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors" onClick={() => navigate(`/admin/work-orders/${order.id}`)}>
+              <Eye className="w-5 h-5" />
             </div>
-            
-            <h3 className="text-slate-900 font-bold text-lg leading-tight truncate">
-              {order.title}
-            </h3>
-            
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-              <span className="flex items-center gap-1 font-semibold">
-                <User className="w-3.5 h-3.5" /> {order.clientName || 'Sem Cliente'}
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" /> {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-              </span>
+            <div className="p-2 bg-slate-50 hover:bg-amber-50 rounded-lg text-slate-400 hover:text-amber-600 transition-colors" onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}>
+              <Edit2 className="w-5 h-5" />
             </div>
           </div>
         </div>
-
-        {/* 3. ÍCONES DE AÇÃO (DIREITA) */}
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <div className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-blue-600" onClick={() => navigate(`/admin/work-orders/${order.id}`)}>
-            <Eye className="w-5 h-5" />
-          </div>
-          <div className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-orange-600" onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}>
-            <Edit2 className="w-5 h-5" />
-          </div>
-        </div>
-
       </div>
-    </div>
-  ))
+    );
+  })
 ) : (
   <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
     <p className="text-slate-500 font-medium">Nenhuma ordem encontrada.</p>
