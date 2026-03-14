@@ -25,7 +25,7 @@ export default function AdminDocuments() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    documentType: "relatorio_servico",
+    documentType: "vistoria",
     file: null as File | null,
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -75,65 +75,94 @@ export default function AdminDocuments() {
     try {
       setUploading(true);
 
-      // Converter arquivo para base64
       const reader = new FileReader();
       reader.onload = async (event) => {
-        const fileBase64 = event.target?.result as string;
-        const base64Data = fileBase64.split(",")[1];
-        const file = formData.file!;
+        try {
+          const fileBase64 = event.target?.result as string;
+          const base64Data = fileBase64.split(",")[1];
+          const file = formData.file!;
 
-        const response = await fetch("/api/admin-documents/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          console.log("Enviando documento:", {
             clientId: parseInt(selectedClientId),
             adminId,
             title: formData.title,
-            description: formData.description,
             documentType: formData.documentType,
             month: formData.month,
             year: formData.year,
-            fileBase64: base64Data,
-            fileName: file.name,
-            mimeType: file.type,
-          }),
-        });
+          });
 
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.message || "Erro ao fazer upload");
+          const response = await fetch("/api/admin-documents/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              clientId: parseInt(selectedClientId),
+              adminId,
+              title: formData.title,
+              description: formData.description,
+              documentType: formData.documentType,
+              month: formData.month,
+              year: formData.year,
+              fileBase64: base64Data,
+              fileName: file.name,
+              mimeType: file.type,
+            }),
+          });
+
+          if (!response.ok) {
+            const data = await response.json();
+            console.error("Erro na resposta:", data);
+            throw new Error(data.message || "Erro ao fazer upload");
+          }
+
+          const result = await response.json();
+          console.log("Upload bem-sucedido:", result);
+
+          setSuccess("Documento enviado com sucesso!");
+          setFormData({
+            title: "",
+            description: "",
+            documentType: "vistoria",
+            file: null,
+            month: new Date().getMonth() + 1,
+            year: new Date().getFullYear(),
+          });
+          setSelectedClientId("");
+          setIsOpen(false);
+
+          const fileInput = document.getElementById("file-input") as HTMLInputElement;
+          if (fileInput) fileInput.value = "";
+
+          setTimeout(() => {
+            setSuccess("");
+          }, 3000);
+        } catch (err) {
+          console.error("Erro no upload:", err);
+          setError(err instanceof Error ? err.message : "Erro ao fazer upload");
+        } finally {
+          setUploading(false);
         }
+      };
 
-        setSuccess("Documento enviado com sucesso!");
-        setFormData({
-          title: "",
-          description: "",
-          documentType: "relatorio_servico",
-          file: null,
-          month: new Date().getMonth() + 1,
-          year: new Date().getFullYear(),
-        });
-        setSelectedClientId("");
-        setIsOpen(false);
-
-        // Limpar input de arquivo
-        const fileInput = document.getElementById("file-input") as HTMLInputElement;
-        if (fileInput) fileInput.value = "";
+      reader.onerror = () => {
+        console.error("Erro ao ler arquivo");
+        setError("Erro ao ler o arquivo");
+        setUploading(false);
       };
 
       reader.readAsDataURL(formData.file);
     } catch (err) {
+      console.error("Erro geral:", err);
       setError(err instanceof Error ? err.message : "Erro ao fazer upload");
-    } finally {
       setUploading(false);
     }
   };
 
   const getDocumentTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      relatorio_servico: "Relatório de Serviço",
-      relatorio_visita: "Relatório de Visita",
+      vistoria: "Vistoria",
+      visita: "Relatório de Visita",
       nota_fiscal: "Nota Fiscal",
+      servico: "Relatório de Serviço",
       outro: "Outro",
     };
     return labels[type] || type;
@@ -215,13 +244,13 @@ export default function AdminDocuments() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="vistoria">Vistoria</SelectItem>
-                   <SelectItem value="visita">Relatório de Visita</SelectItem>
-                   <SelectItem value="servico">Relatório de Serviço</SelectItem>
-                   <SelectItem value="nota_fiscal">Nota Fiscal</SelectItem>
-                   <SelectItem value="outro">Outro</SelectItem>
-                 </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="vistoria">Vistoria</SelectItem>
+                    <SelectItem value="visita">Relatório de Visita</SelectItem>
+                    <SelectItem value="servico">Relatório de Serviço</SelectItem>
+                    <SelectItem value="nota_fiscal">Nota Fiscal</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
