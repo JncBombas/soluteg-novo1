@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, FileUp, Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useLocation } from "wouter";
 
 interface Client {
   id: number;
@@ -14,6 +15,7 @@ interface Client {
 }
 
 export default function AdminDocuments() {
+  const [, navigate] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
@@ -400,6 +402,17 @@ export default function AdminDocuments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Back Button */}
+      <div className="mt-8">
+        <Button
+          variant="outline"
+          onClick={() => navigate("/admin/dashboard")}
+          className="flex items-center gap-2"
+        >
+          ← Voltar ao Dashboard
+        </Button>
+      </div>
     </div>
   );
 }
