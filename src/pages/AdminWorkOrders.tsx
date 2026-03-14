@@ -179,29 +179,34 @@ export default function AdminWorkOrders() {
   ) : (
     <>
       <div className="space-y-4">
-        {workOrders?.length > 0 ? (
+  {workOrders?.length > 0 ? (
   workOrders.map((order) => (
     <div 
       key={order.id} 
-      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white cursor-pointer"
+      className={`bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer relative ${
+        order.priority === 'critica' || order.priority === 'urgente' ? 'border-l-[6px] border-l-red-600' :
+        order.priority === 'alta' ? 'border-l-[6px] border-l-orange-500' :
+        order.priority === 'media' ? 'border-l-[6px] border-l-blue-500' :
+        'border-l-[6px] border-l-emerald-500'
+      }`}
       onClick={() => navigate(`/admin/work-orders/${order.id}`)}
     >
-      {/* CABEÇALHO DO TIPO */}
-      <div className={`px-4 py-2 flex justify-between items-center ${
+      {/* CABEÇALHO SÓLIDO (Identifica o Tipo: Emergencial, Orçamento, Rotina) */}
+      <div className={`px-4 py-1.5 flex justify-between items-center ${
         order.type === 'emergencial' ? 'bg-red-600' : 
         order.type === 'orcamento' ? 'bg-purple-700' : 
         'bg-emerald-600'
       }`}>
-        <span className="text-[11px] font-black uppercase tracking-widest text-white">
+        <span className="text-[10px] font-black uppercase tracking-widest text-white">
           OS {order.type}
         </span>
-        <span className="text-[10px] font-bold text-white/80">
+        <span className="text-[10px] font-bold text-white/80 font-mono">
           #{order.osNumber || order.id}
         </span>
       </div>
 
-      {/* CONTEÚDO */}
-      <div className="p-4 flex items-start gap-4">
+      <div className="p-4 flex items-center gap-4">
+        {/* CHECKBOX DE SELEÇÃO */}
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={selectedIds.includes(order.id)} 
@@ -210,39 +215,51 @@ export default function AdminWorkOrders() {
                 prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
               )
             }
-            className="mt-1 border-slate-300"
           />
         </div>
-        
+
         <div className="flex-1 min-w-0">
-          <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-2">
             <StatusBadge status={order.status} />
-            
-            {/* ETIQUETA DE PRIORIDADE */}
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-              order.priority === 'urgente' || order.priority === 'critica' ? 'bg-red-100 text-red-700 border-red-200' :
-              order.priority === 'alta' ? 'bg-orange-100 text-orange-700 border-orange-200' :
-              order.priority === 'media' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-              'bg-slate-100 text-slate-700 border-slate-200'
-            }`}>
-              {order.priority || 'Normal'}
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+              Prioridade {order.priority || 'Normal'}
             </span>
           </div>
           
-          <h3 className="text-slate-900 font-black text-xl mb-3 leading-tight tracking-tight">
+          <h3 className="text-slate-900 font-bold text-lg leading-tight truncate">
             {order.title}
           </h3>
           
-          <div className="flex items-center gap-4 text-xs text-slate-600 pt-2 border-t border-slate-50">
-            <div className="flex items-center gap-1.5">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className="font-bold text-slate-800">{order.clientName || 'Sem Cliente'}</span>
+          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
+            <div className="flex items-center gap-1">
+              <User className="w-3.5 h-3.5 text-slate-400" />
+              <span className="truncate max-w-[150px]">{order.clientName || 'Sem Cliente'}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
             </div>
           </div>
+        </div>
+
+        {/* ÍCONES DE AÇÃO (DIREITA) */}
+        <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate(`/admin/work-orders/${order.id}`)}
+          >
+            <Eye className="w-5 h-5" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-9 w-9 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+            onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}
+          >
+            <Edit2 className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </div>
