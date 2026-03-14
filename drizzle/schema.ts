@@ -197,6 +197,8 @@ export const clientDocuments = mysqlTable("clientDocuments", {
   fileKey: text("fileKey").notNull(), // Chave do arquivo no S3
   fileSize: int("fileSize"), // Tamanho em bytes
   mimeType: varchar("mimeType", { length: 50 }),
+  month: int("month"), // Mês de referência (1-12)
+  year: int("year"),   // Ano de referência
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
@@ -449,3 +451,22 @@ export const checklistInstances = mysqlTable("checklistInstances", {
 
 export type ChecklistInstance = typeof checklistInstances.$inferSelect;
 export type InsertChecklistInstance = typeof checklistInstances.$inferInsert;
+
+/**
+ * Monitoramento de níveis de caixa d'água
+ */
+export const waterTankMonitoring = mysqlTable("waterTankMonitoring", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  adminId: int("adminId").notNull(),
+  tankName: varchar("tankName", { length: 100 }).notNull(), // Nome da caixa (ex: Torre A, Reservatório Inferior)
+  currentLevel: int("currentLevel").notNull(), // Nível atual em porcentagem (0-100)
+  capacity: int("capacity"), // Capacidade total em litros (opcional)
+  status: mysqlEnum("status", ["otimo", "bom", "alerta", "critico"]).default("otimo").notNull(),
+  notes: text("notes"),
+  measuredAt: timestamp("measuredAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WaterTankMonitoring = typeof waterTankMonitoring.$inferSelect;
+export type InsertWaterTankMonitoring = typeof waterTankMonitoring.$inferInsert;
