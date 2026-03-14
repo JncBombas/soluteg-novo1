@@ -183,16 +183,24 @@ export default function AdminWorkOrders() {
   workOrders.map((order) => (
     <div 
       key={order.id} 
-      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer flex flex-col"
+      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer flex flex-col relative"
       onClick={() => navigate(`/admin/work-orders/${order.id}`)}
     >
-      {/* 1. CABEÇALHO SÓLIDO (Sempre no topo) */}
-      <div className={`px-4 py-1.5 flex justify-between items-center ${
+      {/* 1. BARRA LATERAL DE PRIORIDADE (FORÇADA COM POSIÇÃO ABSOLUTA) */}
+      <span className={`absolute left-0 top-0 bottom-0 w-[6px] z-10 ${
+        order.priority === 'critica' || order.priority === 'urgente' ? 'bg-red-600' :
+        order.priority === 'alta' ? 'bg-orange-500' :
+        order.priority === 'media' ? 'bg-blue-500' :
+        'bg-emerald-500'
+      }`} />
+
+      {/* 2. CABEÇALHO COLORIDO (TIPO) */}
+      <div className={`px-4 py-1.5 flex justify-between items-center relative z-0 ${
         order.type === 'emergencial' ? 'bg-red-600' : 
         order.type === 'orcamento' ? 'bg-purple-700' : 
         'bg-emerald-600'
       }`}>
-        <span className="text-[10px] font-black uppercase tracking-widest text-white">
+        <span className="text-[10px] font-black uppercase tracking-widest text-white ml-2">
           OS {order.type}
         </span>
         <span className="text-[10px] font-bold text-white/80 font-mono">
@@ -200,13 +208,8 @@ export default function AdminWorkOrders() {
         </span>
       </div>
 
-      {/* 2. CONTEÚDO COM A BORDA LATERAL DE PRIORIDADE (INDESSTRUTÍVEL) */}
-      <div className={`flex items-center p-4 gap-4 border-l-[8px] ${
-        order.priority === 'critica' || order.priority === 'urgente' ? 'border-l-red-600' :
-        order.priority === 'alta' ? 'border-l-orange-500' :
-        order.priority === 'media' ? 'border-l-blue-500' :
-        'border-l-emerald-500'
-      }`}>
+      {/* 3. CONTEÚDO PRINCIPAL */}
+      <div className="p-4 flex items-center gap-4 pl-6"> {/* pl-6 dá espaço para a barra lateral */}
         
         {/* CHECKBOX */}
         <div onClick={(e) => e.stopPropagation()}>
@@ -220,23 +223,23 @@ export default function AdminWorkOrders() {
           />
         </div>
 
-        {/* INFORMAÇÕES */}
+        {/* INFO */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <StatusBadge status={order.status} />
-            <span className="text-[9px] font-bold text-slate-400 uppercase">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
               {order.priority || 'Normal'}
             </span>
           </div>
           
-          <h3 className="text-slate-900 font-black text-lg leading-tight truncate">
+          <h3 className="text-slate-900 font-extrabold text-lg leading-tight truncate">
             {order.title}
           </h3>
           
-          <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500">
+          <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500 font-semibold">
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5 text-slate-400" />
-              <span className="font-bold text-slate-700">{order.clientName || 'Sem Cliente'}</span>
+              <span className="text-slate-700">{order.clientName || 'Sem Cliente'}</span>
             </div>
             <div className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -245,12 +248,12 @@ export default function AdminWorkOrders() {
           </div>
         </div>
 
-        {/* 3. ÍCONES DE AÇÃO (FORÇADOS À DIREITA COM ML-AUTO) */}
+        {/* 4. ÍCONES DE AÇÃO (FORÇADOS À DIREITA) */}
         <div className="flex items-center gap-1 ml-auto" onClick={(e) => e.stopPropagation()}>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-100/50"
             onClick={() => navigate(`/admin/work-orders/${order.id}`)}
           >
             <Eye className="w-5 h-5" />
@@ -258,7 +261,7 @@ export default function AdminWorkOrders() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+            className="h-9 w-9 text-slate-400 hover:text-orange-600 hover:bg-orange-100/50"
             onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}
           >
             <Edit2 className="w-5 h-5" />
