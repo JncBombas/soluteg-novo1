@@ -180,84 +180,78 @@ export default function AdminWorkOrders() {
     <>
       <div className="space-y-4">
         {workOrders?.length > 0 ? (
-          workOrders.map((order) => (
-            <div 
-              key={order.id} 
-              className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white cursor-pointer"
-              onClick={() => navigate(`/admin/work-orders/${order.id}`)}
-            >
-              {/* CABEÇALHO SÓLIDO (Identifica o Tipo) */}
-              <div className={`px-4 py-2 flex justify-between items-center ${
-                order.type === 'emergencial' ? 'bg-red-600' : 
-                order.type === 'orcamento' ? 'bg-purple-700' : 
-                'bg-emerald-600'
-              }`}>
-                <span className="text-[11px] font-black uppercase tracking-widest text-white">
-                  OS {order.type}
-                </span>
-                <span className="text-[10px] font-bold text-white/80">
-                  #{order.osNumber || order.id}
-                </span>
-              </div>
-
-              {/* CONTEÚDO COM ETIQUETAS DE STATUS E PRIORIDADE */}
-              <div className="p-4 flex items-start gap-4">
-                <div onClick={(e) => e.stopPropagation()}>
-                  <Checkbox 
-                    checked={selectedIds.includes(order.id)} 
-                    onCheckedChange={() => 
-                      setSelectedIds(prev => 
-                        prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
-                      )
-                    }
-                    className="mt-1 border-slate-300"
-                  />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  {/* LINHA DE BADGES (ESTILO 1ª VERSÃO) */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <StatusBadge status={order.status} />
-                    
-                    {/* ETIQUETA DE PRIORIDADE */}
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                      order.priority === 'urgente' || order.priority === 'critica' ? 'bg-red-100 text-red-700 border-red-200' :
-                      order.priority === 'alta' ? 'bg-orange-100 text-orange-700 border-orange-200' :
-                      order.priority === 'media' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                      'bg-slate-100 text-slate-700 border-slate-200'
-                    }`}>
-                      {order.priority || 'Normal'}
-                    </span>
-                  </div>
-                  
-                  <h3 className="text-slate-900 font-black text-xl mb-3 leading-tight tracking-tight">
-                    {order.title}
-                  </h3>
-                  
-                  <div className="flex flex-wrap gap-4 text-xs text-slate-600 pt-2 border-t border-slate-50">
-                    <div className="flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span className="font-bold text-slate-800">
-                        {order.clientName || 'Cliente não definido'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <span className="font-semibold">
-                        {new Date(order.createdAt).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-            <p className="text-slate-500 font-medium">Nenhuma ordem de serviço encontrada.</p>
-          </div>
-        )}
+  workOrders.map((order) => (
+    <div 
+      key={order.id} 
+      className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all bg-white cursor-pointer"
+      onClick={() => navigate(`/admin/work-orders/${order.id}`)}
+    >
+      {/* CABEÇALHO DO TIPO */}
+      <div className={`px-4 py-2 flex justify-between items-center ${
+        order.type === 'emergencial' ? 'bg-red-600' : 
+        order.type === 'orcamento' ? 'bg-purple-700' : 
+        'bg-emerald-600'
+      }`}>
+        <span className="text-[11px] font-black uppercase tracking-widest text-white">
+          OS {order.type}
+        </span>
+        <span className="text-[10px] font-bold text-white/80">
+          #{order.osNumber || order.id}
+        </span>
       </div>
+
+      {/* CONTEÚDO */}
+      <div className="p-4 flex items-start gap-4">
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox 
+            checked={selectedIds.includes(order.id)} 
+            onCheckedChange={() => 
+              setSelectedIds(prev => 
+                prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id]
+              )
+            }
+            className="mt-1 border-slate-300"
+          />
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap gap-2 mb-3">
+            <StatusBadge status={order.status} />
+            
+            {/* ETIQUETA DE PRIORIDADE */}
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+              order.priority === 'urgente' || order.priority === 'critica' ? 'bg-red-100 text-red-700 border-red-200' :
+              order.priority === 'alta' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+              order.priority === 'media' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+              'bg-slate-100 text-slate-700 border-slate-200'
+            }`}>
+              {order.priority || 'Normal'}
+            </span>
+          </div>
+          
+          <h3 className="text-slate-900 font-black text-xl mb-3 leading-tight tracking-tight">
+            {order.title}
+          </h3>
+          
+          <div className="flex items-center gap-4 text-xs text-slate-600 pt-2 border-t border-slate-50">
+            <div className="flex items-center gap-1.5">
+              <User className="w-4 h-4 text-slate-400" />
+              <span className="font-bold text-slate-800">{order.clientName || 'Sem Cliente'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-slate-400" />
+              <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  ))
+) : (
+  <div className="text-center py-12 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+    <p className="text-slate-500 font-medium">Nenhuma ordem encontrada.</p>
+  </div>
+)}
 
               {/* PAGINAÇÃO */}
               {totalPages > 1 && (
