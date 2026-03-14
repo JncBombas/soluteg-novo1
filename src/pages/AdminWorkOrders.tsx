@@ -179,7 +179,7 @@ export default function AdminWorkOrders() {
   ) : (
     <>
       <div className="space-y-4">
-  {workOrders?.length > 0 ? (
+ {workOrders?.length > 0 ? (
   workOrders.map((order) => (
     <div 
       key={order.id} 
@@ -191,22 +191,24 @@ export default function AdminWorkOrders() {
       }`}
       onClick={() => navigate(`/admin/work-orders/${order.id}`)}
     >
-      {/* CABEÇALHO SÓLIDO (Identifica o Tipo: Emergencial, Orçamento, Rotina) */}
+      {/* CABEÇALHO SÓLIDO (Tipo de OS) */}
       <div className={`px-4 py-1.5 flex justify-between items-center ${
         order.type === 'emergencial' ? 'bg-red-600' : 
         order.type === 'orcamento' ? 'bg-purple-700' : 
         'bg-emerald-600'
       }`}>
-        <span className="text-[10px] font-black uppercase tracking-widest text-white">
-          OS {order.type}
-        </span>
+        <div className="flex items-center gap-2">
+           <span className="text-[10px] font-black uppercase tracking-widest text-white">
+            OS {order.type}
+          </span>
+        </div>
         <span className="text-[10px] font-bold text-white/80 font-mono">
           #{order.osNumber || order.id}
         </span>
       </div>
 
       <div className="p-4 flex items-center gap-4">
-        {/* CHECKBOX DE SELEÇÃO */}
+        {/* CHECKBOX */}
         <div onClick={(e) => e.stopPropagation()}>
           <Checkbox 
             checked={selectedIds.includes(order.id)} 
@@ -219,10 +221,10 @@ export default function AdminWorkOrders() {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <StatusBadge status={order.status} />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-              Prioridade {order.priority || 'Normal'}
+            <span className="text-[10px] font-bold text-slate-400 uppercase">
+              {order.priority || 'normal'}
             </span>
           </div>
           
@@ -230,7 +232,7 @@ export default function AdminWorkOrders() {
             {order.title}
           </h3>
           
-          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium pt-2 border-t border-slate-50">
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5 text-slate-400" />
               <span className="truncate max-w-[150px]">{order.clientName || 'Sem Cliente'}</span>
@@ -242,23 +244,23 @@ export default function AdminWorkOrders() {
           </div>
         </div>
 
-        {/* ÍCONES DE AÇÃO (DIREITA) */}
+        {/* ÍCONES DE AÇÃO NA DIREITA */}
         <div className="flex items-center gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+            className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
             onClick={() => navigate(`/admin/work-orders/${order.id}`)}
           >
-            <Eye className="w-5 h-5" />
+            <Eye className="w-4 h-4" />
           </Button>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
+            className="h-8 w-8 text-slate-400 hover:text-amber-600 hover:bg-amber-50"
             onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}
           >
-            <Edit2 className="w-5 h-5" />
+            <Edit2 className="w-4 h-4" />
           </Button>
         </div>
       </div>
