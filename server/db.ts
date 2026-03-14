@@ -287,30 +287,33 @@ export async function getReportStats() {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const allReports = await db.select().from(reports);
-  const totalReports = allReports.length;
-  
-  // Group by service type
-  const serviceStats = allReports.reduce((acc: Record<string, number>, report) => {
-    acc[report.serviceType] = (acc[report.serviceType] || 0) + 1;
-    return acc;
-  }, {});
+  // Adicionamos um try/catch para que, se as métricas falharem, o portal não "suma"
+  try {
+    const allReports = await db.select().from(reports);
+    const totalReports = allReports.length;
+    
+    const serviceStats = allReports.reduce((acc: Record<string, number>, report) => {
+      acc[report.serviceType] = (acc[report.serviceType] || 0) + 1;
+      return acc;
+    }, {});
 
-  // Group by month
-  const monthlyStats = allReports.reduce((acc: Record<string, number>, report) => {
-    const month = new Date(report.createdAt).toISOString().slice(0, 7);
-    acc[month] = (acc[month] || 0) + 1;
-    return acc;
-  }, {});
+    const monthlyStats = allReports.reduce((acc: Record<string, number>, report) => {
+      const month = new Date(report.createdAt).toISOString().slice(0, 7);
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {});
 
-  return {
-    totalReports,
-    serviceStats,
-    monthlyStats,
-    recentReports: allReports.slice(-5).reverse(),
-  };
+    return {
+      totalReports,
+      serviceStats,
+      monthlyStats,
+      recentReports: allReports.slice(-5).reverse(),
+    };
+  } catch (error) {
+    console.error("Erro ao carregar métricas:", error);
+    return { totalReports: 0, serviceStats: {}, monthlyStats: {}, recentReports: [] };
+  }
 }
-
 export async function createUser(userData: {
   email: string;
   password: string;
