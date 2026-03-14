@@ -43,6 +43,8 @@ export const createDocumentSchema = z.object({
   fileKey: z.string(),
   fileSize: z.number().positive(),
   mimeType: z.string(),
+  month: z.number().int().min(1).max(12).optional().nullable(),
+  year: z.number().int().min(2000).max(2100).optional().nullable(),
 });
 
 export const updateDocumentSchema = z.object({
