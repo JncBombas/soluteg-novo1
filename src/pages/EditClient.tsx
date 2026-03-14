@@ -124,7 +124,7 @@ export default function EditClient() {
         address: formData.address,
         type: formData.type,
       };
-      if (formData.newPassword.trim()) {
+      if (formData.newPassword && formData.newPassword.trim()) {
         payload.password = formData.newPassword;
       }
 
