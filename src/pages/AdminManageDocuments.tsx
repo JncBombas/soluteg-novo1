@@ -21,7 +21,7 @@ interface Document {
 }
 
 export default function AdminManageDocuments() {
-  const [, setLocation] = useLocation();
+  const [, navigate] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
@@ -35,7 +35,7 @@ export default function AdminManageDocuments() {
     if (id) {
       setAdminId(parseInt(id));
     } else {
-      setLocation("/admin/login");
+      navigate("/admin/login");
     }
   }, []);
 
@@ -194,10 +194,12 @@ export default function AdminManageDocuments() {
             <h1 className="text-2xl font-bold text-slate-900">Gerenciar Documentos</h1>
             <p className="text-slate-600">Visualize, filtre e gerencie documentos dos clientes</p>
           </div>
-          <Button variant="outline" onClick={() => setLocation("/admin/dashboard")}>
+          <Button variant="ghost" 
+          onClick={() => navigate("/admin/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
+            Voltar ao Dashboard
           </Button>
+          
         </div>
       </div>
 
@@ -302,7 +304,7 @@ export default function AdminManageDocuments() {
                   Gerencie todos os documentos dos clientes
                 </CardDescription>
               </div>
-              <Button onClick={() => setLocation("/admin/documentos/enviar")}>
+              <Button onClick={() => navigate("/admin/documentos/enviar")}>
                 Enviar Novo Documento
               </Button>
             </div>
