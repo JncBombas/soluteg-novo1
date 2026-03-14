@@ -11,6 +11,7 @@ import AdminProfile from "./pages/AdminProfile";
 import InspectionReports from "./pages/InspectionReports";
 import ClientLogin from "./pages/ClientLogin";
 import ClientPortal from "./pages/ClientPortal";
+import WaterTankMonitoring from "./pages/WaterTankMonitoring";
 import AdminClients from "./pages/AdminClients";
 import AdminEditClient from "./pages/AdminEditClient";
 import EditClient from "./pages/EditClient";
@@ -55,6 +56,7 @@ function Router() {
 
       <Route path="/client/login" component={ClientLogin} />
       <Route path="/client/portal" component={ClientPortal} />
+      <Route path="/client/water-tank" component={WaterTankMonitoring} />
       <Route path="/client/profile" component={ClientProfile} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
