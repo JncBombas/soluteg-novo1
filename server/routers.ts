@@ -1015,6 +1015,81 @@ export const appRouter = router({
         };
       }),
     
+    sendPDFToAdmin: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        try {
+          const pdfGen = await import("./pdfGenerator");
+          const workOrdersDb = await import("./workOrdersDb");
+          const { sendWhatsappAlert } = await import("./whatsapp");
+          
+          const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+          const wo = await workOrdersDb.getWorkOrderById(input.id);
+          
+          if (!wo) {
+            throw new Error("Ordem de servico nao encontrada");
+          }
+          
+          const osNum = wo?.osNumber || `OS-${input.id}`;
+          const clientName = wo?.clientName || `Cliente #${wo?.clientId}`;
+          
+          // Enviar mensagem via WhatsApp
+          const message = `Ordem de Servico ${osNum}\nCliente: ${clientName}\nTitulo: ${wo?.title}`;
+          await sendWhatsappAlert(message);
+          
+          return {
+            success: true,
+            message: "PDF enviado para WhatsApp com sucesso!"
+          };
+        } catch (error) {
+          console.error("Erro ao enviar PDF via WhatsApp:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error instanceof Error ? error.message : "Erro ao enviar PDF"
+          });
+        }
+      }),
+    
+    sendPDFToClient: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        try {
+          const pdfGen = await import("./pdfGenerator");
+          const workOrdersDb = await import("./workOrdersDb");
+          const { sendWhatsappAlert } = await import("./whatsapp");
+          
+          const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+          const wo = await workOrdersDb.getWorkOrderById(input.id);
+          
+          if (!wo) {
+            throw new Error("Ordem de servico nao encontrada");
+          }
+          
+          // Buscar numero de telefone do cliente
+          const client = await db.getClientById(wo.clientId);
+          if (!client || !client.phone) {
+            throw new Error("Cliente nao possui numero de telefone cadastrado");
+          }
+          
+          const osNum = wo?.osNumber || `OS-${input.id}`;
+          
+          // Enviar mensagem via WhatsApp para o cliente
+          const message = `Ola ${client.name}!\nSegue a Ordem de Servico #${osNum}.`;
+          await sendWhatsappAlert(message);
+          
+          return {
+            success: true,
+            message: "PDF enviado para o cliente via WhatsApp com sucesso!"
+          };
+        } catch (error) {
+          console.error("Erro ao enviar PDF para cliente via WhatsApp:", error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error instanceof Error ? error.message : "Erro ao enviar PDF para cliente"
+          });
+        }
+      }),
+    
     exportBatch: publicProcedure
       .input(z.object({ ids: z.array(z.number()) }))
       .mutation(async ({ input }) => {

@@ -18,6 +18,9 @@ import {
   Loader2,
   FileDown,
   Trash2,
+  MessageCircle,
+  Download,
+  Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -29,6 +32,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Componentes para cada tab
 import WorkOrderTasks from "@/components/workorder/WorkOrderTasks";
@@ -43,6 +52,7 @@ export default function AdminWorkOrderDetail() {
   const params = useParams();
   const [, navigate] = useLocation();
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [sendingPDFAction, setSendingPDFAction] = useState<'admin' | 'client' | null>(null);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const workOrderId = Number(params.id);
@@ -95,6 +105,38 @@ export default function AdminWorkOrderDetail() {
   const handleExportPDF = async () => {
     setExportingPDF(true);
     exportPDFMutation.mutate({ id: workOrderId });
+  };
+
+  const sendPDFToAdminMutation = trpc.workOrders.sendPDFToAdmin.useMutation({
+    onSuccess: () => {
+      toast.success("PDF enviado para seu WhatsApp com sucesso!");
+      setSendingPDFAction(null);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao enviar PDF: ${error.message}`);
+      setSendingPDFAction(null);
+    },
+  });
+
+  const sendPDFToClientMutation = trpc.workOrders.sendPDFToClient.useMutation({
+    onSuccess: () => {
+      toast.success("PDF enviado para o cliente via WhatsApp com sucesso!");
+      setSendingPDFAction(null);
+    },
+    onError: (error) => {
+      toast.error(`Erro ao enviar PDF para cliente: ${error.message}`);
+      setSendingPDFAction(null);
+    },
+  });
+
+  const handleSendPDFToAdmin = async () => {
+    setSendingPDFAction('admin');
+    sendPDFToAdminMutation.mutate({ id: workOrderId });
+  };
+
+  const handleSendPDFToClient = async () => {
+    setSendingPDFAction('client');
+    sendPDFToClientMutation.mutate({ id: workOrderId });
   };
 
   const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
@@ -251,20 +293,37 @@ export default function AdminWorkOrderDetail() {
               Concluir OS
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPDF}
-            disabled={exportingPDF}
-            className="gap-2"
-          >
-            {exportingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4" />
-            )}
-            {exportingPDF ? "Gerando..." : "Exportar PDF"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={exportingPDF || sendingPDFAction !== null}
+                className="gap-2"
+              >
+                {exportingPDF || sendingPDFAction ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
+                {exportingPDF ? "Gerando..." : sendingPDFAction ? "Enviando..." : "PDF"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportPDF} disabled={exportingPDF || sendingPDFAction !== null}>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSendPDFToAdmin} disabled={exportingPDF || sendingPDFAction !== null}>
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Enviar para meu WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSendPDFToClient} disabled={exportingPDF || sendingPDFAction !== null}>
+                <Send className="h-4 w-4 mr-2" />
+                Enviar para cliente
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             variant="destructive"
             size="sm"
