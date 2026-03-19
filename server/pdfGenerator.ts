@@ -652,8 +652,10 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       doc.strokeColor('#333333').lineWidth(0.5)
          .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
+      const nomeClienteAssinante = (workOrder as any).clientName || '________________';
+
       doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${workOrder.clientName || '________________'}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
+         .text(`Nome: ${nomeClienteAssinante}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
       // === RODAPÉ ELETRÔNICO FINAL ===
       const footerTextY = doc.page.height - 30;
