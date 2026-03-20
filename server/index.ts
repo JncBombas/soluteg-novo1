@@ -1,23 +1,65 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
-import net from "net";
+import multer from "multer"; // 📦 NOVO: Biblioteca para aceitar arquivos (fotos/PDFs)
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./_core/oauth";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { setupVite, serveStatic } from "./vite";
 
+// Configuração do Multer: ele vai guardar a foto temporariamente na memória RAM
+// para processarmos e enviarmos para a nuvem (Cloudinary) logo em seguida.
+const upload = multer({ storage: multer.memoryStorage() });
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
+
+  // Aumenta o limite para aceitar textos grandes (JSON)
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
+
   registerOAuthRoutes(app);
-  
-  // Client login API
+
+  // -----------------------------------------------------------
+  // 📸 NOVA ROTA: Upload de Fotos de OS (JNC Elétrica)
+  // Esta rota recebe a foto real do celular do técnico.
+  // -----------------------------------------------------------
+  app.post("/api/work-orders/upload", upload.single('file'), async (req, res) => {
+    try {
+      // Verifica se o arquivo realmente chegou
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+      }
+
+      // Importa a função que configuramos para o Cloudinary
+      const { storagePut } = await import("./storage");
+      
+      // Envia a foto para a nuvem (Cloudinary)
+      // O 'storagePut' vai comprimir a imagem automaticamente para não pesar.
+      const { url, key } = await storagePut(
+        req.file.originalname,
+        req.file.buffer,
+        req.file.mimetype
+      );
+
+      // Devolve o link da foto para o sistema salvar no banco de dados
+      res.json({ 
+        success: true, 
+        url, 
+        key,
+        fileName: req.file.originalname 
+      });
+    } catch (error) {
+      console.error("Erro no upload JNC:", error);
+      res.status(500).json({ message: "Erro ao processar upload da foto" });
+    }
+  });
+
+  // -----------------------------------------------------------
+  // 🔑 ROTA: Login do Cliente (Portal do Cliente)
+  // -----------------------------------------------------------
   app.post("/api/client-login", async (req, res) => {
     try {
       const { clientLoginSchema } = await import("./validation");
@@ -45,9 +87,9 @@ async function startServer() {
         return res.status(403).json({ message: "Cliente inativo" });
       }
       
-      // Bloquear login de clientes sem acesso ao portal
+      // Regra da JNC: Bloquear login de clientes sem permissão ao portal
       if (client.type === "sem_portal") {
-        return res.status(403).json({ message: "Este cliente não possui acesso ao portal. Entre em contato com o administrador." });
+        return res.status(403).json({ message: "Este cliente não possui acesso ao portal." });
       }
       
       await updateClientLastLogin(client.id);
@@ -63,320 +105,51 @@ async function startServer() {
       res.status(500).json({ message: "Erro ao fazer login" });
     }
   });
+
+  // -----------------------------------------------------------
+  // 📄 ROTAS DE DOCUMENTOS E CLIENTES (Painel Admin)
+  // -----------------------------------------------------------
   
-  // Get client documents
+  // Lista documentos de um cliente específico
   app.get("/api/client-documents", async (req, res) => {
     try {
       const clientId = req.query.clientId as string;
-      if (!clientId) {
-        return res.status(400).json({ message: "clientId é obrigatório" });
-      }
+      if (!clientId) return res.status(400).json({ message: "clientId é obrigatório" });
       
       const { getDocumentsByClientId } = await import("./db");
       const documents = await getDocumentsByClientId(parseInt(clientId));
       res.json(documents);
     } catch (error) {
-      console.error("Get documents error:", error);
       res.status(500).json({ message: "Erro ao carregar documentos" });
     }
   });
-  
-  // Delete client document
+
+  // Deleta um documento do banco de dados
   app.delete("/api/client-documents/:id", async (req, res) => {
     try {
       const { deleteClientDocument } = await import("./db");
       await deleteClientDocument(parseInt(req.params.id));
       res.json({ success: true });
     } catch (error) {
-      console.error("Delete document error:", error);
       res.status(500).json({ message: "Erro ao deletar documento" });
     }
   });
-  
-  // Get admin clients
-  app.get("/api/admin-clients", async (req, res) => {
-    try {
-      const adminId = req.query.adminId as string;
-      if (!adminId) {
-        return res.status(400).json({ message: "adminId é obrigatório" });
-      }
-      
-      const { getClientsByAdminId } = await import("./db");
-      const clients = await getClientsByAdminId(parseInt(adminId));
-      res.json(clients);
-    } catch (error) {
-      console.error("Get admin clients error:", error);
-      res.status(500).json({ message: "Erro ao carregar clientes" });
-    }
-  });
-  
-  // Create admin client
-  app.post("/api/admin-clients", async (req, res) => {
-    try {
-      const { createClientSchema } = await import("./validation");
-      const validation = createClientSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
-      }
-      
-      const { adminId, name, email, username, password, cnpjCpf, phone, address, type } = validation.data;
-      const { createClient } = await import("./db");
-      const { hashPassword } = await import("./adminAuth");
-      
-      const hashedPassword = await hashPassword(password);
-      await createClient({
-        adminId,
-        name,
-        email: email || undefined,
-        username,
-        password: hashedPassword,
-        cnpjCpf,
-        phone,
-        address,
-        active: 1,
-      });
-      
-      res.json({ success: true, message: "Cliente criado com sucesso" });
-    } catch (error) {
-      console.error("Create client error:", error);
-      res.status(500).json({ message: "Erro ao criar cliente" });
-    }
-  });
-  
-  // Get admin client by ID
-  app.get("/api/admin-clients/:id", async (req, res) => {
-    try {
-      const { getClientById } = await import("./db");
-      const client = await getClientById(parseInt(req.params.id));
-      
-      if (!client) {
-        return res.status(404).json({ message: "Cliente não encontrado" });
-      }
-      
-      res.json(client);
-    } catch (error) {
-      console.error("Get client error:", error);
-      res.status(500).json({ message: "Erro ao carregar cliente" });
-    }
-  });
-  
-  // Update admin client
-  app.put("/api/admin-clients/:id", async (req, res) => {
-    try {
-      const { updateClientSchema } = await import("./validation");
-      const validation = updateClientSchema.safeParse(req.body);
-      
-      if (!validation.success) {
-        return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
-      }
-      
-      const { name, email, username, cnpjCpf, phone, address, type, password } = validation.data;
-      const { updateClient } = await import("../db");
-      
-      const updateData: any = {
-        name,
-        email: email || undefined,
-        username,
-        cnpjCpf,
-        phone,
-        address,
-        type,
-      };
 
-      // Se uma nova senha foi fornecida, gerar hash bcrypt
-      if (password && password.trim()) {
-        const { hashPassword } = await import("../adminAuth");
-        updateData.password = await hashPassword(password);
-      }
-
-      await updateClient(parseInt(req.params.id), updateData);
-      
-      res.json({ success: true, message: "Cliente atualizado com sucesso" });
-    } catch (error) {
-      console.error("Update client error:", error);
-      res.status(500).json({ message: "Erro ao atualizar cliente" });
-    }
-  });
-  
-  // Delete admin client
-  app.delete("/api/admin-clients/:id", async (req, res) => {
-    try {
-      const { deleteClient } = await import("./db");
-      await deleteClient(parseInt(req.params.id));
-      res.json({ success: true });
-    } catch (error) {
-      console.error("Delete client error:", error);
-      res.status(500).json({ message: "Erro ao deletar cliente" });
-    }
-  });
-  
-  // Get work order by ID
+  // Busca Ordem de Serviço por ID (usado na visualização)
   app.get("/api/work-orders/:id", async (req, res) => {
     try {
       const { getWorkOrderById } = await import("./db");
       const workOrder = await getWorkOrderById(parseInt(req.params.id));
-      
-      if (!workOrder) {
-        return res.status(404).json({ message: "Ordem de servico nao encontrada" });
-      }
-      
+      if (!workOrder) return res.status(404).json({ message: "OS não encontrada" });
       res.json(workOrder);
     } catch (error) {
-      console.error("Get work order error:", error);
-      res.status(500).json({ message: "Erro ao carregar ordem de servico" });
+      res.status(500).json({ message: "Erro ao carregar OS" });
     }
   });
-  
-  // Update work order
-  app.put("/api/work-orders/:id", async (req, res) => {
-    try {
-      // Validacao basica
-      if (!req.params.id || isNaN(parseInt(req.params.id))) {
-        return res.status(400).json({ message: "ID da ordem de servico invalido" });
-      }
-      
-      const validStatuses = ["aberta", "em_andamento", "concluida", "cancelada"];
-      const validPriorities = ["normal", "alta", "critica"];
-      
-      if (req.body.status && !validStatuses.includes(req.body.status)) {
-        return res.status(400).json({ message: "Status invalido" });
-      }
-      
-      if (req.body.priority && !validPriorities.includes(req.body.priority)) {
-        return res.status(400).json({ message: "Prioridade invalida" });
-      }
-      
-      const { title, description, serviceType, status, priority, estimatedHours, actualHours } = req.body;
-      const { updateWorkOrder } = await import("./db");
-      
-      await updateWorkOrder(parseInt(req.params.id), {
-        title,
-        description,
-        serviceType,
-        status,
-        priority,
-        estimatedHours: estimatedHours ? parseInt(estimatedHours) : null,
-        actualHours: actualHours ? parseInt(actualHours) : null,
-        updatedAt: new Date(),
-      });
-      
-      res.json({ success: true, message: "Ordem de servico atualizada com sucesso" });
-    } catch (error) {
-      console.error("Update work order error:", error);
-      res.status(500).json({ message: "Erro ao atualizar ordem de servico" });
-    }
-  });
-  
-  // Create work order (for clients)
-  app.post("/api/work-orders", async (req, res) => {
-    try {
-      // Validacao basica
-      const { clientId, title, description, serviceType } = req.body;
-      
-      if (!clientId || !title) {
-        return res.status(400).json({ message: "Campos obrigatorios faltando" });
-      }
-      
-      if (isNaN(parseInt(clientId))) {
-        return res.status(400).json({ message: "ID do cliente invalido" });
-      }
-      const { createWorkOrder, getNextOSNumber } = await import("./db");
-      
-      const osNumber = await getNextOSNumber();
-      
-      const result = await createWorkOrder({
-        adminId: 1,
-        clientId,
-        osNumber,
-        type: "emergencial",
-        title,
-        description,
-        serviceType,
-        status: "aberta",
-        priority: "normal",
-      });
-      
-      res.json({ success: true, message: "Ordem de servico criada com sucesso", osNumber });
-    } catch (error) {
-      console.error("Create work order error:", error);
-      res.status(500).json({ message: "Erro ao criar ordem de servico" });
-    }
-  });
-  
-  // Upload document for client
-  app.post("/api/admin-documents/upload", async (req, res) => {
-    try {
-      // Validacao basica dos campos obrigatorios
-      const { clientId, adminId, title, description, documentType, month, year, fileBase64, fileName, mimeType } = req.body;
-      
-      if (!clientId || !adminId || !title || !documentType || !fileBase64 || !fileName) {
-        return res.status(400).json({ message: "Campos obrigatorios faltando" });
-      }
-      
-      // Validar tipo de documento
-      const validTypes = ["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita", "outro"];
-      if (!validTypes.includes(documentType)) {
-        return res.status(400).json({ message: "Tipo de documento invalido" });
-      }
-      const { createClientDocument } = await import("./db");
-      const { storagePut } = await import("./storage");
-      
-      const buffer = Buffer.from(fileBase64, "base64");
-      const fileKey = `clients/${clientId}/${Date.now()}-${fileName}`;
-      
-      const { url } = await storagePut(fileKey, buffer, mimeType || "application/octet-stream");
-      
-      await createClientDocument({
-        clientId,
-        adminId,
-        title,
-        description,
-        documentType,
-        month: month ? parseInt(month.toString()) : null,
-        year: year ? parseInt(year.toString()) : null,
-        fileUrl: url,
-        fileKey,
-        fileSize: buffer.length,
-        mimeType,
-      });
-      
-      res.json({ success: true, message: "Documento enviado com sucesso", url });
-    } catch (error) {
-      console.error("Upload document error:", error);
-      res.status(500).json({ message: "Erro ao fazer upload do documento" });
-    }
-  });
-  
-  // Get admin metrics
-  app.get("/api/admin-metrics", async (req, res) => {
-    try {
-      const adminId = req.query.adminId as string;
-      if (!adminId) {
-        return res.status(400).json({ message: "adminId eh obrigatorio" });
-      }
-      
-      const { getClientsByAdminId, getWorkOrdersByAdminId, getAllDocumentsByAdminId } = await import("./db");
-      const clients = await getClientsByAdminId(parseInt(adminId));
-      const workOrders = await getWorkOrdersByAdminId(parseInt(adminId));
-      const documents = await getAllDocumentsByAdminId(parseInt(adminId));
-      
-      const activeClients = clients.filter(c => c.active === 1).length;
-      const openWorkOrders = workOrders.filter(wo => wo.status === "aberta" || wo.status === "em_andamento").length;
-      
-      res.json({
-        totalClients: clients.length,
-        activeClients,
-        openWorkOrders,
-        totalDocuments: documents.length,
-      });
-    } catch (error) {
-      console.error("Get metrics error:", error);
-      res.status(500).json({ message: "Erro ao carregar metricas" });
-    }
-  });
-  
-  // tRPC API
+
+  // -----------------------------------------------------------
+  // 📡 INTEGRAÇÃO tRPC (Lógica Principal do Sistema)
+  // -----------------------------------------------------------
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -384,8 +157,8 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
- // ... após o if/else do Vite
+
+  // Configuração para rodar o site (Frontend)
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
@@ -393,14 +166,12 @@ async function startServer() {
   }
 
   const PORT = 3000;
-
   server.listen(PORT, "0.0.0.0", () => {
     console.log("=========================================");
-    console.log(`🚀 SERVIDOR DISPONÍVEL NA REDE`);
-    console.log(`- No Notebook: http://localhost:${PORT}`);
-    console.log(`- No Celular: Use seu IP (ex: http://192.168.3.12:3000)`);
+    console.log(`🚀 SERVIDOR JNC ELÉTRICA RODANDO`);
+    console.log(`- Acesse: http://jnc.soluteg.com.br`);
     console.log("=========================================");
   });
-} // Fim da função startServer
+}
 
 startServer().catch(console.error);
