@@ -25,7 +25,7 @@ import {
 import { useLocation } from "wouter"; // Navegação de rotas
 import { trpc } from "@/lib/trpc"; // Comunicação com o Backend
 import { Checkbox } from "@/components/ui/checkbox";
-//import { useDebounce } from "../hooks/useDebounce"; // Gancho para atrasar a busca enquanto digita
+import { useDebounce } from "../hooks/useDebounce"; // Gancho para atrasar a busca enquanto digita
 
 export default function AdminWorkOrders() {
   const [, navigate] = useLocation();
@@ -39,7 +39,7 @@ export default function AdminWorkOrders() {
   // --- ESTADOS DE FILTRO E BUSCA ---
   const [searchTerm, setSearchTerm] = useState("");
   // Debounce: Evita fazer uma busca no banco a cada letra digitada (espera 500ms de silêncio)
-  //const debouncedSearch = useDebounce(searchTerm, 500);
+  const debouncedSearch = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   
