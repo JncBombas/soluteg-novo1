@@ -51,46 +51,61 @@ export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmen
 
   // 🔥 FUNÇÃO PRINCIPAL: Faz o envio real do arquivo
   const handleFileUpload = async (category: string, files: FileList | null) => {
-    if (!files || files.length === 0) return; // Se o técnico cancelou a seleção, para aqui
+  // 🚧 CHECK DE SEGURANÇA: Se o técnico clicou mas não escolheu foto, para tudo.
+  if (!files || files.length === 0) return;
 
-    setIsUploading(true); // Trava o botão e mostra o ícone de girar
-    const toastId = toast.loading("Enviando foto para a nuvem...");
+  setIsUploading(true); // Trava o botão na tela (fica cinza) para não clicar duas vezes
+  const toastId = toast.loading("Enviando foto para a nuvem...");
 
-    try {
-      const file = files[0]; // Pega o primeiro arquivo selecionado
-      const formData = new FormData(); // Cria um "envelope" virtual
-      formData.append("file", file);   // Coloca a foto dentro do envelope
+  try {
+    const file = files[0]; // Pega o primeiro arquivo da lista
+    const formData = new FormData(); // Cria um "envelope" vazio
+    formData.append("file", file);   // Coloca a foto dentro do envelope
 
-      // 1️⃣ ENVIAR PARA O SERVIDOR: Manda o envelope para a rota que criamos no server/index.ts
-      const response = await fetch("/api/work-orders/upload", {
-        method: "POST",
-        body: formData,
+    // 1️⃣ ROTA DE FUGA: Envia o envelope para o nosso servidor na VPS
+    // O fetch busca o endereço que criamos no backend/server/index.ts
+    const response = await fetch("/api/work-orders/upload", {
+      method: "POST",
+      body: formData, // Envia o envelope com a imagem
+    });
+
+    // Se o servidor da VPS estiver fora ou der erro, avisa aqui
+    if (!response.ok) throw new Error("Falha no servidor de upload");
+
+    // O servidor responde com o link que o Cloudinary gerou
+    const result = await response.json();
+
+    // 2️⃣ REGISTRO NO BANCO DA JNC:
+    // Se o upload para a nuvem deu certo (success), agora salvamos o rastro no banco
+    if (result.success && result.url) {
+      createAttachmentMutation.mutate({
+        workOrderId, // ID da Ordem de Serviço (ex: OS 105)
+        fileName: result.fileName || file.name, // Nome do arquivo (ex: bomba_queimada.jpg)
+        fileUrl: result.url, // O link eterno da foto (https://cloudinary...)
+        
+        /** * 🔑 A CHAVE DO PROBLEMA (fileKey):
+         * O banco de dados exige um "RG" para cada foto. 
+         * Se o Cloudinary não mandar o public_id, geramos um ID único com a data atual.
+         * Sem isso, o tRPC dá aquele erro de "expected string, received undefined".
+         */
+        fileKey: result.public_id || `key_${Date.now()}`, 
+        
+        fileType: file.type, // Tipo (image/jpeg, image/png, etc)
+        fileSize: file.size, // Tamanho em bytes
+        category: category as any, // Se é "Antes", "Depois", "Documento", etc.
       });
-
-      if (!response.ok) throw new Error("Falha no servidor de upload");
-
-      const result = await response.json(); // Lê a resposta do servidor (que contém a URL do Cloudinary)
-
-      // 2️⃣ SALVAR LINK: Se o Cloudinary aceitou, agora avisamos nosso banco de dados
-      if (result.success && result.url) {
-        createAttachmentMutation.mutate({
-          workOrderId,
-          fileName: result.fileName || file.name,
-          fileUrl: result.url, // O link "eterno" da foto na nuvem
-          fileType: file.type,
-          fileSize: file.size,
-          category: category as any, // Salva se é "Antes", "Depois", etc.
-        });
-        toast.dismiss(toastId);
-      }
-    } catch (error) {
-      console.error("Erro no upload JNC:", error);
-      toast.error("Erro ao subir imagem. Verifique a conexão.");
-      toast.dismiss(toastId);
-    } finally {
-      setIsUploading(false); // Destrava o botão para o próximo upload
+      
+      toast.dismiss(toastId); // Tira a mensagem de "Enviando..." da tela
     }
-  };
+  } catch (error) {
+    // 🚨 LOG DE ERRO: Se a internet cair ou o Cloudinary rejeitar, cai aqui
+    console.error("Erro no upload JNC:", error);
+    toast.error("Erro ao subir imagem. Verifique a internet ou o tamanho do arquivo.");
+    toast.dismiss(toastId);
+  } finally {
+    setIsUploading(false); // Destrava o botão para a próxima foto
+  }
+};
 
   // --- TRADUTORES (Transformam nomes técnicos em nomes para humanos) ---
   const getCategoryLabel = (category: string) => {
