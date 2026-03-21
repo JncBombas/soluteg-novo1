@@ -156,7 +156,7 @@ export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmen
           ) : (
             <Upload className="mr-2 h-4 w-4" />
           )}
-          {isUploading ? "Subindo..." : "Adicionar Foto"}
+          {isUploading ? "Subindo..." : "Enviar Arquivos"}
           
           <input
             type="file"

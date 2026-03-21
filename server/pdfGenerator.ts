@@ -1,10 +1,11 @@
 import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
-import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId } from './workOrdersAuxDb';
+import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId, getAttachmentsByWorkOrderId } from './workOrdersAuxDb';
 import { getInspectionTasksByWorkOrder, getChecklistsByInspectionTask } from './checklistsDb';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios'; 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
   
   // Buscar tarefas de inspeção com checklists
   const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
+
+  // 📸 NOVO: Busca as fotos que você acabou de salvar no Cloudinary  
+  const attachments = await getAttachmentsByWorkOrderId(workOrderId);
   
   // Buscar todos os checklists de todas as tarefas
   const tasksWithChecklists = await Promise.all(
@@ -59,8 +63,8 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
       const pageWidth = doc.page.width;
       const leftMargin = 40;
-      const rightMargin = pageWidth - 40;
-      const contentWidth = rightMargin - leftMargin;
+      const rightMargin = pageWidth - 80;
+      const goldColor = '#D4A84B';
 
       // === CABEÇALHO COM LOGO ===
       let headerY = 30;
@@ -599,6 +603,40 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
+
+      // === NOVO: RELATÓRIO FOTOGRÁFICO ===
+      const images = attachments?.filter(a => a.fileType?.includes('image')) || [];
+      
+      if (images.length > 0) {
+        // Pula para nova página se estiver muito no fim
+        if (currentY > doc.page.height - 150) {
+          doc.addPage();
+          currentY = 40;
+        }
+
+        doc.fontSize(11).fillColor('#D4A84B').font('Helvetica-Bold').text('Relatório Fotográfico', leftMargin, currentY);
+        currentY += 25;
+
+        const imgWidth = (contentWidth / 2) - 10;
+        
+        for (let i = 0; i < images.length; i++) {
+          const col = i % 2;
+          const xPos = leftMargin + (col * (imgWidth + 20));
+          
+          if (i > 0 && col === 0) currentY += 145; // Espaço para a próxima linha de fotos
+          if (currentY > doc.page.height - 150) { doc.addPage(); currentY = 40; }
+
+          try {
+            // Baixa a imagem do Cloudinary para o PDF
+            const response = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
+            doc.image(response.data, xPos, currentY, { width: imgWidth, height: 120, fit: [imgWidth, 120] });
+          } catch (e) {
+            console.error("Erro ao inserir imagem no PDF", e);
+          }
+        }
+        currentY = doc.y + 40;
+      }
+
     // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (OTIMIZADO) ===
       const bottomMargin = 40;
       const signatureBlockHeight = 110; 
@@ -640,23 +678,31 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      // --- Assinatura do Cliente ---
+     // --- Assinatura do Cliente (SÓ APARECE SE TIVER SIDO ASSINADA) ---
       const clientSig = (workOrder as any).clientSignature;
-      if (clientSig) {
+
+      if (clientSig && clientSig.length > 50) { 
         try {
+          // 1. Desenha a Imagem da Assinatura
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
           doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
-        } catch (e) { console.error('Erro assinatura cliente', e); }
-      }
+          
+          // 2. Desenha a Linha (Régua)
+          doc.strokeColor('#333333').lineWidth(0.5)
+             .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
-      doc.strokeColor('#333333').lineWidth(0.5)
-         .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
+          // 3. Desenha os Textos (Título e Nome)
+          const nomeClienteAssinante = (workOrder as any).clientName || 'Cliente';
+          doc.fontSize(8).fillColor('#666666').font('Helvetica')
+             .text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
+             .text(`Nome: ${nomeClienteAssinante}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      const nomeClienteAssinante = (workOrder as any).clientName || '________________';
-
-      doc.text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
-         .text(`Nome: ${nomeClienteAssinante}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
-
+        } catch (e) { 
+          console.error('Erro ao renderizar assinatura do cliente', e); 
+        }
+      } 
+      // Se não entrar no IF, o código pula direto para o rodapé e não deixa rastro do cliente.
+      
       // === RODAPÉ ELETRÔNICO FINAL ===
       const footerTextY = doc.page.height - 30;
       doc.fontSize(7).fillColor('#999999').font('Helvetica');
