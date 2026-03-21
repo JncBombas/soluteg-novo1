@@ -63,8 +63,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
       const pageWidth = doc.page.width;
       const leftMargin = 40;
-      const rightMargin = pageWidth - 80;
+      const rightMargin = pageWidth - 40;
       const goldColor = '#D4A84B';
+      const contentWidth = pageWidth - 80;
 
       // === CABEÇALHO COM LOGO ===
       let headerY = 30;
