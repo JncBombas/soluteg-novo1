@@ -604,56 +604,44 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += 10;
       }
 
-
-      // === NOVO: RELATÓRIO FOTOGRÁFICO (AGORA EM 3 COLUNAS) ===
+// === RELATÓRIO FOTOGRÁFICO JNC (MODIFICADO: AGORA EM 3 COLUNAS) ===
       const images = attachments?.filter(a => a.fileType?.includes('image')) || [];
       
       if (images.length > 0) {
-        // Pula para nova página se estiver muito no fim
-        if (currentY > doc.page.height - 150) {
+        // [MODIFICADO] Verificação de segurança: se não couber o título, pula página
+        if (currentY > doc.page.height - 150) { 
           doc.addPage();
           currentY = 40;
         }
 
         doc.fontSize(11).fillColor('#D4A84B').font('Helvetica-Bold').text('Relatório Fotográfico', leftMargin, currentY);
-        currentY += 25; // Espaço após o título
+        currentY += 25; 
 
-        // --- A MÁGICA DAS 3 COLUNAS ---
-        // 1. Definimos o número de colunas
-        const numeroColunas = 3;
-        // 2. Calculamos o espaço entre as fotos (gap)
+        // [MODIFICADO] Variáveis de controle da grade de 3 fotos
+        const numeroColunas = 3; 
         const gap = 10; 
-        // 3. Calculamos a largura de cada imagem automaticamente
-        // (Largura Disponível - Gaps) / Número de Colunas
-        const imgWidth = (contentWidth - (gap * (numeroColunas - 1))) / numeroColunas;
-        // Altura fixa para manter a organização
+        const imgWidth = (contentWidth - (gap * (numeroColunas - 1))) / numeroColunas; 
         const imgHeight = 100; 
 
         for (let i = 0; i < images.length; i++) {
-          // Calculamos em qual coluna (0, 1 ou 2) a foto atual vai ficar
-          const col = i % numeroColunas;
+          // [MODIFICADO] Cálculo dinâmico da coluna (0, 1 ou 2) e da posição horizontal (X)
+          const col = i % numeroColunas; 
+          const xPos = leftMargin + (col * (imgWidth + gap)); 
           
-          // Calculamos a posição X (horizontal) da foto
-          const xPos = leftMargin + (col * (imgWidth + gap));
-          
-          // Se for a primeira foto de uma nova linha (coluna 0) e não for a primeira foto de todas, 
-          // pulamos para a próxima linha verticalmente
+          // [MODIFICADO] Lógica de quebra de linha: só aumenta o Y quando volta para a primeira coluna
           if (i > 0 && col === 0) {
-            currentY += imgHeight + gap + 10; // Espaço para a próxima linha de fotos (+10 de margem)
+            currentY += imgHeight + gap + 15; 
           }
 
-          // Verificação de segurança para nova página (se a foto for cortar no fim)
+          // [MODIFICADO] Se a foto for cortar no fim da folha, cria página nova e reseta o Y
           if (currentY > doc.page.height - 150) { 
             doc.addPage(); 
             currentY = 40; 
-            // Como mudou de página, a foto atual volta a ser a "primeira da linha" verticalmente
           }
 
           try {
-            // Baixa a imagem do Cloudinary para o PDF (ArrayBuffer é essencial para o PDFKit)
             const response = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
-            
-            // Desenha a imagem na posição calculada, com tamanho fixo e usando 'fit' para não distorcer
+            // [MODIFICADO] 'fit' garante que a foto do Cloudinary não saia esticada ou amassada
             doc.image(response.data, xPos, currentY, { 
               width: imgWidth, 
               height: imgHeight, 
@@ -661,95 +649,68 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
               align: 'center', 
               valign: 'center' 
             });
-            
           } catch (e) {
-            console.error("Erro ao inserir imagem no PDF da JNC", e);
-            // Se der erro em uma foto, desenhamos um retângulo cinza com um aviso para não quebrar o layout
+            console.error("Erro na imagem JNC", e);
             doc.rect(xPos, currentY, imgWidth, imgHeight).strokeColor('#CCCCCC').stroke();
-            doc.fontSize(8).fillColor('#999999').text('Erro na imagem', xPos, currentY + (imgHeight/2) - 4, { width: imgWidth, align: 'center' });
           }
         }
         
-        // Atualiza o currentY final para o próximo bloco (assinaturas) não sobrepor
-        currentY = doc.y + gap + 20; 
+        // [MODIFICADO - CRÍTICO] Atualiza o currentY para o FINAL das fotos. 
+        // Isso impede que a assinatura suba em cima das imagens.
+        currentY += imgHeight + 35; 
       }
 
-      // === INÍCIO DO BLOCO DE ASSINATURAS INTELIGENTES JNC ===
+      // === BLOCO DE ASSINATURAS (MODIFICADO: POSICIONAMENTO INTELIGENTE) ===
       
-      // 1. Verifica se precisa pular de página para a assinatura não ficar "cortada" no fim
-      if (currentY > doc.page.height - 120) {
+      if (currentY > doc.page.height - 150) {
         doc.addPage();
-        currentY = 40; // Se pulou página, recomeça do topo
+        currentY = 40;
       }
 
-      // 2. Define o ponto de partida logo abaixo do último conteúdo (fotos/texto)
-      const sigStartY = currentY + 20; 
-
-      // 3. Checa se o cliente assinou digitalmente
+      const sigStartY = currentY; 
       const clientSig = (workOrder as any).clientSignature;
-      const hasClientSig = clientSig && clientSig.length > 50;
-
-      // 4. Se o cliente NÃO assinou, sua assinatura fica maior (250px) para ocupar o espaço
+      const hasClientSig = clientSig && clientSig.length > 50; 
+      
+      // [MODIFICADO] Se o cliente não assinou, sua assinatura fica centralizada (Mágica do layout)
       const sigWidth = hasClientSig ? (contentWidth / 2) - 30 : 250; 
-      
-      // 5. MÁGICA DA CENTRALIZAÇÃO:
-      // Se NÃO tem cliente: calcula o centro da página. 
-      // Se TEM cliente: você fica no canto esquerdo (leftMargin).
       const sigCol1X = hasClientSig ? leftMargin : (doc.page.width - sigWidth) / 2; 
+      const sigCol2X = doc.page.width / 2 + 15; 
       
-      // A coluna do cliente é sempre na metade direita da página
-      const sigCol2X = doc.page.width / 2 + 15;
-
-      // Define a altura da imagem e da linha da assinatura
       const imageY = sigStartY; 
-      const sigLineY = imageY + 40;
+      const sigLineY = imageY + 45; 
 
-      // --- PARTE A: SUA ASSINATURA (COLABORADOR / TÉCNICO) ---
+      // --- ASSINATURA JNC ---
       const collaboratorSig = (workOrder as any).collaboratorSignature;
-      
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
-          // Desenha sua assinatura na posição calculada (centralizada ou esquerda)
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
-        } catch (e) { 
-          console.error('Erro ao desenhar sua assinatura', e); 
-        }
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
+        } catch (e) { console.error('Erro na assinatura técnica', e); }
       }
 
-      // Desenha a linha da sua assinatura
-      doc.strokeColor('#333333').lineWidth(0.5)
-         .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
-
+      doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
+      
       const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || 'Técnico Responsável';
-
-      // Escreve os seus dados embaixo da linha
+      
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-
-      // --- PARTE B: ASSINATURA DO CLIENTE (SÓ APARECE SE TIVER DADOS) ---
+      // --- ASSINATURA CLIENTE ---
       if (hasClientSig) {
         try {
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
-          // Desenha a assinatura do cliente sempre na coluna da direita
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
+          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
+          doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
           
-          // Desenha a linha do cliente
-          doc.strokeColor('#333333').lineWidth(0.5)
-             .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
-
           const nomeCliente = (workOrder as any).clientName || 'Cliente';
           doc.fontSize(8).fillColor('#666666').font('Helvetica')
              .text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
              .text(`Nome: ${nomeCliente}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
-        } catch (e) { 
-          console.error('Erro ao desenhar assinatura do cliente', e); 
-        }
-      } 
-      
-      // Atualiza o Y final para que o rodapé saiba onde o documento acabou de verdade
+        } catch (e) { console.error('Erro na assinatura do cliente', e); }
+      }
+
+      // [MODIFICADO] Define o fim real do documento para o rodapé não encavalar
       currentY = sigLineY + 40;
       // === FIM DO BLOCO DE ASSINATURAS ===
 
@@ -771,6 +732,8 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
     }
   }); 
 }
+
+
 
 // === FUNÇÕES AUXILIARES ===
 
