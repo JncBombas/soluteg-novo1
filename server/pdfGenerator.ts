@@ -605,7 +605,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       }
 
 
-      // === NOVO: RELATÓRIO FOTOGRÁFICO ===
+      // === NOVO: RELATÓRIO FOTOGRÁFICO (AGORA EM 3 COLUNAS) ===
       const images = attachments?.filter(a => a.fileType?.includes('image')) || [];
       
       if (images.length > 0) {
@@ -616,107 +616,140 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         }
 
         doc.fontSize(11).fillColor('#D4A84B').font('Helvetica-Bold').text('Relatório Fotográfico', leftMargin, currentY);
-        currentY += 25;
+        currentY += 25; // Espaço após o título
 
-        const imgWidth = (contentWidth / 2) - 10;
-        
+        // --- A MÁGICA DAS 3 COLUNAS ---
+        // 1. Definimos o número de colunas
+        const numeroColunas = 3;
+        // 2. Calculamos o espaço entre as fotos (gap)
+        const gap = 10; 
+        // 3. Calculamos a largura de cada imagem automaticamente
+        // (Largura Disponível - Gaps) / Número de Colunas
+        const imgWidth = (contentWidth - (gap * (numeroColunas - 1))) / numeroColunas;
+        // Altura fixa para manter a organização
+        const imgHeight = 100; 
+
         for (let i = 0; i < images.length; i++) {
-          const col = i % 2;
-          const xPos = leftMargin + (col * (imgWidth + 20));
+          // Calculamos em qual coluna (0, 1 ou 2) a foto atual vai ficar
+          const col = i % numeroColunas;
           
-          if (i > 0 && col === 0) currentY += 145; // Espaço para a próxima linha de fotos
-          if (currentY > doc.page.height - 150) { doc.addPage(); currentY = 40; }
+          // Calculamos a posição X (horizontal) da foto
+          const xPos = leftMargin + (col * (imgWidth + gap));
+          
+          // Se for a primeira foto de uma nova linha (coluna 0) e não for a primeira foto de todas, 
+          // pulamos para a próxima linha verticalmente
+          if (i > 0 && col === 0) {
+            currentY += imgHeight + gap + 10; // Espaço para a próxima linha de fotos (+10 de margem)
+          }
+
+          // Verificação de segurança para nova página (se a foto for cortar no fim)
+          if (currentY > doc.page.height - 150) { 
+            doc.addPage(); 
+            currentY = 40; 
+            // Como mudou de página, a foto atual volta a ser a "primeira da linha" verticalmente
+          }
 
           try {
-            // Baixa a imagem do Cloudinary para o PDF
+            // Baixa a imagem do Cloudinary para o PDF (ArrayBuffer é essencial para o PDFKit)
             const response = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
-            doc.image(response.data, xPos, currentY, { width: imgWidth, height: 120, fit: [imgWidth, 120] });
+            
+            // Desenha a imagem na posição calculada, com tamanho fixo e usando 'fit' para não distorcer
+            doc.image(response.data, xPos, currentY, { 
+              width: imgWidth, 
+              height: imgHeight, 
+              fit: [imgWidth, imgHeight], 
+              align: 'center', 
+              valign: 'center' 
+            });
+            
           } catch (e) {
-            console.error("Erro ao inserir imagem no PDF", e);
+            console.error("Erro ao inserir imagem no PDF da JNC", e);
+            // Se der erro em uma foto, desenhamos um retângulo cinza com um aviso para não quebrar o layout
+            doc.rect(xPos, currentY, imgWidth, imgHeight).strokeColor('#CCCCCC').stroke();
+            doc.fontSize(8).fillColor('#999999').text('Erro na imagem', xPos, currentY + (imgHeight/2) - 4, { width: imgWidth, align: 'center' });
           }
         }
-        currentY = doc.y + 40;
+        
+        // Atualiza o currentY final para o próximo bloco (assinaturas) não sobrepor
+        currentY = doc.y + gap + 20; 
       }
 
-    // === BLOCO DE FINALIZAÇÃO E ASSINATURAS (OTIMIZADO) ===
-      const bottomMargin = 40;
-      const signatureBlockHeight = 110; 
-      const sigStartY = doc.page.height - bottomMargin - signatureBlockHeight;
+      // === INÍCIO DO BLOCO DE ASSINATURAS INTELIGENTES JNC ===
+      
+      // Definimos o ponto de partida das assinaturas com base no currentY atual
+      const sigStartY = currentY;
 
-      // Só cria nova página se o conteúdo técnico invadir o espaço do rodapé
-      if (currentY > sigStartY - 10) {
-        doc.addPage();
-        currentY = 40;
-      }
+      const clientSig = (workOrder as any).clientSignature;
+      const hasClientSig = clientSig && clientSig.length > 50;
 
-      // Título "Assinaturas" no rodapé fixo
-      doc.fontSize(11)
-         .fillColor('#D4A84B')
-         .font('Helvetica-Bold')
-         .text('Assinaturas', leftMargin, sigStartY);
+      // Se o cliente não assinou, a sua assinatura ganha destaque (250px)
+      const sigWidth = hasClientSig ? (contentWidth / 2) - 30 : 250; 
+      
+      // Centraliza você se o cliente não assinou, senão fica na esquerda
+      const sigCol1X = hasClientSig ? leftMargin : (doc.page.width - sigWidth) / 2; 
+      const sigCol2X = doc.page.width / 2 + 15;
 
       const imageY = sigStartY + 15; 
-      const sigLineY = imageY + 40; 
-      const sigWidth = (contentWidth / 2) - 30;
-      const sigCol1X = leftMargin;
-      const sigCol2X = pageWidth / 2 + 15;
+      const sigLineY = imageY + 40;
 
-      // --- Assinatura do Colaborador ---
+      // --- PARTE A: SUA ASSINATURA (COLABORADOR) ---
       const collaboratorSig = (workOrder as any).collaboratorSignature;
+      
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
           doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
-        } catch (e) { console.error('Erro assinatura colaborador', e); }
+        } catch (e) { 
+          console.error('Erro ao desenhar sua assinatura', e); 
+        }
       }
 
       doc.strokeColor('#333333').lineWidth(0.5)
          .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
-      const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || (workOrder as any).assignedTo || '________________';
+      const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || 'Técnico Responsável';
 
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-     // --- Assinatura do Cliente (SÓ APARECE SE TIVER SIDO ASSINADA) ---
-      const clientSig = (workOrder as any).clientSignature;
 
-      if (clientSig && clientSig.length > 50) { 
+      // --- PARTE B: ASSINATURA DO CLIENTE (SÓ SE EXISTIR) ---
+      if (hasClientSig) {
         try {
-          // 1. Desenha a Imagem da Assinatura
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
           doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
           
-          // 2. Desenha a Linha (Régua)
           doc.strokeColor('#333333').lineWidth(0.5)
              .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
-          // 3. Desenha os Textos (Título e Nome)
-          const nomeClienteAssinante = (workOrder as any).clientName || 'Cliente';
+          const nomeCliente = (workOrder as any).clientName || 'Cliente';
           doc.fontSize(8).fillColor('#666666').font('Helvetica')
              .text('Assinatura do Cliente', sigCol2X, sigLineY + 5, { width: sigWidth, align: 'center' })
-             .text(`Nome: ${nomeClienteAssinante}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
-
+             .text(`Nome: ${nomeCliente}`, sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
         } catch (e) { 
-          console.error('Erro ao renderizar assinatura do cliente', e); 
+          console.error('Erro ao desenhar assinatura do cliente', e); 
         }
       } 
-      // Se não entrar no IF, o código pula direto para o rodapé e não deixa rastro do cliente.
-      
+      // === FIM DO BLOCO DE ASSINATURAS ===
+
       // === RODAPÉ ELETRÔNICO FINAL ===
       const footerTextY = doc.page.height - 30;
       doc.fontSize(7).fillColor('#999999').font('Helvetica');
+      
       const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
       const footerWidth = doc.widthOfString(footerText);
-      const footerX = (pageWidth - footerWidth) / 2;
+      const footerX = (doc.page.width - footerWidth) / 2;
+      
       doc.text(footerText, footerX, footerTextY, { lineBreak: false });
 
       doc.end();
+
     } catch (error) {
-      reject(error);
+       // Este catch final garante que qualquer erro na geração não derrube o servidor
+       console.error("Erro geral na geração do PDF:", error);
     }
-  });
+  }); 
 }
 
 // === FUNÇÕES AUXILIARES ===
