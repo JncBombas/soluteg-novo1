@@ -660,34 +660,46 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += imgHeight + 35; 
       }
 
-      // === BLOCO DE ASSINATURAS (MODIFICADO: POSICIONAMENTO INTELIGENTE) ===
+      // === BLOCO DE ASSINATURAS (FIXADO NO FINAL DA PÁGINA) ===
       
-      if (currentY > doc.page.height - 150) {
+      // [MODIFICADO] Definimos que a assinatura vai começar sempre a 160 pixels do fim da folha.
+      // doc.page.height é a altura total da página.
+      const posicaoFixaRodape = doc.page.height - 160;
+
+      // [MODIFICADO] Se o texto/fotos de cima já chegaram onde a assinatura deveria estar,
+      // a gente pula para uma folha nova para não atropelar.
+      if (currentY > posicaoFixaRodape - 20) {
         doc.addPage();
-        currentY = 40;
+        currentY = 40; // Reseta o cursor na página nova
       }
 
-      const sigStartY = currentY; 
+      // [MODIFICADO] A MÁGICA: sigStartY agora é fixo no pé da página, não sobe mais!
+      const sigStartY = posicaoFixaRodape; 
+
       const clientSig = (workOrder as any).clientSignature;
       const hasClientSig = clientSig && clientSig.length > 50; 
       
-      // [MODIFICADO] Se o cliente não assinou, sua assinatura fica centralizada (Mágica do layout)
+      // Se não tiver assinatura do cliente, a sua aumenta para 250px e centraliza
       const sigWidth = hasClientSig ? (contentWidth / 2) - 30 : 250; 
+      
+      // Se tiver cliente, você fica na esquerda. Se não tiver, o código calcula o centro da folha.
       const sigCol1X = hasClientSig ? leftMargin : (doc.page.width - sigWidth) / 2; 
       const sigCol2X = doc.page.width / 2 + 15; 
       
       const imageY = sigStartY; 
       const sigLineY = imageY + 45; 
 
-      // --- ASSINATURA JNC ---
+      // --- TUA ASSINATURA (JNC) ---
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
+          // Desenha sua assinatura na posição fixa calculada
           doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 40 });
         } catch (e) { console.error('Erro na assinatura técnica', e); }
       }
 
+      // Desenha a linha preta da assinatura
       doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
       
       const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || 'Técnico Responsável';
@@ -696,7 +708,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
-      // --- ASSINATURA CLIENTE ---
+      // --- ASSINATURA DO CLIENTE (SÓ SE EXISTIR) ---
       if (hasClientSig) {
         try {
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
@@ -710,7 +722,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         } catch (e) { console.error('Erro na assinatura do cliente', e); }
       }
 
-      // [MODIFICADO] Define o fim real do documento para o rodapé não encavalar
+      // [MODIFICADO] Informa que o documento acabou depois das assinaturas
       currentY = sigLineY + 40;
       // === FIM DO BLOCO DE ASSINATURAS ===
 
