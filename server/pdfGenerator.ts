@@ -676,50 +676,67 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
       // === INÍCIO DO BLOCO DE ASSINATURAS INTELIGENTES JNC ===
       
-      // Definimos o ponto de partida das assinaturas com base no currentY atual
-      const sigStartY = currentY;
+      // 1. Verifica se precisa pular de página para a assinatura não ficar "cortada" no fim
+      if (currentY > doc.page.height - 120) {
+        doc.addPage();
+        currentY = 40; // Se pulou página, recomeça do topo
+      }
 
+      // 2. Define o ponto de partida logo abaixo do último conteúdo (fotos/texto)
+      const sigStartY = currentY + 20; 
+
+      // 3. Checa se o cliente assinou digitalmente
       const clientSig = (workOrder as any).clientSignature;
       const hasClientSig = clientSig && clientSig.length > 50;
 
-      // Se o cliente não assinou, a sua assinatura ganha destaque (250px)
+      // 4. Se o cliente NÃO assinou, sua assinatura fica maior (250px) para ocupar o espaço
       const sigWidth = hasClientSig ? (contentWidth / 2) - 30 : 250; 
       
-      // Centraliza você se o cliente não assinou, senão fica na esquerda
+      // 5. MÁGICA DA CENTRALIZAÇÃO:
+      // Se NÃO tem cliente: calcula o centro da página. 
+      // Se TEM cliente: você fica no canto esquerdo (leftMargin).
       const sigCol1X = hasClientSig ? leftMargin : (doc.page.width - sigWidth) / 2; 
+      
+      // A coluna do cliente é sempre na metade direita da página
       const sigCol2X = doc.page.width / 2 + 15;
 
-      const imageY = sigStartY + 15; 
+      // Define a altura da imagem e da linha da assinatura
+      const imageY = sigStartY; 
       const sigLineY = imageY + 40;
 
-      // --- PARTE A: SUA ASSINATURA (COLABORADOR) ---
+      // --- PARTE A: SUA ASSINATURA (COLABORADOR / TÉCNICO) ---
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       
       if (collaboratorSig) {
         try {
           let base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
+          // Desenha sua assinatura na posição calculada (centralizada ou esquerda)
           doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
         } catch (e) { 
           console.error('Erro ao desenhar sua assinatura', e); 
         }
       }
 
+      // Desenha a linha da sua assinatura
       doc.strokeColor('#333333').lineWidth(0.5)
          .moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
 
       const nomeColaborador = (workOrder as any).collaboratorName || (workOrder as any).technicianName || 'Técnico Responsável';
 
+      // Escreve os seus dados embaixo da linha
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
          .text('Assinatura do Colaborador', sigCol1X, sigLineY + 5, { width: sigWidth, align: 'center' })
          .text(`Nome: ${nomeColaborador}`, sigCol1X, sigLineY + 15, { width: sigWidth, align: 'center' });
 
 
-      // --- PARTE B: ASSINATURA DO CLIENTE (SÓ SE EXISTIR) ---
+      // --- PARTE B: ASSINATURA DO CLIENTE (SÓ APARECE SE TIVER DADOS) ---
       if (hasClientSig) {
         try {
           let base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
+          // Desenha a assinatura do cliente sempre na coluna da direita
           doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth/4), imageY, { width: sigWidth/2, height: 35 });
           
+          // Desenha a linha do cliente
           doc.strokeColor('#333333').lineWidth(0.5)
              .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
 
@@ -731,6 +748,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
           console.error('Erro ao desenhar assinatura do cliente', e); 
         }
       } 
+      
+      // Atualiza o Y final para que o rodapé saiba onde o documento acabou de verdade
+      currentY = sigLineY + 40;
       // === FIM DO BLOCO DE ASSINATURAS ===
 
       // === RODAPÉ ELETRÔNICO FINAL ===
