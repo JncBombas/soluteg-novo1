@@ -43,7 +43,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
   // Calcular total de materiais
   const totalMaterials = materials.reduce((sum: number, m: any) => sum + (m.totalCost || 0), 0);
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async(resolve, reject) => {
     try {
       // Criar documento PDF - tamanho A4
       const doc = new PDFDocument({
