@@ -98,7 +98,7 @@ export async function getWorkOrderById(id: number) {
       collaboratorName: workOrders.collaboratorName,
       clientSignature: workOrders.clientSignature,
       // Dados do cliente
-      clientName: workOrders.clientName || clients.name,
+      clientName: clients.name, // Busca direto da tabela de clientes vinculada
       clientAddress: clients.address,
       clientPhone: clients.phone,
       clientEmail: clients.email,
