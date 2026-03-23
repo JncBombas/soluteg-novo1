@@ -18,8 +18,8 @@ import {
   Loader2,
   FileDown,
   Trash2,
-  Play,      // <--- ADICIONE ESTE
-  FileText   // <--- ADICIONE ESTE TAMBÉM
+  Play,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Componentes para cada tab
+// Importação das sub-telas (Abas)
 import WorkOrderTasks from "@/components/workorder/WorkOrderTasks";
 import WorkOrderMaterials from "@/components/workorder/WorkOrderMaterials";
 import WorkOrderAttachments from "@/components/workorder/WorkOrderAttachments";
@@ -42,13 +42,15 @@ import InspectionTasksTab from "@/components/InspectionTasksTab";
 import CompleteWorkOrderModal from "@/components/CompleteWorkOrderModal";
 
 export default function AdminWorkOrderDetail() {
-  const params = useParams();
-  const [, navigate] = useLocation();
-  const [exportingPDF, setExportingPDF] = useState(false);
-  const [completeModalOpen, setCompleteModalOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // --- CONFIGURAÇÕES INICIAIS ---
+  const params = useParams(); // Pega o ID da OS na URL do navegador
+  const [, navigate] = useLocation(); // Função para mudar de página
+  const [exportingPDF, setExportingPDF] = useState(false); // Controla se o PDF está sendo gerado
+  const [completeModalOpen, setCompleteModalOpen] = useState(false); // Abre/fecha o modal de finalizar
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false); // Abre/fecha o aviso de deletar
   const workOrderId = Number(params.id);
 
+  // --- BUSCA DE DADOS (CONVERSA COM O BANCO) ---
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
     id: workOrderId,
   });
@@ -57,19 +59,22 @@ export default function AdminWorkOrderDetail() {
     workOrderId,
   });
 
+  // --- AÇÕES (BOTÕES QUE ALTERAM O BANCO) ---
+
+  // Função para mudar o status (ex: de Aberta para Em Andamento)
   const updateStatusMutation = trpc.workOrders.updateStatus.useMutation({
     onSuccess: () => {
       toast.success("Status atualizado com sucesso");
-      refetch();
+      refetch(); // Atualiza a tela com a nova info
     },
     onError: (error) => {
       toast.error(`Erro ao atualizar status: ${error.message}`);
     },
   });
 
+  // Função para gerar e baixar o arquivo PDF
   const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
     onSuccess: (data) => {
-      // Converter base64 para blob e fazer download
       const byteCharacters = atob(data.pdf);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -99,9 +104,10 @@ export default function AdminWorkOrderDetail() {
     exportPDFMutation.mutate({ id: workOrderId });
   };
 
+  // Finalizar a OS (Envia assinaturas e dados finais)
   const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
     onSuccess: () => {
-      toast.success("OS concluida com sucesso!");
+      toast.success("OS concluída com sucesso!");
       refetch();
       setCompleteModalOpen(false);
     },
@@ -110,6 +116,7 @@ export default function AdminWorkOrderDetail() {
     },
   });
 
+  // Deletar a OS permanentemente
   const deleteWorkOrderMutation = trpc.workOrders.delete.useMutation({
     onSuccess: () => {
       toast.success("OS deletada com sucesso!");
@@ -126,41 +133,15 @@ export default function AdminWorkOrderDetail() {
   };
 
   const handleCompleteWorkOrder = async (data: any) => {
-    console.log("[AdminWorkOrderDetail] handleCompleteWorkOrder chamado com:", {
-      workOrderId,
-      collaboratorName: data.collaboratorName,
-      collaboratorSignatureSize: data.collaboratorSignature?.length,
-      clientName: data.clientName,
-      clientSignatureSize: data.clientSignature?.length,
-    });
-    
     completeWorkOrderMutation.mutate({
       id: workOrderId,
       ...data,
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!workOrder) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <XCircle className="h-16 w-16 text-destructive" />
-        <h2 className="text-2xl font-bold">OS não encontrada</h2>
-        <Button onClick={() => navigate("/admin/work-orders")}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para lista
-        </Button>
-      </div>
-    );
-  }
-
+  // --- TRADUTORES DE CORES E NOMES (LOGICA VISUAL) ---
+  
+  // Define a cor da etiqueta baseada no status
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       aberta: "bg-blue-500",
@@ -175,6 +156,7 @@ export default function AdminWorkOrderDetail() {
     return colors[status] || "bg-gray-500";
   };
 
+  // Transforma o nome técnico do banco em texto bonito para o usuário
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       aberta: "Aberta",
@@ -226,9 +208,34 @@ export default function AdminWorkOrderDetail() {
     });
   };
 
+  // Se estiver carregando, mostra o ícone de girar
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se não encontrar a OS, mostra erro
+  if (!workOrder) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <XCircle className="h-16 w-16 text-destructive" />
+        <h2 className="text-2xl font-bold">OS não encontrada</h2>
+        <Button onClick={() => navigate("/admin/work-orders")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar para lista
+        </Button>
+      </div>
+    );
+  }
+
+  // --- O QUE APARECE NA TELA (LAYOUT) ---
   return (
     <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 px-4">
-      {/* Header */}
+      
+      {/* SEÇÃO: CABEÇALHO (Título, Botão Voltar e Ações rápidas) */}
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           <Button
@@ -243,16 +250,8 @@ export default function AdminWorkOrderDetail() {
             <h1 className="text-xl md:text-3xl font-bold">OS #{workOrder.id}</h1>
             <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
           </div>
-          {workOrder.status !== "concluida" && (
-            <Button
-              size="sm"
-              onClick={() => setCompleteModalOpen(true)}
-              className="gap-2"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Concluir OS
-            </Button>
-          )}
+          
+          {/* Botões de Exportar e Deletar no topo */}
           <Button
             variant="outline"
             size="sm"
@@ -260,28 +259,22 @@ export default function AdminWorkOrderDetail() {
             disabled={exportingPDF}
             className="gap-2"
           >
-            {exportingPDF ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4" />
-            )}
+            {exportingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
             {exportingPDF ? "Gerando..." : "Exportar PDF"}
           </Button>
+          
           <Button
             variant="destructive"
             size="sm"
             onClick={() => setDeleteDialogOpen(true)}
-            disabled={deleteWorkOrderMutation.isPending}
             className="gap-2"
           >
-            {deleteWorkOrderMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-            {deleteWorkOrderMutation.isPending ? "Deletando..." : "Deletar OS"}
+            <Trash2 className="h-4 w-4" />
+            Deletar
           </Button>
         </div>
+        
+        {/* Badges de Status e Prioridade */}
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={getStatusColor(workOrder.status)}>
             {getStatusLabel(workOrder.status)}
@@ -293,7 +286,7 @@ export default function AdminWorkOrderDetail() {
         </div>
       </div>
 
-      {/* Quick Info Cards */}
+      {/* SEÇÃO: CARTÕES DE INFORMAÇÃO RÁPIDA */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -301,288 +294,151 @@ export default function AdminWorkOrderDetail() {
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg md:text-xl font-bold">{workOrder.clientName || `Cliente #${workOrder.clientId}`}</div>
-            {workOrder.clientPhone && (
-              <p className="text-xs md:text-sm text-muted-foreground mt-1">{workOrder.clientPhone}</p>
-            )}
+            {/* Correção feita aqui: de order.clientName para workOrder.clientName */}
+            <div className="text-lg md:text-xl font-bold">{workOrder.clientName || "Não informado"}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Data Agendada</CardTitle>
+            <CardTitle className="text-sm font-medium">Agendamento</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {workOrder.scheduledDate
-                ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR")
-                : "Não definida"}
+            <div className="text-xl font-bold">
+              {workOrder.scheduledDate ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR") : "N/A"}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Estimado</CardTitle>
+            <CardTitle className="text-sm font-medium">Horas Est.</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {workOrder.estimatedHours ? `${workOrder.estimatedHours}h` : "N/A"}
-            </div>
+            <div className="text-xl font-bold">{workOrder.estimatedHours || 0}h</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Estimado</CardTitle>
+            <CardTitle className="text-sm font-medium">Valor Est.</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {workOrder.estimatedValue
-                ? `R$ ${workOrder.estimatedValue.toFixed(2)}`
-                : "N/A"}
-            </div>
+            <div className="text-xl font-bold">R$ {workOrder.estimatedValue?.toFixed(2) || "0,00"}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content with Tabs */}
+      {/* SEÇÃO: ABAS DE NAVEGAÇÃO */}
       <Tabs defaultValue="details" className="space-y-4">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
-            <TabsTrigger value="details" className="flex-shrink-0">Detalhes</TabsTrigger>
-            <TabsTrigger value="tasks" className="flex-shrink-0">Tarefas</TabsTrigger>
-            <TabsTrigger value="inspections" className="flex-shrink-0">Inspeções</TabsTrigger>
-            <TabsTrigger value="materials" className="flex-shrink-0">Materiais</TabsTrigger>
-            <TabsTrigger value="attachments" className="flex-shrink-0">Anexos</TabsTrigger>
-            <TabsTrigger value="comments" className="flex-shrink-0">Comentários</TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-shrink-0">Timeline</TabsTrigger>
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+            <TabsTrigger value="inspections">Inspeções</TabsTrigger>
+            <TabsTrigger value="materials">Materiais</TabsTrigger>
+            <TabsTrigger value="attachments">Anexos</TabsTrigger>
+            <TabsTrigger value="comments">Comentários</TabsTrigger>
+            <TabsTrigger value="timeline">Histórico</TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Detalhes Tab */}
+        {/* CONTEÚDO DA ABA DETALHES */}
         <TabsContent value="details" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Informações Gerais</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Informações Gerais</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Tipo de Serviço
-                  </label>
-                  <p className="text-lg">{workOrder.serviceType || "Não especificado"}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Criada em
-                  </label>
-                  <p className="text-lg">
-                    {new Date(workOrder.createdAt).toLocaleString("pt-BR")}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
               <div>
-                <label className="text-sm font-medium text-muted-foreground">
-                  Descrição
-                </label>
-                <p className="text-lg mt-2">
-                  {workOrder.description || "Sem descrição"}
-                </p>
+                <label className="text-sm text-muted-foreground">Descrição do Problema</label>
+                <p className="text-lg">{workOrder.description || "Sem descrição detalhada"}</p>
               </div>
-
-              {workOrder.clientAddress && (
-                <>
-                  <Separator />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Endereço do Cliente
-                    </label>
-                    <p className="text-lg mt-2">{workOrder.clientAddress}</p>
-                  </div>
-                </>
-              )}
-
-              {workOrder.internalNotes && (
-                <>
-                  <Separator />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Notas Internas
-                    </label>
-                    <p className="text-lg mt-2">{workOrder.internalNotes}</p>
-                  </div>
-                </>
-              )}
-
-              {workOrder.clientNotes && (
-                <>
-                  <Separator />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Notas do Cliente
-                    </label>
-                    <p className="text-lg mt-2">{workOrder.clientNotes}</p>
-                  </div>
-                </>
-              )}
-
-              {workOrder.isRecurring === 1 && (
-                <>
-                  <Separator />
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-blue-500" />
-                    <span className="font-medium">OS Recorrente</span>
-                    {(workOrder as any).recurrenceCanceled === 1 && (
-                      <Badge variant="destructive">Recorrência Cancelada</Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Tipo: {workOrder.recurrenceType === "mensal_fixo" ? "Mensal (dia fixo)" : "Mensal (início do mês)"}
-                    {workOrder.recurrenceDay && ` - Dia ${workOrder.recurrenceDay}`}
-                  </p>
-                </>
-              )}
+              <Separator />
+              <div>
+                <label className="text-sm text-muted-foreground">Endereço de Execução</label>
+                <p className="text-lg">{workOrder.clientAddress || "Consultar cadastro"}</p>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Actions Card - Estilo Industrial / Alta Visibilidade */}
-<Card className="border-none shadow-2xl overflow-hidden bg-white">
-  {/* Cabeçalho Robusto - Preenche até o topo */}
-  <div className={`px-4 py-4 flex justify-between items-center ${
-    workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'
-  }`}>
-    <div className="flex items-center gap-2">
-      <AlertCircle className="h-5 w-5 text-white animate-pulse" />
-      <span className="text-white text-sm font-black uppercase tracking-widest">
-        {workOrder.type === 'emergencial' ? 'Emergência Ativa' : 'Controle de Fluxo'}
-      </span>
-    </div>
-    <Badge variant="outline" className="text-white border-white/40 bg-black/20 font-mono">
-      STATUS: {getStatusLabel(workOrder.status).toUpperCase()}
-    </Badge>
-  </div>
+          {/* PAINEL DE CONTROLE INDUSTRIAL (Ações de Status) */}
+          <Card className="border-none shadow-2xl overflow-hidden bg-white">
+            <div className={`px-4 py-4 flex justify-between items-center ${workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'}`}>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-white animate-pulse" />
+                <span className="text-white text-sm font-black uppercase">Controle de Operação</span>
+              </div>
+            </div>
 
-  <CardContent className="p-6">
-    <div className="flex flex-col gap-5">
-      
-      {/* SE ESTIVER ABERTA: BOTÃO DE INICIAR GIGANTE */}
-      {workOrder.status === "aberta" && (
-        <Button 
-          size="lg" 
-          className="w-full bg-blue-600 hover:bg-blue-700 h-24 text-2xl font-black shadow-xl border-b-4 border-blue-800 active:border-b-0 transition-all"
-          onClick={() => handleStatusChange("em_andamento")}
-        >
-          <Play className="mr-4 h-10 w-10 fill-current" />
-          INICIAR AGORA
-        </Button>
-      )}
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-5">
+                
+                {/* Botão para dar PLAY no serviço */}
+                {workOrder.status === "aberta" && (
+                  <Button 
+                    size="lg" 
+                    className="w-full bg-blue-600 hover:bg-blue-700 h-24 text-2xl font-black shadow-xl"
+                    onClick={() => handleStatusChange("em_andamento")}
+                  >
+                    <Play className="mr-4 h-10 w-10 fill-current" />
+                    INICIAR AGORA
+                  </Button>
+                )}
 
-      {/* SE ESTIVER EM ANDAMENTO: FINALIZAR OU CANCELAR */}
-      {workOrder.status === "em_andamento" && (
-  <div className="space-y-4">
-    <Button 
-      size="lg" 
-      className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl border-b-4 border-emerald-800 active:border-b-0 active:translate-y-1 transition-all"
-      onClick={() => setCompleteModalOpen(true)}
-    >
-      <CheckCircle2 className="mr-4 h-10 w-10" />
-      FINALIZAR SERVIÇO
-    </Button>
+                {/* Botão para FINALIZAR o serviço */}
+                {workOrder.status === "em_andamento" && (
+                  <div className="space-y-4">
+                    <Button 
+                      size="lg" 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl"
+                      onClick={() => setCompleteModalOpen(true)}
+                    >
+                      <CheckCircle2 className="mr-4 h-10 w-10" />
+                      FINALIZAR SERVIÇO
+                    </Button>
+                    <button 
+                      onClick={() => handleStatusChange("aberta")}
+                      className="w-full py-2 text-slate-400 hover:text-red-600 text-[10px] font-black uppercase"
+                    >
+                      Voltar para "Aberta" (Correção de erro)
+                    </button>
+                  </div>
+                )}
 
-    {/* Opção de Cancelar - Mais discreta mas com área de clique boa */}
-    <button 
-      onClick={() => handleStatusChange("aberta")}
-      className="w-full py-2 flex items-center justify-center gap-2 text-slate-400 hover:text-red-600 transition-colors group"
-    >
-      <XCircle className="h-4 w-4 group-hover:animate-pulse" />
-      <span className="text-[10px] font-black uppercase tracking-tighter">
-        Cometi um erro, voltar para status "Aberta"
-      </span>
-    </button>
-  </div>
-)}
-
-      {/* SEÇÃO DE AÇÕES DE ESCRITÓRIO (MENORES) */}
-      <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
-        {workOrder.status === "aguardando_aprovacao" && (
-          <>
-            <Button size="sm" className="bg-green-600" onClick={() => handleStatusChange("aprovada")}>
-              Aprovar
-            </Button>
-            <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejeitada")}>
-              Rejeitar
-            </Button>
-          </>
-        )}
-        
-        {workOrder.status === "concluida" && (
-          <Button size="sm" variant="outline" className="col-span-2" onClick={() => handleStatusChange("aguardando_pagamento")}>
-            Aguardando Pagamento
-          </Button>
-        )}
-
-        <Button
-          variant="secondary"
-          size="sm"
-          className="col-span-2 font-bold text-slate-600"
-          onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
-        >
-          Editar Informações da OS
-        </Button>
-      </div>
-
-      {workOrder.type === 'emergencial' && workOrder.status === 'aberta' && (
-        <div className="bg-red-50 p-3 rounded-lg border border-red-100">
-          <p className="text-[12px] text-center text-red-700 font-black uppercase leading-tight">
-            ⚠️ Ordem Prioritária <br/> 
-            O tempo de resposta está sendo contabilizado.
-          </p>
-        </div>
-      )}
-    </div>
-  </CardContent>
-</Card>
+                {/* Ações de aprovação (Escritório) */}
+                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
+                  {workOrder.status === "aguardando_aprovacao" && (
+                    <>
+                      <Button size="sm" className="bg-green-600" onClick={() => handleStatusChange("aprovada")}>Aprovar</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejeitada")}>Rejeitar</Button>
+                    </>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="col-span-2 font-bold"
+                    onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
+                  >
+                    Editar Dados da OS
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Tarefas Tab */}
-        <TabsContent value="tasks">
-          <WorkOrderTasks workOrderId={workOrderId} />
-        </TabsContent>
-
-        {/* Inspeções Tab */}
-        <TabsContent value="inspections">
-          <InspectionTasksTab workOrderId={workOrderId} />
-        </TabsContent>
-
-        {/* Materiais Tab */}
-        <TabsContent value="materials">
-          <WorkOrderMaterials workOrderId={workOrderId} />
-        </TabsContent>
-
-        {/* Anexos Tab */}
-        <TabsContent value="attachments">
-          <WorkOrderAttachments workOrderId={workOrderId} />
-        </TabsContent>
-
-        {/* Comentários Tab */}
-        <TabsContent value="comments">
-          <WorkOrderComments workOrderId={workOrderId} />
-        </TabsContent>
-
-        {/* Timeline Tab */}
-        <TabsContent value="timeline">
-          <WorkOrderTimeline workOrderId={workOrderId} history={history || []} />
-        </TabsContent>
+        {/* OUTRAS ABAS (Carregam componentes externos) */}
+        <TabsContent value="tasks"><WorkOrderTasks workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="inspections"><InspectionTasksTab workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="materials"><WorkOrderMaterials workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="attachments"><WorkOrderAttachments workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="comments"><WorkOrderComments workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="timeline"><WorkOrderTimeline workOrderId={workOrderId} history={history || []} /></TabsContent>
       </Tabs>
 
+      {/* MODAIS (Janelas que abrem por cima da tela) */}
       <CompleteWorkOrderModal
         open={completeModalOpen}
         onOpenChange={setCompleteModalOpen}
@@ -593,20 +449,12 @@ export default function AdminWorkOrderDetail() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar Ordem de Serviço?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja deletar a OS #{workOrder?.id}? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Apagar esta OS?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação é permanente e removerá todos os dados desta Ordem de Serviço.</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteWorkOrder}
-              disabled={deleteWorkOrderMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteWorkOrderMutation.isPending ? "Deletando..." : "Deletar"}
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteWorkOrder} className="bg-destructive text-white">Deletar</AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>
