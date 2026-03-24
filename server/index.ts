@@ -24,14 +24,11 @@ async function startServer() {
   registerOAuthRoutes(app);
 
   // -----------------------------------------------------------
-  // 📸 ROTA TURBINADA: Upload Múltiplo de Fotos (JNC Elétrica)
+  // 📸 ROTA CORRIGIDA (JNC) - Sem erros de sintaxe
   // -----------------------------------------------------------
   app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
-
-      // Log para conferir no 'pm2 logs'
-      console.log(`[JNC Upload] Recebidos ${files?.length || 0} arquivos.`);
 
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, message: "Nenhum arquivo enviado" });
@@ -39,7 +36,6 @@ async function startServer() {
 
       const { storagePut } = await import("./storage");
       
-      // Sobe todas as fotos em paralelo para o Cloudinary
       const uploadPromises = files.map(async (file) => {
         const { url, key } = await storagePut(
           file.originalname,
@@ -58,7 +54,6 @@ async function startServer() {
 
       const results = await Promise.all(uploadPromises);
 
-      // Retorna 'urls' para o seu componente WorkOrderAttachments.tsx
       res.json({ 
         success: true, 
         urls: results 
@@ -66,7 +61,7 @@ async function startServer() {
 
     } catch (error: any) {
       console.error("Erro no upload JNC:", error);
-      res.status(500).json({ success: false, message: error.message || "Erro no processamento" });
+      res.status(500).json({ success: false, message: error.message || "Erro interno" });
     }
   });
 
