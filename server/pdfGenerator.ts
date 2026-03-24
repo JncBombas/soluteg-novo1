@@ -30,7 +30,7 @@ function isMarcado(value: any): boolean {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number')  return value === 1;
   const s = String(value).toLowerCase().trim();
-  return s === 'sim' || s === 'true' || s === '1' || s === 'yes';
+  return s === 'sim' || s === 'true' || s === '1' || s === 'yes' || s === 'ok';
 }
  
 /**
@@ -41,6 +41,7 @@ function isMarcado(value: any): boolean {
  */
 function formatLabel(raw: string): string {
   const aliases: Record<string, string> = {
+    tensão:            'Tensão',
     tensao:            'Tensão',
     fases:             'Fases',
     quantidade_bombas: 'Qtd. bombas',
@@ -78,11 +79,17 @@ function splitValueUnit(key: string, value: any): [string, string] {
  
   if (k.startsWith('corrente')) return [cleanValue, 'A'];
   if (k === 'tensao')           return [cleanValue, 'V'];
+  if (k === 'tensão')           return [cleanValue, 'V'];
   if (k === 'potencia')         return [cleanValue, 'CV'];
+  if (k === 'nivel')            return [cleanValue, 'l'];
+  if (k === 'frequencia')       return [cleanValue, 'Hz'];
+  if (k === 'horimetro')        return [cleanValue, 'h'];
+  if (k === 'horímetro')        return [cleanValue, 'h'];
   if (k === 'pressao')          return [cleanValue, 'bar'];
   if (k === 'vazao')            return [cleanValue, 'm³/h'];
   if (k === 'rpm')              return [cleanValue, 'rpm'];
   if (k === 'fases')            return [formatFieldValue(value), ''];
+  
   return [formatFieldValue(value), ''];
 }
  
@@ -286,17 +293,37 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // comparar === 'sim', para aceitar qualquer variação
                   // de case e tipo que o banco possa mandar.
                   // ================================================
-                  const visualKeys = Object.keys(responses).filter(k =>
-                    k.toLowerCase().startsWith('visual_items_')
-                  );
+                  // Substitua a definição antiga por esta:
+    const visualKeys = Object.keys(responses).filter(k => {
+    const key = k.toLowerCase();
+    const value = String(responses[k]).trim().toUpperCase();
+  
+    // Captura se começar com o prefixo OU se o valor for um status de inspeção
+    return key.startsWith('visual_items_') || 
+         value === 'OK' || 
+         value === 'NOK' || 
+         value === 'N/A' ||
+         value === 'NORMAL'; // Adicionado 'Normal' que aparece no Gerador 
+    });
  
-                  if (visualKeys.length > 0) {
-                    doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
-                       .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
-                    currentY += 4;
-                    doc.strokeColor('#E0E0E0').lineWidth(0.5)
-                       .moveTo(cardX + 10, currentY).lineTo(cardX + cardW - 10, currentY).stroke();
-                    currentY += 8;
+                 if (visualKeys.length > 0) {
+    // 1. Define o estilo e escreve o texto
+    doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
+       .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
+
+    // 2. Aumente o incremento aqui. 
+    // Se a fonte é 8, currentY += 4 é muito pouco. Use pelo menos 10 ou 12.
+    currentY += 10; 
+
+    // 3. Desenha a linha
+    doc.strokeColor('#E0E0E0').lineWidth(0.5)
+       .moveTo(cardX + 10, currentY)
+       .lineTo(cardX + cardW - 10, currentY)
+       .stroke();
+
+    // 4. Espaço após a linha para o próximo conteúdo
+    currentY += 8;
+}
  
                     // Agrupa por nome do item
                     const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
@@ -387,12 +414,17 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // já embutida no valor antes de adicionar a sua
                   // (evita "220V V").
                   // ================================================
-                  const technicalFields = Object.entries(responses).filter(([key]) => {
-                    const k = key.toLowerCase();
-                    return !k.startsWith('visual_items_') &&
-                           k !== 'observations' && k !== 'observacoes' &&
-                           k !== 'notes'        && k !== 'comments';
-                  });
+                  // Substitua a definição antiga por esta:
+const technicalFields = Object.entries(responses).filter(([key, value]) => {
+  const k = key.toLowerCase();
+  const v = String(value).trim().toUpperCase();
+  
+  // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
+  const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
+  const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
+  
+  return !isVisual && !isObs;
+});
  
                   if (technicalFields.length > 0) {
                     doc.strokeColor('#E0E0E0').lineWidth(0.5)
@@ -573,9 +605,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
     } catch (error) {
       console.error('Erro geral na geração do PDF:', error);
-    }
-  });
-}
+    })
+  };
+
  
 // ============================================================
 // 🔧 FUNÇÕES AUXILIARES
