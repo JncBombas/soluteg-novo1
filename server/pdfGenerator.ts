@@ -338,84 +338,77 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   //   [■ OK]  [■ NOK]  [■ N/A]   Nome do Item
                   // ==============================================
                   if (responses.visual_items) {
- 
-                    // Título da seção
-                    doc.rect(cardX + 5, currentY, cardWidth - 10, 16).fill('#E8E8E8');
-                    doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold')
-                       .text('Inspeção Visual', cardX + 10, currentY + 3);
-                    currentY += 22;
- 
-                    // Parseia se vier como string
-                    const visualData = typeof responses.visual_items === 'string'
-                      ? JSON.parse(responses.visual_items)
-                      : responses.visual_items;
- 
-                    // Lista de itens que podem aparecer na inspeção visual
-                    const items = ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'];
- 
-                    // Dimensões dos checkboxes e espaçamentos
-                    const checkSize   = 9;  // Lado do quadrado do checkbox
-                    const checkGap    = 4;  // Espaço entre checkbox e label
-                    const colSpacing  = 55; // Largura de cada bloco "checkbox + label"
-                    const rowHeight   = 16; // Altura de cada linha de item
-                    const startX      = cardX + 10; // X inicial da linha
- 
-                    // Renderiza cada item como uma linha de checkboxes
-                    items.forEach((item) => {
-                      if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
- 
-                      const itemData = visualData[item] || {};
- 
-                      // Fundo suave alternado por item
-                      doc.rect(cardX + 5, currentY, cardWidth - 10, rowHeight).fill('#FAFAFA');
- 
-                      // --- Nome do item à esquerda ---
-                      doc.fontSize(8).fillColor('#333333').font('Helvetica-Bold')
-                         .text(item, startX, currentY + 3, { width: 70 });
- 
-                      // --- Posição base dos 3 checkboxes (OK, NOK, N/A) ---
-                      const checkboxStartX = startX + 80;
- 
-                      // Dados de cada opção: label, chave no objeto, cor quando marcado
-                      const opcoes = [
-                        { label: 'OK',   key: 'OK',   color: '#2E7D32' }, // Verde para OK
-                        { label: 'NOK',  key: 'NOK',  color: '#C62828' }, // Vermelho para NOK
-                        { label: 'N/A',  key: 'N/A',  color: '#757575' }, // Cinza para N/A
-                      ];
- 
-                      opcoes.forEach((opcao, idx) => {
-                        const boxX     = checkboxStartX + (idx * colSpacing);
-                        const boxY     = currentY + (rowHeight - checkSize) / 2; // Centraliza verticalmente
-                        const marcado  = !!itemData[opcao.key];
- 
-                        // Desenha o quadrado externo do checkbox
-                        doc.rect(boxX, boxY, checkSize, checkSize)
-                           .strokeColor(marcado ? opcao.color : '#AAAAAA')
-                           .lineWidth(0.8)
-                           .stroke();
- 
-                        // Se marcado: preenche o interior com a cor da opção
-                        if (marcado) {
-                          doc.rect(boxX + 1.5, boxY + 1.5, checkSize - 3, checkSize - 3)
-                             .fill(opcao.color);
- 
-                          // Desenha o "✓" branco dentro do quadrado preenchido
-                          doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold')
-                             .text('✓', boxX + 1, boxY, { width: checkSize, align: 'center' });
-                        }
- 
-                        // Label da opção ao lado do checkbox (OK / NOK / N/A)
-                        doc.fontSize(7)
-                           .fillColor(marcado ? opcao.color : '#999999')
-                           .font(marcado ? 'Helvetica-Bold' : 'Helvetica')
-                           .text(opcao.label, boxX + checkSize + checkGap, currentY + 3, { width: 30 });
-                      });
- 
-                      currentY += rowHeight;
-                    });
- 
-                    currentY += 10; // Espaço após a lista de checkboxes
-                  }
+                     // Título da seção
+  doc.rect(cardX + 5, currentY, cardWidth - 10, 16).fill('#E8E8E8');
+  doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold')
+     .text('Inspeção Visual', cardX + 10, currentY + 3);
+  currentY += 22;
+
+  const visualData = typeof responses.visual_items === 'string'
+    ? JSON.parse(responses.visual_items) : responses.visual_items;
+
+  const items = ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'];
+  const rowHeight = 18;
+
+  items.forEach((item) => {
+    const itemData = visualData[item] || {};
+
+    // Se o item for N/A, pula — não aparece no PDF
+    if (itemData['N/A']) return;
+
+    if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
+
+    // Determina se OK ou NOK
+    const isOk  = !!itemData.OK;
+    const isNok = !!itemData.NOK;
+
+    // Fundo suave da linha
+    doc.rect(cardX + 5, currentY, cardWidth - 10, rowHeight).fill('#FAFAFA');
+
+    // Nome do item
+    doc.fontSize(8).fillColor('#333333').font('Helvetica-Bold')
+       .text(item, cardX + 10, currentY + 5, { width: 80 });
+
+    // === Badge OK ===
+    const okX = cardX + 100;
+    const badgeY = currentY + 3;
+    const badgeH = 12;
+    const badgeW = 36;
+
+    if (isOk) {
+      // Preenchido verde
+      doc.roundedRect(okX, badgeY, badgeW, badgeH, 6).fill('#2E7D32');
+      doc.fontSize(7).fillColor('#FFFFFF').font('Helvetica-Bold')
+         .text('✓ OK', okX + 2, badgeY + 2, { width: badgeW, align: 'center' });
+    } else {
+      // Borda cinza vazia
+      doc.roundedRect(okX, badgeY, badgeW, badgeH, 6)
+         .strokeColor('#CCCCCC').lineWidth(0.5).stroke();
+      doc.fontSize(7).fillColor('#AAAAAA').font('Helvetica')
+         .text('OK', okX + 2, badgeY + 2, { width: badgeW, align: 'center' });
+    }
+
+    // === Badge NOK ===
+    const nokX = okX + badgeW + 8;
+
+    if (isNok) {
+      // Preenchido vermelho
+      doc.roundedRect(nokX, badgeY, badgeW, badgeH, 6).fill('#C62828');
+      doc.fontSize(7).fillColor('#FFFFFF').font('Helvetica-Bold')
+         .text('✗ NOK', nokX + 2, badgeY + 2, { width: badgeW, align: 'center' });
+    } else {
+      // Borda cinza vazia
+      doc.roundedRect(nokX, badgeY, badgeW, badgeH, 6)
+         .strokeColor('#CCCCCC').lineWidth(0.5).stroke();
+      doc.fontSize(7).fillColor('#AAAAAA').font('Helvetica')
+         .text('NOK', nokX + 2, badgeY + 2, { width: badgeW, align: 'center' });
+    }
+
+    currentY += rowHeight;
+  });
+
+  currentY += 10;
+}
  
                   // ==============================================
                   // 🔧 DADOS TÉCNICOS (duas colunas)
