@@ -76,13 +76,17 @@ function splitValueUnit(key: string, value: any): [string, string] {
     .replace('.', ',') // ponto → vírgula (padrão BR)
     .trim();
 
-  if (k.startsWith('corrente')) return [cleanValue, 'A'];
-  if (k === 'tensao')           return [cleanValue, 'V'];
-  if (k === 'potencia')         return [cleanValue, 'CV'];
-  if (k === 'pressao')          return [cleanValue, 'bar'];
-  if (k === 'vazao')            return [cleanValue, 'm³/h'];
-  if (k === 'rpm')              return [cleanValue, 'rpm'];
-  if (k === 'fases')            return [formatFieldValue(value), ''];
+  if (k.startsWith('corrente'))                    return [cleanValue, 'A'];
+  if (k.startsWith('tensao'))                      return [cleanValue, 'V'];
+  if (k === 'potencia')                            return [cleanValue, 'CV'];
+  if (k === 'pressao')                             return [cleanValue, 'bar'];
+  if (k === 'vazao')                               return [cleanValue, 'm³/h'];
+  if (k === 'rpm')                                 return [cleanValue, 'rpm'];
+  if (k === 'frequencia')                          return [cleanValue, 'Hz'];
+  if (k === 'nivel_combustivel')                   return [cleanValue, 'L'];
+  if (k === 'temperatura_arrefecimento')           return [cleanValue, '°C'];
+  if (k === 'horometro')                           return [cleanValue, 'h'];
+  if (k === 'fases')                               return [formatFieldValue(value), ''];
   return [formatFieldValue(value), ''];
 }
 
