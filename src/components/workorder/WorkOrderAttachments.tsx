@@ -66,7 +66,7 @@ const handleFileUpload = async (category: string, files: FileList | null) => {
     });
 
     // 1️⃣ ROTA DE FUGA: Envia o pacotão para a VPS
-    const response = await fetch("/api/work-orders/upload", { // Use a rota exata do seu backend
+    const response = await fetch("/api/work-orders/upload", { 
   method: "POST",
   body: formData,
 });

@@ -1,6 +1,5 @@
 import "dotenv/config";
 import express from "express";
-import uploadHandler from './routes/uploadHandler'; // Ajuste o caminho se necessário
 import { createServer } from "http";
 import multer from "multer"; // 📦 NOVO: Biblioteca para aceitar arquivos (fotos/PDFs)
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -11,13 +10,14 @@ import { setupVite, serveStatic } from "./vite";
 
 // Configuração do Multer: ele vai guardar a foto temporariamente na memória RAM
 // para processarmos e enviarmos para a nuvem (Cloudinary) logo em seguida.
+// Configuração do Multer para memória RAM
 const upload = multer({ storage: multer.memoryStorage() });
 
 async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Aumenta o limite para aceitar textos grandes (JSON)
+  // Limites de tamanho (Importante para fotos de alta resolução)
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -25,63 +25,50 @@ async function startServer() {
 
   // -----------------------------------------------------------
   // 📸 ROTA TURBINADA: Upload Múltiplo de Fotos (JNC Elétrica)
-  // Agora aceita até 10 fotos de uma vez do celular do técnico.
   // -----------------------------------------------------------
   app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
 
-      // 🚧 CHECK DE SEGURANÇA: Se não veio nada, avisa.
+      // Log para conferir no 'pm2 logs'
+      console.log(`[JNC Upload] Recebidos ${files?.length || 0} arquivos.`);
+
       if (!files || files.length === 0) {
-        return res.status(400).json({ message: "Nenhum arquivo enviado" });
+        return res.status(400).json({ success: false, message: "Nenhum arquivo enviado" });
       }
 
-     // 📸 ROTA CORRIGIDA PARA MÚLTIPLOS ARQUIVOS (JNC)
-app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
-  try {
-    const files = req.files as Express.Multer.File[];
-
-    // Log para você ver no 'pm2 logs' se os arquivos chegaram
-    console.log(`[JNC Upload] Recebidos ${files?.length || 0} arquivos.`);
-
-    if (!files || files.length === 0) {
-      return res.status(400).json({ message: "Nenhum arquivo enviado" });
-    }
-
-    const { storagePut } = await import("./storage");
-    
-    // Processamento paralelo para ganhar tempo
-    const uploadPromises = files.map(async (file) => {
-      // Aqui usamos a sua função storagePut original
-      const { url, key } = await storagePut(
-        file.originalname,
-        file.buffer,
-        file.mimetype
-      );
+      const { storagePut } = await import("./storage");
       
-      return {
-        url,
-        key,
-        fileName: file.originalname,
-        fileType: file.mimetype,
-        fileSize: file.size
-      };
-    });
+      // Sobe todas as fotos em paralelo para o Cloudinary
+      const uploadPromises = files.map(async (file) => {
+        const { url, key } = await storagePut(
+          file.originalname,
+          file.buffer,
+          file.mimetype
+        );
+        
+        return {
+          url,
+          key,
+          fileName: file.originalname,
+          fileType: file.mimetype,
+          fileSize: file.size
+        };
+      });
 
-    const results = await Promise.all(uploadPromises);
+      const results = await Promise.all(uploadPromises);
 
-    // Retornamos 'urls' (plural) para o seu novo Frontend
-    res.json({ 
-      success: true, 
-      urls: results 
-    });
+      // Retorna 'urls' para o seu componente WorkOrderAttachments.tsx
+      res.json({ 
+        success: true, 
+        urls: results 
+      });
 
-  } catch (error: any) {
-    console.error("Erro no upload JNC:", error);
-    // Se o Multer barrar por tamanho, ele cai aqui
-    res.status(500).json({ message: error.message || "Erro no processamento" });
-  }
-});
+    } catch (error: any) {
+      console.error("Erro no upload JNC:", error);
+      res.status(500).json({ success: false, message: error.message || "Erro no processamento" });
+    }
+  });
 
       // Aguarda todas as fotos terminarem de subir para o Cloudinary
       const results = await Promise.all(uploadPromises);
@@ -95,8 +82,7 @@ app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) 
     } catch (error) {
       console.error("Erro no upload múltiplo JNC:", error);
       res.status(500).json({ message: "Erro ao processar upload das fotos" });
-    }
-  });
+    };
 
   // -----------------------------------------------------------
   // 🔑 ROTA: Login do Cliente (Portal do Cliente)

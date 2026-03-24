@@ -12,6 +12,7 @@ const client = new Client({
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-extensions'
+            '--disable-gpu' // Adicione esta linha
         ]
     }
 });

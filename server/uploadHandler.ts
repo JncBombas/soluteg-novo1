@@ -6,7 +6,7 @@ const router = Router(); // ADICIONE ISSO
 
 // 'files' é o nome que o seu frontend deve enviar no FormData
 // '10' é o máximo de fotos que a JNC vai permitir por vez
-router.post('/os/upload-fotos', upload.array('files', 10), async (req, res) => {
+router.post('/work-orders/upload', upload.array('files', 10), async (req, res) => {
   try {
     // O Multer coloca os arquivos dentro de req.files
     const files = req.files as Express.Multer.File[];
