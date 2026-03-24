@@ -98,32 +98,32 @@ function splitValueUnit(key: string, value: any): [string, string] {
 // ============================================================
 export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer> {
  
-  const workOrder = await getWorkOrderById(workOrderId);
-  if (!workOrder) throw new Error('Ordem de serviço não encontrada');
+    const workOrder = await getWorkOrderById(workOrderId);
+    if (!workOrder) throw new Error('Ordem de serviço não encontrada');
  
-  const materials       = await getMaterialsByWorkOrderId(workOrderId);
-  const comments        = await getCommentsByWorkOrderId(workOrderId, false);
-  const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
-  const attachments     = await getAttachmentsByWorkOrderId(workOrderId);
+    const materials       = await getMaterialsByWorkOrderId(workOrderId);
+    const comments        = await getCommentsByWorkOrderId(workOrderId, false);
+    const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
+    const attachments     = await getAttachmentsByWorkOrderId(workOrderId);
  
-  const tasksWithChecklists = await Promise.all(
+    const tasksWithChecklists = await Promise.all(
     inspectionTasks.map(async (task) => ({
       ...task,
       checklists: await getChecklistsByInspectionTask(task.id)
     }))
-  );
+    );
  
-  const totalMaterials = materials.reduce((sum: number, m: any) => sum + (m.totalCost || 0), 0);
+    const totalMaterials = materials.reduce((sum: number, m: any) => sum + (m.totalCost || 0), 0);
  
-  return new Promise(async (resolve, reject) => {
-    try {
+    return new Promise(async (resolve, reject) => {
+        try {
       const doc = new PDFDocument({
         size: 'A4',
         margins: { top: 40, bottom: 40, left: 40, right: 40 },
         autoFirstPage: true,
         bufferPages: true
-      });
- 
+            });
+      
       const chunks: Buffer[] = [];
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end',  () => resolve(Buffer.concat(chunks)));
@@ -299,12 +299,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                  const value = String(responses[k]).trim().toUpperCase();
   
                   // Captura se começar com o prefixo OU se o valor for um status de inspeção
-                return key.startsWith('visual_items_') || 
+                  return key.startsWith('visual_items_') || 
                      value === 'OK' || 
                      value === 'NOK' || 
                      value === 'N/A' ||
                      value === 'NORMAL'; // Adicionado 'Normal' que aparece no Gerador 
-                });
+                  });
  
                  if (visualKeys.length > 0) {
                  // 1. Define o estilo e escreve o texto
@@ -323,7 +323,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
                   // 4. Espaço após a linha para o próximo conteúdo
                   currentY += 8;
-                }
+                  }
  
                     // Agrupa por nome do item
                     const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
@@ -401,8 +401,13 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
                     const col1EndY = renderVisualCol(itensVisiveis.slice(0, meioVis), col1VisX, currentY);
                     const col2EndY = renderVisualCol(itensVisiveis.slice(meioVis),    col2VisX, currentY);
+                    
                     currentY = Math.max(col1EndY, col2EndY) + 10;
-                  }
+                    
+                    } catch (e) {
+                        console.error('Erro ao processar checklist.responses:', e);
+                      }
+                } 
  
                   // ================================================
                   // 🔧 DADOS TÉCNICOS — grade 2 colunas
@@ -419,11 +424,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   const k = key.toLowerCase();
                   const v = String(value).trim().toUpperCase();
   
-                  // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
-                  const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
-                  const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
+               // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
+                const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
+                const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
   
-                  return !isVisual && !isObs;
+               return !isVisual && !isObs;
                   });
  
                   if (technicalFields.length > 0) {
@@ -512,7 +517,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     currentY += 14;
  
                      } catch (e) {
-                      console.error('[PDF] Erro ao parsear respostas do checklist:', e);
+                      console.error('[PDF] Erro ao processar respostas do checklist:', e);
                      }
               } 
                   currentY += 6;
@@ -602,11 +607,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
         doc.end();
  
-   catch (error) {
+      catch (error) {
       console.error('Erro geral na geração do PDF:', error);
-     }
-    });
-  }
+     });
+    }
+  
   
 
  
