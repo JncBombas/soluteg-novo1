@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import uploadHandler from './routes/uploadHandler'; // Ajuste o caminho se necessário
 import { createServer } from "http";
 import multer from "multer"; // 📦 NOVO: Biblioteca para aceitar arquivos (fotos/PDFs)
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -23,37 +24,77 @@ async function startServer() {
   registerOAuthRoutes(app);
 
   // -----------------------------------------------------------
-  // 📸 NOVA ROTA: Upload de Fotos de OS (JNC Elétrica)
-  // Esta rota recebe a foto real do celular do técnico.
+  // 📸 ROTA TURBINADA: Upload Múltiplo de Fotos (JNC Elétrica)
+  // Agora aceita até 10 fotos de uma vez do celular do técnico.
   // -----------------------------------------------------------
-  app.post("/api/work-orders/upload", upload.single('file'), async (req, res) => {
+  app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
     try {
-      // Verifica se o arquivo realmente chegou
-      if (!req.file) {
+      const files = req.files as Express.Multer.File[];
+
+      // 🚧 CHECK DE SEGURANÇA: Se não veio nada, avisa.
+      if (!files || files.length === 0) {
         return res.status(400).json({ message: "Nenhum arquivo enviado" });
       }
 
-      // Importa a função que configuramos para o Cloudinary
-      const { storagePut } = await import("./storage");
-      
-      // Envia a foto para a nuvem (Cloudinary)
-      // O 'storagePut' vai comprimir a imagem automaticamente para não pesar.
-      const { url, key } = await storagePut(
-        req.file.originalname,
-        req.file.buffer,
-        req.file.mimetype
-      );
+     // 📸 ROTA CORRIGIDA PARA MÚLTIPLOS ARQUIVOS (JNC)
+app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
+  try {
+    const files = req.files as Express.Multer.File[];
 
-      // Devolve o link da foto para o sistema salvar no banco de dados
+    // Log para você ver no 'pm2 logs' se os arquivos chegaram
+    console.log(`[JNC Upload] Recebidos ${files?.length || 0} arquivos.`);
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "Nenhum arquivo enviado" });
+    }
+
+    const { storagePut } = await import("./storage");
+    
+    // Processamento paralelo para ganhar tempo
+    const uploadPromises = files.map(async (file) => {
+      // Aqui usamos a sua função storagePut original
+      const { url, key } = await storagePut(
+        file.originalname,
+        file.buffer,
+        file.mimetype
+      );
+      
+      return {
+        url,
+        key,
+        fileName: file.originalname,
+        fileType: file.mimetype,
+        fileSize: file.size
+      };
+    });
+
+    const results = await Promise.all(uploadPromises);
+
+    // Retornamos 'urls' (plural) para o seu novo Frontend
+    res.json({ 
+      success: true, 
+      urls: results 
+    });
+
+  } catch (error: any) {
+    console.error("Erro no upload JNC:", error);
+    // Se o Multer barrar por tamanho, ele cai aqui
+    res.status(500).json({ message: error.message || "Erro no processamento" });
+  }
+});
+
+      // Aguarda todas as fotos terminarem de subir para o Cloudinary
+      const results = await Promise.all(uploadPromises);
+
+      // Devolve a lista de links para o React salvar no MySQL da JNC
       res.json({ 
         success: true, 
-        url, 
-        key,
-        fileName: req.file.originalname 
+        urls: results // Agora enviamos um array chamado 'urls'
       });
+
     } catch (error) {
-      console.error("Erro no upload JNC:", error);
-      res.status(500).json({ message: "Erro ao processar upload da foto" });
+      console.error("Erro no upload múltiplo JNC:", error);
+      res.status(500).json({ message: "Erro ao processar upload das fotos" });
     }
   });
 
