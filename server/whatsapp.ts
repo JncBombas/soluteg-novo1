@@ -11,7 +11,7 @@ const client = new Client({
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-extensions'
+            '--disable-extensions',
             '--disable-gpu' // Adicione esta linha
         ]
     }
