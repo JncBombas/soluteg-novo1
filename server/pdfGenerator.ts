@@ -398,6 +398,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                       });
                       return y;
                     };
+                  }
  
                     const col1EndY = renderVisualCol(itensVisiveis.slice(0, meioVis), col1VisX, currentY);
                     const col2EndY = renderVisualCol(itensVisiveis.slice(meioVis),    col2VisX, currentY);
@@ -407,10 +408,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     } catch (e) {
                         console.error('Erro ao processar checklist.responses:', e);
                       }
-                } 
- 
-                  // ================================================
-                  // 🔧 DADOS TÉCNICOS — grade 2 colunas
+                 } 
+                  try {
+                      const responses = typeof checklist.responses === 'string'
+                 ? JSON.parse(checklist.responses) : checklist.responses;
+                // ================================================
+                 // 🔧 DADOS TÉCNICOS — grade 2 colunas
                   //
                   // Cada célula: rótulo pequeno (cinza) + valor em
                   // destaque + unidade automática ao lado.
@@ -481,7 +484,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     // Avança após a última linha
                     currentY += cellH + 8;
                   }
- 
+                
                   // ================================================
                   // 📝 OBSERVAÇÕES TÉCNICAS — blockquote dourado
                   // ================================================
@@ -517,14 +520,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     currentY += 14;
  
                      } catch (e) {
-                      console.error('[PDF] Erro ao processar respostas do checklist:', e);
-                     }
-              } 
-                  currentY += 6;
-            }
-         }          currentY += 14;
-        }
-      }
+                        console.error('[PDF] Erro ao processar respostas do checklist:', e);
+                        }
+              }
  
       // ── COMENTÁRIOS ───────────────────────────────────────────
       if (comments && comments.length > 0) {
@@ -609,7 +607,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
       catch (error) {
       console.error('Erro geral na geração do PDF:', error);
-     });
+      }
+    }
+  }
+}
+     
+    });
     }
   
   
