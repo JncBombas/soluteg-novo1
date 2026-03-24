@@ -323,7 +323,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
                   // 4. Espaço após a linha para o próximo conteúdo
                   currentY += 8;
-                  }
+                  
  
                     // Agrupa por nome do item
                     const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
@@ -399,20 +399,21 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                       return y;
                     };
                   }
- 
+                  
+                
                     const col1EndY = renderVisualCol(itensVisiveis.slice(0, meioVis), col1VisX, currentY);
                     const col2EndY = renderVisualCol(itensVisiveis.slice(meioVis),    col2VisX, currentY);
                     
                     currentY = Math.max(col1EndY, col2EndY) + 10;
                     
-                    } catch (e) {
+                } catch (e) {
                         console.error('Erro ao processar checklist.responses:', e);
                       }
-                 } 
-                  try {
+               } 
+                 try {
                       const responses = typeof checklist.responses === 'string'
                  ? JSON.parse(checklist.responses) : checklist.responses;
-                // ================================================
+                 // ================================================
                  // 🔧 DADOS TÉCNICOS — grade 2 colunas
                   //
                   // Cada célula: rótulo pequeno (cinza) + valor em
@@ -427,11 +428,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   const k = key.toLowerCase();
                   const v = String(value).trim().toUpperCase();
   
-               // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
-                const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
-                const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
+                 // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
+                 const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
+                 const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
   
-               return !isVisual && !isObs;
+                 return !isVisual && !isObs;
                   });
  
                   if (technicalFields.length > 0) {
@@ -605,15 +606,14 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
         doc.end();
  
-      catch (error) {
-      console.error('Erro geral na geração do PDF:', error);
+    } catch (error) {console.error('Erro geral na geração do PDF:', error);}
       }
     }
-  }
-}
+          }
+      });
      
-    });
-    }
+  }
+    
   
   
 
