@@ -293,7 +293,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   if (visualKeys.length > 0) {
                     doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
                        .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
-                    currentY += 4;
+                    currentY += 10;
                     doc.strokeColor('#E0E0E0').lineWidth(0.5)
                        .moveTo(cardX + 10, currentY).lineTo(cardX + cardW - 10, currentY).stroke();
                     currentY += 8;

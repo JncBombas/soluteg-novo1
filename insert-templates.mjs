@@ -174,20 +174,25 @@ async function main() {
       name: "Gerador",
       slug: "gerador",
       description: "Checklist para inspeção de geradores",
-      formStructure: JSON.stringify({
-        sections: [
-          {
-            title: "Inspeção Visual",
-            type: "visual_inspection",
-            items: [
-              { label: "Vazamentos", type: "checkbox" },
-              { label: "USCA", type: "checkbox" },
-              { label: "Limpeza", type: "checkbox" },
-              { label: "Conexões", type: "checkbox" },
-              { label: "Sala", type: "checkbox" },
-              { label: "Ruído", type: "checkbox" }
-            ]
-          },
+      formStructure: JSON.stringify(
+        {
+  sections: [
+    {
+      id: "visual",
+      title: "Inspeção Visual",
+      fields: [{
+          id: "visual_items",
+          type: "checkbox_table",
+          label: "Itens",
+          items: [
+            "Vazamentos", "USCA", "Corrosão", "Conexões", "Sala", 
+            "Ruido", "Nivel de óleo", "Líquido de Arrefecimento", 
+            "Filtro de ar", "Correa", "Alternador", "Painel QTA"
+          ],
+          options: ["OK", "NOK", "N/A"]
+        }
+      ]
+    },
           {
             title: "Dados Técnicos",
             type: "technical_data",
@@ -206,7 +211,6 @@ async function main() {
               { label: "Tensão do Alternador", type: "number", unit: "V" },
               { label: "Nível de Combustível", type: "number", unit: "L" },
               { label: "Horômetro", type: "number", unit: "h" },
-              { label: "Nível de Arrefecimento", type: "select", options: ["Baixo", "Normal", "Alto"] },
               { label: "Temperatura", type: "number", unit: "°C" }
             ]
           },

@@ -75,13 +75,23 @@ await connection.execute('UPDATE checklistTemplates SET formStructure = ? WHERE 
 console.log('✅ Bomba Incêndio (com Pressão)');
 
 // 5. Gerador
-const gerador = JSON.stringify({
+const gerador = JSON.stringify(
+  {
   sections: [
     {
-      id: 'visual',
-      title: 'Inspeção Visual',
-      fields: [
-        { id: 'visual_items', type: 'checkbox_table', label: 'Itens', items: ['Vazamentos', 'Acionamento', 'USCA', 'Limpeza', 'Sala', 'Ruído'], options: ['OK', 'NOK', 'N/A'] }
+      id: "visual",
+      title: "Inspeção Visual",
+      fields: [{
+          id: "visual_items",
+          type: "checkbox_table",
+          label: "Itens",
+          items: [
+            "Vazamentos", "USCA", "Corrosão", "Conexões", "Sala", 
+            "Ruido", "Nivel de óleo", "Líquido de Arrefecimento", 
+            "Filtro de ar", "Correa", "Alternador", "Painel QTA"
+          ],
+          options: ["OK", "NOK", "N/A"]
+        }
       ]
     },
     {
@@ -102,7 +112,6 @@ const gerador = JSON.stringify({
         { id: 'tensao_alternador', type: 'number', label: 'Tensão do Alternador (V)' },
         { id: 'nivel_combustivel', type: 'number', label: 'Nível de Combustível (L)' },
         { id: 'horometro', type: 'number', label: 'Horômetro (h)' },
-        { id: 'nivel_arrefecimento', type: 'select', label: 'Nível Arrefecimento', options: ['Baixo', 'Normal', 'Alto'] },
         { id: 'temperatura_arrefecimento', type: 'number', label: 'Temperatura (°C)' }
       ]
     },
