@@ -194,6 +194,6 @@ async function startServer() {
     console.log(`- Acesse: http://jnc.soluteg.com.br`);
     console.log("=========================================");
   });
-}
+
 
 startServer().catch(console.error);
