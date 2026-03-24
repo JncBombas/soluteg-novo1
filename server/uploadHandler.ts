@@ -1,62 +1,37 @@
-import { Request, Response } from "express";
-import multer from "multer";
-import { storagePut } from "./storage";
-import * as workOrdersAuxDb from "./workOrdersAuxDb";
+import { Router } from 'express'; // ADICIONE ISSO
+import { upload } from '../config/multer'; // Importa o que você acabou de criar
+import { uploadToCloudinary } from '../services/cloudinaryService'; // Sua função que manda pro Cloudinary
 
-// Configurar multer para upload em memória
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
-  },
+const router = Router(); // ADICIONE ISSO
+
+// 'files' é o nome que o seu frontend deve enviar no FormData
+// '10' é o máximo de fotos que a JNC vai permitir por vez
+router.post('/os/upload-fotos', upload.array('files', 10), async (req, res) => {
+  try {
+    // O Multer coloca os arquivos dentro de req.files
+    const files = req.files as Express.Multer.File[];
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'Nenhuma foto selecionada.' });
+    }
+
+    // MANDANDO TUDO DE UMA VEZ (Múltiplos arquivos)
+    const uploadPromises = files.map(file => {
+      // Aqui você passa o buffer (o arquivo que está na memória) pro Cloudinary
+      return uploadToCloudinary(file.buffer); 
+    });
+
+    const urls = await Promise.all(uploadPromises);
+
+    // Agora é só salvar essas URLs no seu banco MySQL vinculado à OS
+    // ex: await savePhotosToDb(req.body.workOrderId, urls);
+
+    res.status(200).json({ message: 'Fotos enviadas!', urls });
+    
+  } catch (error) {
+    console.error('Erro no upload da JNC:', error);
+    res.status(500).json({ error: 'Falha ao processar imagens.' });
+  }
 });
 
-export const uploadMiddleware = upload.single("file");
-
-export async function handleAttachmentUpload(req: Request, res: Response) {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "Nenhum arquivo enviado" });
-    }
-
-    const { workOrderId, category, description } = req.body;
-
-    if (!workOrderId) {
-      return res.status(400).json({ error: "workOrderId é obrigatório" });
-    }
-
-    // Gerar nome único para o arquivo
-    const timestamp = Date.now();
-    const randomSuffix = Math.random().toString(36).substring(7);
-    const fileExtension = req.file.originalname.split(".").pop();
-    const fileName = `wo-${workOrderId}/${timestamp}-${randomSuffix}.${fileExtension}`;
-
-    // Upload para S3
-    const { url } = await storagePut(
-      fileName,
-      req.file.buffer,
-      req.file.mimetype
-    );
-
-    // Salvar no banco de dados
-    const attachment = await workOrdersAuxDb.createAttachment({
-      workOrderId: parseInt(workOrderId),
-      fileName: req.file.originalname,
-      fileKey: fileName,
-      fileUrl: url,
-      fileType: req.file.mimetype,
-      fileSize: req.file.size,
-      category: category || "outro",
-    });
-
-    return res.json({
-      success: true,
-      attachment,
-    });
-  } catch (error: any) {
-    console.error("[Upload] Error:", error);
-    return res.status(500).json({
-      error: error.message || "Erro ao fazer upload do arquivo",
-    });
-  }
-}
+export default router; // ADICIONE ISSO PARA PODER USAR NO SERVER.TS
