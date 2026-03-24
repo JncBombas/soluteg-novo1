@@ -294,36 +294,36 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // de case e tipo que o banco possa mandar.
                   // ================================================
                   // Substitua a definição antiga por esta:
-    const visualKeys = Object.keys(responses).filter(k => {
-    const key = k.toLowerCase();
-    const value = String(responses[k]).trim().toUpperCase();
+                 const visualKeys = Object.keys(responses).filter(k => {
+                 const key = k.toLowerCase();
+                 const value = String(responses[k]).trim().toUpperCase();
   
-    // Captura se começar com o prefixo OU se o valor for um status de inspeção
-    return key.startsWith('visual_items_') || 
-         value === 'OK' || 
-         value === 'NOK' || 
-         value === 'N/A' ||
-         value === 'NORMAL'; // Adicionado 'Normal' que aparece no Gerador 
-    });
+                  // Captura se começar com o prefixo OU se o valor for um status de inspeção
+                return key.startsWith('visual_items_') || 
+                     value === 'OK' || 
+                     value === 'NOK' || 
+                     value === 'N/A' ||
+                     value === 'NORMAL'; // Adicionado 'Normal' que aparece no Gerador 
+                });
  
                  if (visualKeys.length > 0) {
-    // 1. Define o estilo e escreve o texto
-    doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
-       .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
+                 // 1. Define o estilo e escreve o texto
+                  doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
+                  .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
 
-    // 2. Aumente o incremento aqui. 
-    // Se a fonte é 8, currentY += 4 é muito pouco. Use pelo menos 10 ou 12.
-    currentY += 10; 
+                  // 2. Aumente o incremento aqui. 
+                  // Se a fonte é 8, currentY += 4 é muito pouco. Use pelo menos 10 ou 12.
+                  currentY += 10; 
 
-    // 3. Desenha a linha
-    doc.strokeColor('#E0E0E0').lineWidth(0.5)
-       .moveTo(cardX + 10, currentY)
-       .lineTo(cardX + cardW - 10, currentY)
-       .stroke();
+                  // 3. Desenha a linha
+                  doc.strokeColor('#E0E0E0').lineWidth(0.5)
+                  .moveTo(cardX + 10, currentY)
+                  .lineTo(cardX + cardW - 10, currentY)
+                  .stroke();
 
-    // 4. Espaço após a linha para o próximo conteúdo
-    currentY += 8;
-}
+                  // 4. Espaço após a linha para o próximo conteúdo
+                  currentY += 8;
+                }
  
                     // Agrupa por nome do item
                     const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
@@ -415,16 +415,16 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // (evita "220V V").
                   // ================================================
                   // Substitua a definição antiga por esta:
-const technicalFields = Object.entries(responses).filter(([key, value]) => {
-  const k = key.toLowerCase();
-  const v = String(value).trim().toUpperCase();
+                  const technicalFields = Object.entries(responses).filter(([key, value]) => {
+                  const k = key.toLowerCase();
+                  const v = String(value).trim().toUpperCase();
   
-  // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
-  const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
-  const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
+                  // Critérios para IGNORAR (não devem aparecer nos Dados Técnicos)
+                  const isVisual = k.startsWith('visual_items_') || v === 'OK' || v === 'NOK' || v === 'N/A' || v === 'NORMAL';
+                  const isObs = k.includes('observ') || k.includes('note') || k.includes('comment');
   
-  return !isVisual && !isObs;
-});
+                  return !isVisual && !isObs;
+                  });
  
                   if (technicalFields.length > 0) {
                     doc.strokeColor('#E0E0E0').lineWidth(0.5)
@@ -508,17 +508,16 @@ const technicalFields = Object.entries(responses).filter(([key, value]) => {
  
                   // Linha separadora do card
                   doc.strokeColor(goldColor).lineWidth(1)
-                     .moveTo(cardX, currentY).lineTo(cardX + cardW, currentY).stroke();
-                  currentY += 14;
+                    .moveTo(cardX, currentY).lineTo(cardX + cardW, currentY).stroke();
+                    currentY += 14;
  
-                } catch (e) {
-                  console.error('[PDF] Erro ao parsear respostas do checklist:', e);
-                }
-              }
-              currentY += 6;
+                     } catch (e) {
+                      console.error('[PDF] Erro ao parsear respostas do checklist:', e);
+                     }
+              } 
+                  currentY += 6;
             }
-          }
-          currentY += 14;
+         }          currentY += 14;
         }
       }
  
@@ -596,17 +595,19 @@ const technicalFields = Object.entries(responses).filter(([key, value]) => {
         } catch (e) { console.error('Erro na assinatura do cliente', e); }
       }
  
-      // ── RODAPÉ ────────────────────────────────────────────────
-      const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
-      doc.fontSize(7).fillColor('#999999').font('Helvetica')
+        // ── RODAPÉ ────────────────────────────────────────────────
+       const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
+       doc.fontSize(7).fillColor('#999999').font('Helvetica')
          .text(footerText, (doc.page.width - doc.widthOfString(footerText)) / 2, doc.page.height - 30, { lineBreak: false });
  
-      doc.end();
+        doc.end();
  
-    } catch (error) {
+   catch (error) {
       console.error('Erro geral na geração do PDF:', error);
-    })
-  };
+     }
+    });
+  }
+  
 
  
 // ============================================================
