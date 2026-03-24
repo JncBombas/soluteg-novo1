@@ -15,15 +15,67 @@ import axios from 'axios';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
  
+// ============================================================
+// 🔧 HELPERS DE FORMATAÇÃO DE RÓTULOS E UNIDADES
+// Deixam os dados técnicos legíveis para o cliente final.
+// ============================================================
+ 
+/**
+ * Transforma uma chave interna em rótulo legível.
+ * Ex: "corrente_1" → "Corrente 1"
+ *     "quantidade_bombas" → "Qtd. bombas"
+ *     "tensao" → "Tensão"
+ */
+function formatLabel(raw: string): string {
+  const aliases: Record<string, string> = {
+    tensao:            'Tensão',
+    fases:             'Fases',
+    quantidade_bombas: 'Qtd. bombas',
+    corrente_1:        'Corrente 1',
+    corrente_2:        'Corrente 2',
+    corrente_3:        'Corrente 3',
+    corrente_4:        'Corrente 4',
+    potencia:          'Potência',
+    marca:             'Marca',
+    modelo:            'Modelo',
+    rpm:               'RPM',
+    pressao:           'Pressão',
+    vazao:             'Vazão',
+  };
+  const key = raw.toLowerCase().trim();
+  if (aliases[key]) return aliases[key];
+  // Fallback: troca _ por espaço e capitaliza a primeira letra
+  return key.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+}
+ 
+/**
+ * Detecta a unidade correta para cada campo e retorna [valor, unidade].
+ * Ex: ("corrente_1", "24.1") → ["24,1", "A"]
+ *     ("tensao",    "220")   → ["220",  "V"]
+ */
+function splitValueUnit(key: string, value: any): [string, string] {
+  const k = key.toLowerCase();
+  const v = String(value).replace('.', ','); // Padrão BR
+ 
+  if (k.startsWith('corrente'))           return [v, 'A'];
+  if (k === 'tensao')                     return [v, 'V'];
+  if (k === 'potencia')                   return [v, 'CV'];
+  if (k === 'pressao')                    return [v, 'bar'];
+  if (k === 'vazao')                      return [v, 'm³/h'];
+  if (k === 'rpm')                        return [v, 'rpm'];
+  if (k === 'fases')                      return [formatFieldValue(value), ''];
+  return [formatFieldValue(value), ''];
+}
+ 
 export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer> {
  
   const workOrder = await getWorkOrderById(workOrderId);
   if (!workOrder) throw new Error('Ordem de serviço não encontrada');
  
-  const materials        = await getMaterialsByWorkOrderId(workOrderId);
-  const comments         = await getCommentsByWorkOrderId(workOrderId, false);
-  const inspectionTasks  = await getInspectionTasksByWorkOrder(workOrderId);
-  const attachments      = await getAttachmentsByWorkOrderId(workOrderId);
+  const materials       = await getMaterialsByWorkOrderId(workOrderId);
+  const comments        = await getCommentsByWorkOrderId(workOrderId, false);
+  const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
+  const attachments     = await getAttachmentsByWorkOrderId(workOrderId);
  
   const tasksWithChecklists = await Promise.all(
     inspectionTasks.map(async (task) => ({
@@ -65,15 +117,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         path.join(process.cwd(), 'logo-jnc-transparente.png'),
         '/home/ubuntu/soluteg-novo/server/logo-jnc-transparente.png'
       ];
- 
       let logoPath = '';
       for (const p of possibleLogoPaths) {
         if (fs.existsSync(p)) { logoPath = p; break; }
       }
- 
       if (logoPath) {
-        const logoX = (pageWidth - 80) / 2;
-        doc.image(logoPath, logoX, headerY, { width: 80, height: 80 });
+        doc.image(logoPath, (pageWidth - 80) / 2, headerY, { width: 80, height: 80 });
         headerY += 90;
       }
  
@@ -142,37 +191,37 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         doc.fontSize(11).fillColor(goldColor).font('Helvetica-Bold').text('Materiais', leftMargin, currentY);
         currentY += 15;
  
-        const tableLeft   = leftMargin;
-        const tableWidth  = contentWidth;
-        const colMaterial = tableLeft;
-        const colQtd      = tableLeft + tableWidth * 0.45;
-        const colUnit     = tableLeft + tableWidth * 0.60;
-        const colSubtotal = tableLeft + tableWidth * 0.80;
+        const tLeft   = leftMargin;
+        const tWidth  = contentWidth;
+        const cMat    = tLeft;
+        const cQtd    = tLeft + tWidth * 0.45;
+        const cUnit   = tLeft + tWidth * 0.60;
+        const cSub    = tLeft + tWidth * 0.80;
  
-        doc.rect(tableLeft, currentY, tableWidth, 18).fill(goldColor);
+        doc.rect(tLeft, currentY, tWidth, 18).fill(goldColor);
         doc.fontSize(8).fillColor('#FFFFFF').font('Helvetica-Bold')
-           .text('Material',    colMaterial + 5, currentY + 5, { width: tableWidth * 0.40 })
-           .text('Qtd',         colQtd      + 5, currentY + 5, { width: tableWidth * 0.12 })
-           .text('Valor Unit.', colUnit     + 5, currentY + 5, { width: tableWidth * 0.18 })
-           .text('Subtotal',    colSubtotal + 5, currentY + 5, { width: tableWidth * 0.18 });
+           .text('Material',    cMat  + 5, currentY + 5, { width: tWidth * 0.40 })
+           .text('Qtd',         cQtd  + 5, currentY + 5, { width: tWidth * 0.12 })
+           .text('Valor Unit.', cUnit + 5, currentY + 5, { width: tWidth * 0.18 })
+           .text('Subtotal',    cSub  + 5, currentY + 5, { width: tWidth * 0.18 });
         currentY += 20;
  
         materials.forEach((material: any, index: number) => {
           const subtotal     = material.totalCost || 0;
           const materialName = material.materialName || material.name || material.description || 'Material sem nome';
-          if (index % 2 === 0) doc.rect(tableLeft, currentY, tableWidth, 16).fill('#F8F8F8');
+          if (index % 2 === 0) doc.rect(tLeft, currentY, tWidth, 16).fill('#F8F8F8');
           doc.fontSize(8).fillColor('#333333')
-             .text(materialName,                                          colMaterial + 5, currentY + 4, { width: tableWidth * 0.40, ellipsis: true })
-             .text(`${material.quantity || 0} ${material.unit || 'un'}`, colQtd      + 5, currentY + 4, { width: tableWidth * 0.12 })
-             .text(`R$ ${(material.unitCost || 0).toFixed(2)}`,          colUnit     + 5, currentY + 4, { width: tableWidth * 0.18 })
-             .text(`R$ ${subtotal.toFixed(2)}`,                          colSubtotal + 5, currentY + 4, { width: tableWidth * 0.18 });
+             .text(materialName,                                          cMat  + 5, currentY + 4, { width: tWidth * 0.40, ellipsis: true })
+             .text(`${material.quantity || 0} ${material.unit || 'un'}`, cQtd  + 5, currentY + 4, { width: tWidth * 0.12 })
+             .text(`R$ ${(material.unitCost || 0).toFixed(2)}`,          cUnit + 5, currentY + 4, { width: tWidth * 0.18 })
+             .text(`R$ ${subtotal.toFixed(2)}`,                          cSub  + 5, currentY + 4, { width: tWidth * 0.18 });
           currentY += 18;
         });
  
-        doc.rect(tableLeft, currentY, tableWidth, 20).fill('#3D4654');
+        doc.rect(tLeft, currentY, tWidth, 20).fill('#3D4654');
         doc.fontSize(10).fillColor('#FFFFFF').font('Helvetica-Bold')
-           .text('TOTAL',                            colMaterial + 5, currentY + 5, { width: tableWidth * 0.70 })
-           .text(`R$ ${totalMaterials.toFixed(2)}`, colSubtotal + 5, currentY + 5, { width: tableWidth * 0.18 });
+           .text('TOTAL',                            cMat + 5, currentY + 5, { width: tWidth * 0.70 })
+           .text(`R$ ${totalMaterials.toFixed(2)}`, cSub + 5, currentY + 5, { width: tWidth * 0.18 });
         currentY += 30;
       }
  
@@ -204,7 +253,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
           const statusText = task.status === 'concluida' ? 'Concluída'
             : task.status === 'em_andamento' ? 'Em Andamento' : 'Pendente';
           doc.fontSize(8).fillColor('#666666').font('Helvetica').text(`Status: ${statusText}`, leftMargin, currentY);
-          currentY += 12;
+          currentY += 14;
  
           if (task.checklists && task.checklists.length > 0) {
             for (const checklist of task.checklists) {
@@ -214,26 +263,26 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
               const cardX     = leftMargin;
               const cardWidth = contentWidth;
  
-              // Borda superior dourada do card
+              // ── Borda superior dourada ──
               doc.strokeColor(goldColor).lineWidth(3)
                  .moveTo(cardX, currentY).lineTo(cardX + cardWidth, currentY).stroke();
               currentY += 8;
  
-              // Header cinza do card
-              doc.rect(cardX, currentY, cardWidth, 20).fill('#F5F5F5');
+              // ── Header do card (cinza claro + título dourado) ──
+              doc.rect(cardX, currentY, cardWidth, 22).fill('#F5F5F5');
               doc.fontSize(10).fillColor(goldColor).font('Helvetica-Bold')
-                 .text(`${checklist.customTitle}`, cardX + 8, currentY + 4, { width: cardWidth - 16 });
-              currentY += 25;
+                 .text(checklist.customTitle, cardX + 10, currentY + 5, { width: cardWidth - 20 });
+              currentY += 28;
  
-              // Marca e potência
+              // ── Marca e Potência (linha de meta) ──
               if (checklist.brand || checklist.power) {
-                doc.fontSize(8).fillColor('#666666').font('Helvetica');
-                doc.text(`Marca: ${checklist.brand || 'N/A'}`,    cardX + 8,             currentY, { width: cardWidth / 2 - 8 });
-                doc.text(`Potência: ${checklist.power || 'N/A'}`, cardX + cardWidth / 2, currentY, { width: cardWidth / 2 - 8 });
-                currentY += 14;
+                doc.fontSize(8).fillColor('#888888').font('Helvetica');
+                doc.text(`Marca: ${checklist.brand || 'N/A'}`,    cardX + 10,             currentY, { width: cardWidth / 2 - 10 });
+                doc.text(`Potência: ${checklist.power || 'N/A'}`, cardX + cardWidth / 2,  currentY, { width: cardWidth / 2 - 10 });
+                currentY += 16;
               }
  
-              currentY += 5;
+              currentY += 4;
  
               if (checklist.responses) {
                 try {
@@ -242,22 +291,17 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     : checklist.responses;
  
                   // ================================================
-                  // ✅ INSPEÇÃO VISUAL — BADGES OK / NOK
+                  // ✅ INSPEÇÃO VISUAL — 2 COLUNAS COM BADGES
                   //
-                  // ⚠️ IMPORTANTE: os dados NÃO chegam como objeto
-                  // aninhado. Chegam como CHAVES PLANAS no objeto
-                  // responses, com o prefixo "visual_items_":
-                  //
+                  // Dados chegam como chaves planas:
                   //   "visual_items_Tubos_OK": "Sim"
-                  //   "visual_items_Sala_OK": "Não"
                   //   "visual_items_Sala_N/A": "Sim"
                   //   "visual_items_Acionamento_NOK": "Sim"
                   //
-                  // Lógica:
-                  //   1. Pega todas as chaves com prefixo visual_items_
-                  //   2. Extrai o nome do item e o estado (OK/NOK/N/A)
-                  //   3. Agrupa em um objeto { ok, nok, na } por item
-                  //   4. Renderiza badges — itens N/A são OMITIDOS
+                  // Layout: grade 2 colunas, cada linha tem:
+                  //   [Nome do item]  [badge OK verde / NOK vermelho]
+                  //
+                  // Itens N/A → omitidos completamente.
                   // ================================================
                   const visualKeys = Object.keys(responses).filter(k =>
                     k.toLowerCase().startsWith('visual_items_')
@@ -265,106 +309,147 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
                   if (visualKeys.length > 0) {
  
-                    // Título da seção com fundo cinza
-                    doc.rect(cardX + 5, currentY, cardWidth - 10, 16).fill('#E8E8E8');
-                    doc.fontSize(9).fillColor('#333333').font('Helvetica-Bold')
-                       .text('Inspeção Visual', cardX + 10, currentY + 3);
-                    currentY += 22;
+                    // Título da seção
+                    doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
+                       .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
+                    currentY += 4;
+                    doc.strokeColor('#E0E0E0').lineWidth(0.5)
+                       .moveTo(cardX + 10, currentY).lineTo(cardX + cardWidth - 10, currentY).stroke();
+                    currentY += 8;
  
-                    // ── PASSO 1: Agrupa por nome do item ────────────
-                    // Remove prefixo → separa no último "_" → classifica
+                    // ── Agrupa por nome do item ──────────────────
                     const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
  
                     for (const key of visualKeys) {
-                      // Remove "visual_items_" do início
-                      const semPrefixo = key.replace(/^visual_items_/i, '');
+                      const semPrefixo    = key.replace(/^visual_items_/i, '');
+                      const ultimoUnder   = semPrefixo.lastIndexOf('_');
+                      if (ultimoUnder === -1) continue;
  
-                      // Separa no ÚLTIMO underscore para pegar o estado
-                      // Ex: "Tubos_OK" → itemName="Tubos", state="OK"
-                      // Ex: "Sala_N/A" → itemName="Sala",  state="N/A"
-                      const ultimoUnderline = semPrefixo.lastIndexOf('_');
-                      if (ultimoUnderline === -1) continue;
- 
-                      const itemName = semPrefixo.substring(0, ultimoUnderline);
-                      const estado   = semPrefixo.substring(ultimoUnderline + 1).toUpperCase().replace(/\s/g, '');
-                      const valor    = String(responses[key]).toLowerCase();
-                      const marcado  = valor === 'sim' || valor === 'true' || valor === '1';
+                      const itemName = semPrefixo.substring(0, ultimoUnder);
+                      const estado   = semPrefixo.substring(ultimoUnder + 1).toUpperCase().replace(/\s/g, '');
+                      const marcado  = String(responses[key]).toLowerCase() === 'sim' || String(responses[key]) === '1';
  
                       if (!itemMap[itemName]) itemMap[itemName] = { ok: false, nok: false, na: false };
  
-                      if      (estado === 'OK')                              itemMap[itemName].ok  = marcado;
-                      else if (estado === 'NOK')                             itemMap[itemName].nok = marcado;
+                      if      (estado === 'OK')                               itemMap[itemName].ok  = marcado;
+                      else if (estado === 'NOK')                              itemMap[itemName].nok = marcado;
                       else if (estado.includes('N') && estado.includes('A')) itemMap[itemName].na  = marcado;
                     }
  
-                    // ── PASSO 2: Renderiza na ordem correta ─────────
+                    // ── Filtra N/A e ordena ──────────────────────
                     const ordemConhecida = ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'];
-                    const todosItens = [
-                      ...ordemConhecida.filter(i => itemMap[i]),
-                      ...Object.keys(itemMap).filter(i => !ordemConhecida.includes(i))
+                    const itensVisiveis  = [
+                      ...ordemConhecida.filter(i => itemMap[i] && !itemMap[i].na),
+                      ...Object.keys(itemMap).filter(i => !ordemConhecida.includes(i) && !itemMap[i].na)
                     ];
  
-                    const rowHeight = 18;
-                    const badgeW    = 40;
-                    const badgeH    = 12;
+                    // ── Renderiza em 2 colunas ───────────────────
+                    // Divide a lista ao meio para montar as duas colunas lado a lado
+                    const colVisW  = (cardWidth - 20) / 2; // largura de cada coluna
+                    const col1VisX = cardX + 10;
+                    const col2VisX = cardX + 10 + colVisW + 5;
+                    const rowH     = 16;
+                    const badgeW   = 36;
+                    const badgeH   = 11;
+                    const meioVis  = Math.ceil(itensVisiveis.length / 2);
  
-                    for (const itemName of todosItens) {
-                      const est = itemMap[itemName];
+                    // Renderiza coluna esquerda e guarda posição Y final
+                    let col1VisY = currentY;
+                    itensVisiveis.slice(0, meioVis).forEach((itemName) => {
+                      const est    = itemMap[itemName];
+                      const bgCol  = col1VisY % (rowH * 2) < rowH ? '#FAFAFA' : '#FFFFFF';
  
-                      // N/A → não aparece no PDF
-                      if (est.na) continue;
+                      doc.rect(col1VisX, col1VisY, colVisW, rowH).fill(bgCol);
  
-                      if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
- 
-                      // Fundo suave
-                      doc.rect(cardX + 5, currentY, cardWidth - 10, rowHeight).fill('#FAFAFA');
- 
-                      // Nome do item à esquerda
+                      // Nome
                       doc.fontSize(8).fillColor('#333333').font('Helvetica-Bold')
-                         .text(itemName, cardX + 10, currentY + 5, { width: 90 });
+                         .text(itemName, col1VisX + 4, col1VisY + 4, { width: colVisW - badgeW * 2 - 20 });
  
-                      const okX    = cardX + 108;
-                      const nokX   = okX + badgeW + 8;
-                      const badgeY = currentY + 3;
+                      const bY   = col1VisY + (rowH - badgeH) / 2;
+                      const okX  = col1VisX + colVisW - badgeW * 2 - 6;
+                      const nokX = okX + badgeW + 4;
  
-                      // ── Badge OK ──
+                      // Badge OK
                       if (est.ok) {
-                        // Verde preenchido com ✓
-                        doc.roundedRect(okX, badgeY, badgeW, badgeH, 5).fill('#2E7D32');
-                        doc.fontSize(7).fillColor('#FFFFFF').font('Helvetica-Bold')
-                           .text('✓  OK', okX, badgeY + 2, { width: badgeW, align: 'center' });
+                        doc.roundedRect(okX, bY, badgeW, badgeH, 4).fill('#2E7D32');
+                        doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold')
+                           .text('✓ OK', okX, bY + 2, { width: badgeW, align: 'center' });
                       } else {
-                        // Cinza vazio
-                        doc.roundedRect(okX, badgeY, badgeW, badgeH, 5)
-                           .strokeColor('#CCCCCC').lineWidth(0.5).stroke();
-                        doc.fontSize(7).fillColor('#CCCCCC').font('Helvetica')
-                           .text('OK', okX, badgeY + 2, { width: badgeW, align: 'center' });
+                        doc.roundedRect(okX, bY, badgeW, badgeH, 4)
+                           .strokeColor('#DDDDDD').lineWidth(0.5).stroke();
+                        doc.fontSize(6).fillColor('#CCCCCC').font('Helvetica')
+                           .text('OK', okX, bY + 2, { width: badgeW, align: 'center' });
                       }
  
-                      // ── Badge NOK ──
+                      // Badge NOK
                       if (est.nok) {
-                        // Vermelho preenchido com ✗
-                        doc.roundedRect(nokX, badgeY, badgeW, badgeH, 5).fill('#C62828');
-                        doc.fontSize(7).fillColor('#FFFFFF').font('Helvetica-Bold')
-                           .text('✗  NOK', nokX, badgeY + 2, { width: badgeW, align: 'center' });
+                        doc.roundedRect(nokX, bY, badgeW, badgeH, 4).fill('#C62828');
+                        doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold')
+                           .text('✗ NOK', nokX, bY + 2, { width: badgeW, align: 'center' });
                       } else {
-                        // Cinza vazio
-                        doc.roundedRect(nokX, badgeY, badgeW, badgeH, 5)
-                           .strokeColor('#CCCCCC').lineWidth(0.5).stroke();
-                        doc.fontSize(7).fillColor('#CCCCCC').font('Helvetica')
-                           .text('NOK', nokX, badgeY + 2, { width: badgeW, align: 'center' });
+                        doc.roundedRect(nokX, bY, badgeW, badgeH, 4)
+                           .strokeColor('#DDDDDD').lineWidth(0.5).stroke();
+                        doc.fontSize(6).fillColor('#CCCCCC').font('Helvetica')
+                           .text('NOK', nokX, bY + 2, { width: badgeW, align: 'center' });
                       }
  
-                      currentY += rowHeight;
-                    }
+                      col1VisY += rowH;
+                    });
  
-                    currentY += 10;
+                    // Renderiza coluna direita
+                    let col2VisY = currentY;
+                    itensVisiveis.slice(meioVis).forEach((itemName) => {
+                      const est   = itemMap[itemName];
+                      const bgCol = col2VisY % (rowH * 2) < rowH ? '#FAFAFA' : '#FFFFFF';
+ 
+                      doc.rect(col2VisX, col2VisY, colVisW, rowH).fill(bgCol);
+ 
+                      doc.fontSize(8).fillColor('#333333').font('Helvetica-Bold')
+                         .text(itemName, col2VisX + 4, col2VisY + 4, { width: colVisW - badgeW * 2 - 20 });
+ 
+                      const bY   = col2VisY + (rowH - badgeH) / 2;
+                      const okX  = col2VisX + colVisW - badgeW * 2 - 6;
+                      const nokX = okX + badgeW + 4;
+ 
+                      if (est.ok) {
+                        doc.roundedRect(okX, bY, badgeW, badgeH, 4).fill('#2E7D32');
+                        doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold')
+                           .text('✓ OK', okX, bY + 2, { width: badgeW, align: 'center' });
+                      } else {
+                        doc.roundedRect(okX, bY, badgeW, badgeH, 4)
+                           .strokeColor('#DDDDDD').lineWidth(0.5).stroke();
+                        doc.fontSize(6).fillColor('#CCCCCC').font('Helvetica')
+                           .text('OK', okX, bY + 2, { width: badgeW, align: 'center' });
+                      }
+ 
+                      if (est.nok) {
+                        doc.roundedRect(nokX, bY, badgeW, badgeH, 4).fill('#C62828');
+                        doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold')
+                           .text('✗ NOK', nokX, bY + 2, { width: badgeW, align: 'center' });
+                      } else {
+                        doc.roundedRect(nokX, bY, badgeW, badgeH, 4)
+                           .strokeColor('#DDDDDD').lineWidth(0.5).stroke();
+                        doc.fontSize(6).fillColor('#CCCCCC').font('Helvetica')
+                           .text('NOK', nokX, bY + 2, { width: badgeW, align: 'center' });
+                      }
+ 
+                      col2VisY += rowH;
+                    });
+ 
+                    // currentY avança para abaixo da maior coluna
+                    currentY = Math.max(col1VisY, col2VisY) + 10;
                   }
  
                   // ================================================
-                  // 🔧 DADOS TÉCNICOS (duas colunas)
-                  // Remove TUDO que começa com "visual_items_"
-                  // e as chaves de observações.
+                  // 🔧 DADOS TÉCNICOS — 2 COLUNAS
+                  //
+                  // Cada célula tem:
+                  //   - Rótulo pequeno e cinza em cima  (ex: "Corrente 1")
+                  //   - Valor em destaque embaixo        (ex: "24,1")
+                  //   - Unidade cinza ao lado            (ex: "A")
+                  //
+                  // Underscores nos nomes → espaço (via formatLabel).
+                  // Unidades automáticas  → via splitValueUnit.
                   // ================================================
                   const technicalFields = Object.entries(responses).filter(([key]) => {
                     const k = key.toLowerCase();
@@ -376,40 +461,78 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   });
  
                   if (technicalFields.length > 0) {
-                    doc.fontSize(9).fillColor(goldColor).font('Helvetica-Bold')
-                       .text('Dados Técnicos', cardX + 10, currentY);
-                    currentY += 15;
  
-                    const midPoint          = Math.ceil(technicalFields.length / 2);
-                    const leftColumnFields  = technicalFields.slice(0, midPoint);
-                    const rightColumnFields = technicalFields.slice(midPoint);
+                    // Separador + título
+                    doc.strokeColor('#E0E0E0').lineWidth(0.5)
+                       .moveTo(cardX + 10, currentY).lineTo(cardX + cardWidth - 10, currentY).stroke();
+                    currentY += 6;
+                    doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
+                       .text('DADOS TÉCNICOS', cardX + 10, currentY);
+                    currentY += 10;
  
-                    let col1Y = currentY;
-                    let col2Y = currentY;
+                    // Grade 2 colunas
+                    // Cada célula: largura = metade do card
+                    const cellW   = (cardWidth - 20) / 2;
+                    const cellH   = 28; // altura de cada célula
+                    const col1TecX = cardX + 10;
+                    const col2TecX = cardX + 10 + cellW + 4;
  
-                    leftColumnFields.forEach(([label, value]) => {
-                      if (value !== null && value !== undefined && value !== '') {
-                        const fl = label.charAt(0).toUpperCase() + label.slice(1).replace(/([A-Z])/g, ' $1');
-                        doc.fontSize(8).fillColor('#333333').font('Helvetica')
-                           .text(`${fl}: ${formatFieldValue(value)}`, cardX + 10, col1Y, { width: cardWidth / 2 - 15 });
-                        col1Y += 12;
+                    for (let i = 0; i < technicalFields.length; i++) {
+                      const [label, value] = technicalFields[i];
+                      if (value === null || value === undefined || value === '') continue;
+ 
+                      // Alterna entre coluna esquerda (i par) e direita (i ímpar)
+                      const isLeft = i % 2 === 0;
+                      const cellX  = isLeft ? col1TecX : col2TecX;
+ 
+                      // A cada 2 itens, avança o Y (nova linha da grade)
+                      if (!isLeft) {
+                        // Não avança — fica na mesma linha da coluna esquerda
+                      } else if (i > 0) {
+                        currentY += cellH;
                       }
-                    });
  
-                    rightColumnFields.forEach(([label, value]) => {
-                      if (value !== null && value !== undefined && value !== '') {
-                        const fl = label.charAt(0).toUpperCase() + label.slice(1).replace(/([A-Z])/g, ' $1');
-                        doc.fontSize(8).fillColor('#333333').font('Helvetica')
-                           .text(`${fl}: ${formatFieldValue(value)}`, cardX + cardWidth / 2 + 5, col2Y, { width: cardWidth / 2 - 15 });
-                        col2Y += 12;
+                      if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
+ 
+                      // Fundo alternado por linha (par = claro, ímpar = branco)
+                      const linhaIdx = Math.floor(i / 2);
+                      if (linhaIdx % 2 === 0) {
+                        doc.rect(cellX, currentY, cellW, cellH).fill('#F7F7F7');
                       }
-                    });
  
-                    currentY = Math.max(col1Y, col2Y) + 10;
+                      // Rótulo pequeno em cinza
+                      doc.fontSize(7).fillColor('#999999').font('Helvetica')
+                         .text(formatLabel(label), cellX + 6, currentY + 4, { width: cellW - 8 });
+ 
+                      // Valor + unidade
+                      const [val, unit] = splitValueUnit(label, value);
+                      const valX = cellX + 6;
+                      const valY = currentY + 14;
+ 
+                      doc.fontSize(10).fillColor('#222222').font('Helvetica-Bold')
+                         .text(val, valX, valY, { continued: unit !== '' });
+ 
+                      if (unit !== '') {
+                        doc.fontSize(7).fillColor('#999999').font('Helvetica')
+                           .text(` ${unit}`, { continued: false });
+                      }
+                    }
+ 
+                    // Se o último item estava na coluna esquerda, ainda falta avançar uma linha
+                    if (technicalFields.length % 2 !== 0) {
+                      currentY += cellH;
+                    } else {
+                      currentY += cellH;
+                    }
+ 
+                    currentY += 8;
                   }
  
                   // ================================================
                   // 📝 OBSERVAÇÕES TÉCNICAS
+                  //
+                  // Borda dourada à esquerda (estilo blockquote)
+                  // em vez de caixa cinza chata.
                   // ================================================
                   const obsContent = responses.observations || responses.observacoes;
  
@@ -417,35 +540,49 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     if (currentY > doc.page.height - 120) { doc.addPage(); currentY = 40; }
  
                     const cleanObs   = obsContent.trim();
-                    const textWidth  = cardWidth - 25;
-                    const textHeight = doc.heightOfString(cleanObs, { width: textWidth, align: 'justify' });
+                    const obsWidth   = cardWidth - 30; // margem interna
+                    const textHeight = doc.heightOfString(cleanObs, { width: obsWidth - 16, align: 'justify' });
+                    const blockH     = textHeight + 20;
  
-                    doc.fontSize(9).fillColor(goldColor).font('Helvetica-Bold')
-                       .text('Observações Técnicas:', cardX + 10, currentY);
-                    currentY += 12;
+                    // Borda dourada à esquerda (3px)
+                    doc.strokeColor(goldColor).lineWidth(3)
+                       .moveTo(cardX + 10, currentY)
+                       .lineTo(cardX + 10, currentY + blockH)
+                       .stroke();
  
-                    doc.rect(cardX + 8, currentY, cardWidth - 16, textHeight + 8).fill('#F9F9F9');
-                    doc.fontSize(8).fillColor('#333333').font('Helvetica')
-                       .text(cleanObs, cardX + 12, currentY + 4, { width: textWidth, align: 'justify', lineGap: 2 });
+                    // Fundo levíssimo
+                    doc.rect(cardX + 13, currentY, obsWidth, blockH).fill('#FDFAF4');
  
-                    currentY += textHeight + 20;
+                    // Rótulo "Observações técnicas"
+                    doc.fontSize(7).fillColor('#B8922A').font('Helvetica-Bold')
+                       .text('OBSERVAÇÕES TÉCNICAS', cardX + 18, currentY + 5);
+ 
+                    // Texto das observações
+                    doc.fontSize(8).fillColor('#444444').font('Helvetica')
+                       .text(cleanObs, cardX + 18, currentY + 16, {
+                         width: obsWidth - 16,
+                         align: 'justify',
+                         lineGap: 2
+                       });
+ 
+                    currentY += blockH + 12;
                   }
  
-                  // Linha separadora do card
+                  // Linha separadora ao final do card
                   doc.strokeColor(goldColor).lineWidth(1)
                      .moveTo(cardX, currentY).lineTo(cardX + cardWidth, currentY).stroke();
-                  currentY += 15;
+                  currentY += 14;
  
                 } catch (e) {
                   console.error('[PDF] Erro ao parsear respostas do checklist:', e);
                 }
               }
  
-              currentY += 8;
+              currentY += 6;
             }
           }
  
-          currentY += 15;
+          currentY += 14;
         }
       }
  
@@ -480,20 +617,20 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         doc.fontSize(11).fillColor(goldColor).font('Helvetica-Bold').text('Relatório Fotográfico', leftMargin, currentY);
         currentY += 25;
  
-        const numeroColunas = 3;
+        const numCols   = 3;
         const gap       = 10;
-        const imgWidth  = (contentWidth - (gap * (numeroColunas - 1))) / numeroColunas;
+        const imgWidth  = (contentWidth - (gap * (numCols - 1))) / numCols;
         const imgHeight = 100;
  
         for (let i = 0; i < images.length; i++) {
-          const col  = i % numeroColunas;
+          const col  = i % numCols;
           const xPos = leftMargin + (col * (imgWidth + gap));
           if (i > 0 && col === 0) currentY += imgHeight + gap + 15;
           if (currentY > doc.page.height - 150) { doc.addPage(); currentY = 40; }
  
           try {
-            const response = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
-            doc.image(response.data, xPos, currentY, {
+            const resp = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
+            doc.image(resp.data, xPos, currentY, {
               width: imgWidth, height: imgHeight,
               fit: [imgWidth, imgHeight], align: 'center', valign: 'center'
             });
@@ -511,20 +648,19 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const posicaoFixaRodape = doc.page.height - 160;
       if (currentY > posicaoFixaRodape - 20) { doc.addPage(); currentY = 40; }
  
-      const sigStartY    = posicaoFixaRodape;
       const clientSig    = (workOrder as any).clientSignature;
       const hasClientSig = clientSig && clientSig.length > 50;
       const sigWidth     = hasClientSig ? (contentWidth / 2) - 30 : 250;
       const sigCol1X     = hasClientSig ? leftMargin : (doc.page.width - sigWidth) / 2;
       const sigCol2X     = doc.page.width / 2 + 15;
-      const imageY       = sigStartY;
+      const imageY       = posicaoFixaRodape;
       const sigLineY     = imageY + 45;
  
       const collaboratorSig = (workOrder as any).collaboratorSignature;
       if (collaboratorSig) {
         try {
-          const base64Data = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol1X + (sigWidth / 4), imageY, { width: sigWidth / 2, height: 40 });
+          const b64 = collaboratorSig.includes(',') ? collaboratorSig.split(',')[1] : collaboratorSig;
+          doc.image(Buffer.from(b64, 'base64'), sigCol1X + (sigWidth / 4), imageY, { width: sigWidth / 2, height: 40 });
         } catch (e) { console.error('Erro na assinatura técnica', e); }
       }
  
@@ -538,8 +674,8 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
       if (hasClientSig) {
         try {
-          const base64Data = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
-          doc.image(Buffer.from(base64Data, 'base64'), sigCol2X + (sigWidth / 4), imageY, { width: sigWidth / 2, height: 40 });
+          const b64 = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
+          doc.image(Buffer.from(b64, 'base64'), sigCol2X + (sigWidth / 4), imageY, { width: sigWidth / 2, height: 40 });
           doc.strokeColor('#333333').lineWidth(0.5)
              .moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
           const nomeCliente = (workOrder as any).clientName || 'Cliente';
@@ -579,12 +715,12 @@ function translateStatus(status: string): string {
   return map[status] || status;
 }
  
-function translatePriority(priority: string): string {
-  return ({ 'normal': 'Normal', 'alta': 'Alta', 'critica': 'Crítica' } as any)[priority] || priority;
+function translatePriority(p: string): string {
+  return ({ normal: 'Normal', alta: 'Alta', critica: 'Crítica' } as any)[p] || p;
 }
  
-function translateType(type: string): string {
-  return ({ 'rotina': 'Rotina', 'emergencial': 'Emergencial', 'orcamento': 'Orçamento' } as any)[type] || type;
+function translateType(t: string): string {
+  return ({ rotina: 'Rotina', emergencial: 'Emergencial', orcamento: 'Orçamento' } as any)[t] || t;
 }
  
 function formatDate(date: Date | string): string {
@@ -597,8 +733,8 @@ function formatFieldValue(value: any): string {
   if (typeof value === 'number')  return value.toString();
   if (typeof value === 'string') {
     const t: Record<string, string> = {
-      'ok': 'Ok', 'nok': 'NOk', 'n_a': 'N/A',
-      'monofasico': 'Monofásico', 'bifasico': 'Bifásico', 'trifasico': 'Trifásico'
+      ok: 'Ok', nok: 'NOk', n_a: 'N/A',
+      monofasico: 'Monofásico', bifasico: 'Bifásico', trifasico: 'Trifásico'
     };
     return t[value.toLowerCase()] || value;
   }
