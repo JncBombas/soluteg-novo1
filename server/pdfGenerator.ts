@@ -555,9 +555,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
           if (i > 0 && col === 0) currentY += imgH + gap + 15;
           if (currentY > doc.page.height - 150) { doc.addPage(); currentY = 40; }
           try {
-            const resp = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
-            doc.image(resp.data, xPos, currentY, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
-          } catch { doc.rect(xPos, currentY, imgW, imgH).strokeColor('#CCCCCC').stroke(); }
+                const resp = await axios.get(images[i].fileUrl, { responseType: 'arraybuffer' });
+                doc.image(resp.data, xPos, currentY, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
+              } catch (error) {
+              doc.rect(xPos, currentY, imgW, imgH).strokeColor('#CCCCCC').stroke();
+                }
         }
         currentY += imgH + 35;
       }
@@ -577,10 +579,10 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const collabSig = (workOrder as any).collaboratorSignature;
       if (collabSig) {
         try {
-          const b64 = collabSig.includes(',') ? collabSig.split(',')[1] : collabSig;
-          doc.image(Buffer.from(b64, 'base64'), sigCol1X + sigWidth / 4, imageY, { width: sigWidth / 2, height: 40 });
-        } catch (e) { console.error('Erro na assinatura técnica', e); }
-      }
+             const b64 = collabSig.includes(',') ? collabSig.split(',')[1] : collabSig;
+             doc.image(Buffer.from(b64, 'base64'), sigCol1X + sigWidth / 4, imageY, { width: sigWidth / 2, height: 40 });
+            } catch (e) { console.error('Erro na assinatura técnica', e); }
+                     }    
       doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol1X, sigLineY).lineTo(sigCol1X + sigWidth, sigLineY).stroke();
       const nomeColab = (workOrder as any).collaboratorName || (workOrder as any).technicianName || 'Técnico Responsável';
       doc.fontSize(8).fillColor('#666666').font('Helvetica')
@@ -589,14 +591,14 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
       if (hasClientSig) {
         try {
-          const b64 = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
-          doc.image(Buffer.from(b64, 'base64'), sigCol2X + sigWidth / 4, imageY, { width: sigWidth / 2, height: 40 });
-          doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
-          const nomeCliente = (workOrder as any).clientName || 'Cliente';
-          doc.fontSize(8).fillColor('#666666').font('Helvetica')
+             const b64 = clientSig.includes(',') ? clientSig.split(',')[1] : clientSig;
+             doc.image(Buffer.from(b64, 'base64'), sigCol2X + sigWidth / 4, imageY, { width: sigWidth / 2, height: 40 });
+             doc.strokeColor('#333333').lineWidth(0.5).moveTo(sigCol2X, sigLineY).lineTo(sigCol2X + sigWidth, sigLineY).stroke();
+             const nomeCliente = (workOrder as any).clientName || 'Cliente';
+             doc.fontSize(8).fillColor('#666666').font('Helvetica')
              .text('Assinatura do Cliente', sigCol2X, sigLineY + 5,  { width: sigWidth, align: 'center' })
              .text(`Nome: ${nomeCliente}`,  sigCol2X, sigLineY + 15, { width: sigWidth, align: 'center' });
-        } catch (e) { console.error('Erro na assinatura do cliente', e); }
+            } catch (e) { console.error('Erro na assinatura do cliente', e); }
       }
  
         // ── RODAPÉ ────────────────────────────────────────────────
@@ -606,13 +608,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
  
         doc.end();
  
-    } catch (error) {console.error('Erro geral na geração do PDF:', error);}
-      }
-    }
-          }
-      });
+    
+    }}}} catch (error) {console.error('Erro geral na geração do PDF:', error);}
+          });
+        }
      
-  }
+  
     
   
   
