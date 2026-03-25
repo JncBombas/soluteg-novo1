@@ -153,7 +153,7 @@ export default function CompleteWorkOrderModal({
                   className="bg-white"
                 />
                 <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setCollaboratorSignature} height={300} />
+                  <SignaturePad onSave={setCollaboratorSignature} height={400} />
                 </div>
               </div>
             </div>
@@ -171,7 +171,7 @@ export default function CompleteWorkOrderModal({
                   className="bg-white"
                 />
                 <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setClientSignature} height={300} />
+                  <SignaturePad onSave={setClientSignature} height={400} />
                 </div>
               </div>
             </div>
