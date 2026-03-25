@@ -342,6 +342,7 @@ export const workOrderAttachments = mysqlTable("workOrderAttachments", {
   fileType: varchar("fileType", { length: 100 }), // Ex: image/jpeg, application/pdf
   fileSize: int("fileSize"), // Em bytes
   category: mysqlEnum("category", ["before", "during", "after", "document", "other"]).default("other").notNull(),
+  description: text("description"), // <--- Aqui é onde a legenda será salva!
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   uploadedBy: varchar("uploadedBy", { length: 100 }),
 });
