@@ -104,7 +104,7 @@ export default function CompleteWorkOrderModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* max-h-[95vh] garante que a janela não suma em telas pequenas, permitindo rolagem */}
-      <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto border-t-8 border-t-emerald-600">
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto border-t-8 border-t-emerald-600">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-2xl font-black">Finalizar Atendimento</DialogTitle>
@@ -140,12 +140,12 @@ export default function CompleteWorkOrderModal({
           {/* O campo de Relatório (Textarea) foi removido totalmente desta seção */}
 
           {/* Grid que divide a tela em duas colunas no computador (md:grid-cols-2) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-8">
             
             {/* SEÇÃO DO TÉCNICO */}
             <div className="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
               <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Colaborador (Técnico)</h3>
-              <div className="space-y-3">
+              <div className="space-y-6 py-4">
                 <Input
                   placeholder="Seu nome completo"
                   value={collaboratorName}
@@ -153,7 +153,7 @@ export default function CompleteWorkOrderModal({
                   className="bg-white"
                 />
                 <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setCollaboratorSignature} height={120} />
+                  <SignaturePad onSave={setCollaboratorSignature} height={300} />
                 </div>
               </div>
             </div>
@@ -163,7 +163,7 @@ export default function CompleteWorkOrderModal({
               <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">
                 Cliente {isEmergency && "(OBRIGATÓRIO)"}
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-6 py-4">
                 <Input
                   placeholder="Nome de quem acompanhou"
                   value={clientName}
@@ -171,7 +171,7 @@ export default function CompleteWorkOrderModal({
                   className="bg-white"
                 />
                 <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setClientSignature} height={120} />
+                  <SignaturePad onSave={setClientSignature} height={300} />
                 </div>
               </div>
             </div>
