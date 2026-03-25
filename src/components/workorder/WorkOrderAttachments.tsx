@@ -1,242 +1,220 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc"; // 📞 Comunicação oficial com o Banco de Dados
+import { trpc } from "@/lib/trpc"; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Image, Trash2, ExternalLink, Loader2 } from "lucide-react"; // ✨ Ícones bonitos
-import { toast } from "sonner"; // 🔔 Aquelas mensagens de aviso no canto da tela
+import { Progress } from "@/components/ui/progress"; 
+import { 
+  Upload, 
+  FileText, 
+  Image as ImageIcon, 
+  Trash2, 
+  ExternalLink, 
+  Loader2, 
+  CheckCircle2 
+} from "lucide-react"; 
+import { toast } from "sonner"; 
 
-// Define que este componente precisa receber o ID da Ordem de Serviço para funcionar
+// --- CONFIGURAÇÃO INICIAL ---
+// Dizemos ao sistema: "Para mostrar as fotos, preciso saber o número da Ordem de Serviço (ID)".
 interface WorkOrderAttachmentsProps {
   workOrderId: number;
 }
 
 export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmentsProps) {
-  // 📍 ESTADOS (Variáveis que o React "vigia" para atualizar a tela)
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined); // Qual aba (Antes/Depois) está clicada
-  const [isUploading, setIsUploading] = useState(false); // Avisa se o sistema está "trabalhando" no upload agora
+  
+  // --- QUADRO DE AVISOS (ESTADOS) ---
+  // O React usa isso para saber o que está acontecendo na tela agora.
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined); // Qual aba (Antes/Depois) está clicada?
+  const [isUploading, setIsUploading] = useState(false); // O sistema está "trabalhando" no upload agora?
+  const [uploadProgress, setUploadProgress] = useState(0); // Qual a porcentagem (0 a 100) do envio?
+  const [editingId, setEditingId] = useState<number | null>(null); // Qual foto o usuário clicou para escrever a legenda?
+  const [tempDescription, setTempDescription] = useState(""); // O que está sendo digitado na legenda antes de salvar?
 
-  // 📡 BUSCA DE DADOS: Pede ao servidor a lista de fotos desta OS
+  // --- CONVERSA COM O BANCO DE DADOS (tRPC) ---
+  
+  // 1. Pede a lista de fotos que já estão salvas para essa OS.
   const { data: attachments, refetch } = trpc.workOrders.attachments.list.useQuery({
     workOrderId,
     category: selectedCategory as any,
   });
 
-  // 💾 SALVAR NO BANCO: Comando para registrar o link da foto que veio do Cloudinary
+  // 2. Comando para avisar o banco: "Ei, acabei de subir uma foto nova, anote o link aí!"
   const createAttachmentMutation = trpc.workOrders.attachments.create.useMutation({
+    onSuccess: () => refetch(), // Se deu certo, atualiza a lista na tela sozinho.
+  });
+
+  // 3. Comando para trocar o texto da legenda de uma foto que já existe.
+  const updateAttachmentMutation = trpc.workOrders.attachments.update.useMutation({
     onSuccess: () => {
-      toast.success("Foto salva com sucesso na OS!");
-      refetch(); // Atualiza a lista na tela para a foto nova aparecer
+      toast.success("Legenda salva!");
+      setEditingId(null); // Fecha a caixinha de digitar.
+      refetch(); // Atualiza o texto na tela.
     },
   });
 
-  // 🗑️ DELETAR: Comando para apagar um anexo
+  // 4. Comando para apagar uma foto do sistema.
   const deleteAttachmentMutation = trpc.workOrders.attachments.delete.useMutation({
     onSuccess: () => {
-      toast.success("Anexo removido com sucesso");
-      refetch(); // Atualiza a lista para a foto sumir da tela
-    },
-    onError: (error) => {
-      toast.error(`Erro ao remover anexo: ${error.message}`);
+      toast.success("Foto removida!");
+      refetch();
     },
   });
 
-  // Função disparada ao clicar no ícone de lixeira
-  const handleDeleteAttachment = (attachmentId: number) => {
-    if (confirm("Tem certeza que deseja remover este anexo?")) {
-      deleteAttachmentMutation.mutate({ id: attachmentId });
-    }
-  };
+  // --- MOTOR DE ENVIO (LÓGICA DO UPLOAD) ---
+  const handleFileUpload = async (category: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-  // 🔥 FUNÇÃO PRINCIPAL ATUALIZADA: Envia Múltiplos Arquivos para a JNC
-const handleFileUpload = async (category: string, files: FileList | null) => {
-  if (!files || files.length === 0) return;
+    setIsUploading(true); // Liga o ícone de "carregando".
+    setUploadProgress(10); // Começa a barra em 10% para o usuário ver que iniciou.
+    const toastId = toast.loading("Enviando arquivos...");
 
-  setIsUploading(true);
-  const toastId = toast.loading(`Enviando ${files.length} arquivo(s)...`);
+    try {
+      // Cria um "pacote" com todas as fotos selecionadas.
+      const formData = new FormData();
+      Array.from(files).forEach((file) => formData.append("files", file));
 
-  try {
-    const formData = new FormData();
-    
-    // 📦 COLOCANDO TUDO NO ENVELOPE:
-    // O nome 'files' deve ser exatamente o que está no upload.array('files') do seu backend
-    Array.from(files).forEach((file) => {
-      formData.append("files", file); 
-    });
-
-    // 1️⃣ ROTA DE FUGA: Envia o pacotão para a VPS
-    const response = await fetch("/api/work-orders/upload", { 
-  method: "POST",
-  body: formData,
-});
-
-    if (!response.ok) throw new Error("Falha no servidor de upload");
-
-    const result = await response.json(); // O backend agora deve retornar um ARRAY de URLs
-
-    // 2️⃣ REGISTRO NO BANCO DA JNC:
-    // Como enviamos vários, o resultado (result.urls) será uma lista.
-    if (result.urls && result.urls.length > 0) {
-      
-      // Fazemos um loop para registrar cada foto individualmente no seu banco via tRPC
-      result.urls.forEach((urlData: any, index: number) => {
-        createAttachmentMutation.mutate({
-          workOrderId,
-          fileName: files[index].name,
-          fileUrl: urlData.url || urlData, // Ajuste conforme o retorno do seu backend
-          fileKey: urlData.public_id || `key_${Date.now()}_${index}`, 
-          fileType: files[index].type,
-          fileSize: files[index].size,
-          category: category as any,
+      // Cria um "mensageiro" (XHR) que consegue dizer quantos % do caminho ele já percorreu.
+      const xhr = new XMLHttpRequest();
+      const promise = new Promise((resolve, reject) => {
+        // Enquanto o arquivo viaja pela internet, atualizamos a barra de progresso.
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const porcentagem = Math.round((e.loaded / e.total) * 95); // Vai até 95%.
+            setUploadProgress(porcentagem);
+          }
         });
-      });
-      
-      toast.success(`${files.length} arquivos enviados com sucesso!`);
-    }
-  } catch (error) {
-    console.error("Erro no upload múltiplo JNC:", error);
-    toast.error("Erro ao subir imagens. Verifique o tamanho total.");
-  } finally {
-    toast.dismiss(toastId);
-    setIsUploading(false);
-  }
-};
-
-  // --- TRADUTORES (Transformam nomes técnicos em nomes para humanos) ---
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      before: "Antes",
-      during: "Durante",
-      after: "Depois",
-      document: "Documentos",
-      other: "Outros",
-    };
-    return labels[category] || category;
-  };
-
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      before: "bg-blue-100 text-blue-800",
-      during: "bg-yellow-100 text-yellow-800",
-      after: "bg-green-100 text-green-800",
-      document: "bg-purple-100 text-purple-800",
-      other: "bg-gray-100 text-gray-800",
-    };
-    return colors[category] || "bg-gray-100 text-gray-800";
-  };
-
-  // Verifica se o arquivo é imagem para mostrar a miniatura ou um ícone de papel
-  const isImage = (fileType?: string | null) => {
-    if (!fileType) return false;
-    return fileType.startsWith("image/");
-  };
-
-  // Transforma o tamanho do arquivo (bytes) em algo legível (KB ou MB)
-  const formatFileSize = (bytes?: number | null) => {
-    if (!bytes) return "N/A";
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Anexos e Fotos</CardTitle>
+        // Quando o servidor avisar que recebeu tudo com sucesso.
+        xhr.addEventListener("load", () => resolve(JSON.parse(xhr.responseText)));
+        xhr.addEventListener("error", () => reject());
         
-        {/* BOTÃO DE UPLOAD: O "input type=file" fica invisível por cima do botão real */}
-        <Button variant="outline" className="relative" disabled={isUploading}>
-          {isUploading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> // Ícone girando
-          ) : (
-            <Upload className="mr-2 h-4 w-4" />
-          )}
-          {isUploading ? "Subindo..." : "Enviar Arquivos"}
-          
+        xhr.open("POST", "/api/work-orders/upload"); // Caminho da "estrada" até o servidor.
+        xhr.send(formData); // Envia o pacote.
+      });
+
+      const result: any = await promise; // Espera o mensageiro voltar com os links das fotos.
+
+      if (result.urls) {
+        // Para cada link que voltou, criamos um registro "oficial" no banco de dados.
+        for (const [index, urlData] of result.urls.entries()) {
+          createAttachmentMutation.mutate({
+            workOrderId,
+            fileName: files[index].name,
+            fileUrl: urlData.url || urlData,
+            fileKey: urlData.key || `key_${Date.now()}`,
+            fileType: files[index].type,
+            fileSize: files[index].size,
+            category: category as any,
+            description: "", 
+          });
+        }
+        toast.success("Fotos enviadas!", { id: toastId });
+      }
+    } catch {
+      toast.error("Falha no envio.", { id: toastId });
+    } finally {
+      setUploadProgress(100); // Finaliza a barra.
+      // Espera quase 1 segundo e "limpa" o estado para o próximo upload.
+      setTimeout(() => { setIsUploading(false); setUploadProgress(0); }, 800);
+    }
+  };
+
+  // --- O QUE APARECE NA TELA (VISUAL) ---
+  return (
+    <Card className="shadow-sm border-slate-200">
+      {/* CABEÇALHO: Título e Botão de Subir Fotos */}
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
+        <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <ImageIcon className="h-5 w-5 text-blue-600" />
+          Galeria da Ordem de Serviço
+        </CardTitle>
+        
+        {/* Botão de Upload: O seletor real fica invisível por cima para facilitar o clique */}
+        <Button variant="outline" className="relative h-9 border-blue-200 text-blue-700 hover:bg-blue-50" disabled={isUploading}>
+          {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+          {isUploading ? `${uploadProgress}%` : "Subir Fotos"}
           <input
-            type="file"
-            multiple // <--- ADICIONE ISSO AQUI para permitir selecionar várias fotos de uma vez
-            accept="image/*,application/pdf" // Só aceita fotos e PDFs
-            className="absolute inset-0 opacity-0 cursor-pointer" // Deixa o seletor invisível
+            type="file" multiple accept="image/*,application/pdf"
+            className="absolute inset-0 opacity-0 cursor-pointer"
             onChange={(e) => handleFileUpload(selectedCategory || "other", e.target.files)}
-            disabled={isUploading}
           />
         </Button>
       </CardHeader>
+
+      {/* BARRA DE PROGRESSO: Só aparece se estiver subindo algo */}
+      {isUploading && (
+        <div className="px-6 pb-4">
+          <Progress value={uploadProgress} className="h-1 bg-blue-100" />
+        </div>
+      )}
       
       <CardContent>
-        {/* ABAS: Filtram as fotos por etapa do serviço */}
         <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 overflow-x-auto">
-            <TabsTrigger value="all" onClick={() => setSelectedCategory(undefined)}>Todos</TabsTrigger>
-            <TabsTrigger value="before" onClick={() => setSelectedCategory("before")}>Antes</TabsTrigger>
-            <TabsTrigger value="during" onClick={() => setSelectedCategory("during")}>Durante</TabsTrigger>
-            <TabsTrigger value="after" onClick={() => setSelectedCategory("after")}>Depois</TabsTrigger>
-            <TabsTrigger value="document" onClick={() => setSelectedCategory("document")}>Docs</TabsTrigger>
-            <TabsTrigger value="other" onClick={() => setSelectedCategory("other")}>Outros</TabsTrigger>
+          {/* ABAS: Filtros (Todos, Antes, Durante, Depois, etc.) */}
+          <TabsList className="grid w-full grid-cols-6 bg-slate-100/50 p-1">
+            {["all", "before", "during", "after", "document", "other"].map((cat) => (
+              <TabsTrigger 
+                key={cat} value={cat} 
+                className="text-[10px] uppercase font-bold" 
+                onClick={() => setSelectedCategory(cat === "all" ? undefined : cat)}
+              >
+                {cat === "all" ? "Tudo" : cat.slice(0, 4)} {/* Abrevia o nome para caber no celular */}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            {/* Se tiver fotos, mostra o grid. Se não, mostra o aviso de "Vazio" */}
-            {attachments && attachments.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {attachments.map((attachment) => (
-                  <div key={attachment.id} className="border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow">
-                    {/* MINIATURA: Mostra a foto ou ícone de arquivo */}
-                    {isImage(attachment.fileType) ? (
-                      <div className="aspect-video bg-gray-100 rounded-md overflow-hidden">
-                        <img src={attachment.fileUrl} alt={attachment.fileName} className="w-full h-full object-cover" />
-                      </div>
-                    ) : (
-                      <div className="aspect-video bg-gray-100 rounded-md flex items-center justify-center">
-                        <FileText className="h-16 w-16 text-gray-400" />
-                      </div>
-                    )}
+          {/* GRID: Onde os cards das fotos são desenhados */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+            {attachments?.map((file) => (
+              <div key={file.id} className="group border rounded-xl p-3 bg-white hover:shadow-md transition-all">
+                
+                {/* ESPAÇO DA FOTO (MINIATURA) */}
+                <div className="aspect-video bg-slate-50 rounded-lg overflow-hidden border mb-3 flex items-center justify-center">
+                  {file.fileType?.startsWith("image/") ? (
+                    <img src={file.fileUrl} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <FileText className="h-10 w-10 text-slate-300" /> // Se for PDF, mostra ícone de papel
+                  )}
+                </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-sm truncate flex-1">{attachment.fileName}</p>
-                        <Badge className={getCategoryColor(attachment.category)}>
-                          {getCategoryLabel(attachment.category)}
-                        </Badge>
-                      </div>
-
-                      {/* RODAPÉ DO CARD: Tamanho e Data */}
-                      <div className="flex items-center justify-between text-xs text-gray-600">
-                        <span>{formatFileSize(attachment.fileSize)}</span>
-                        <span>{new Date(attachment.uploadedAt).toLocaleDateString("pt-BR")}</span>
-                      </div>
-
-                      {/* BOTÕES DE AÇÃO: Abrir link ou Deletar */}
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="mr-2 h-3 w-3" /> Abrir
-                          </a>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteAttachment(attachment.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
+                <div className="space-y-2">
+                  {/* NOME E ETIQUETA DA CATEGORIA */}
+                  <div className="flex justify-between items-start">
+                    <p className="text-xs font-bold truncate flex-1">{file.fileName}</p>
+                    <Badge variant="outline" className="text-[9px] uppercase">{file.category}</Badge>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <Image className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p>Nenhuma foto da bomba ou do gerador ainda.</p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
-  );
-}
+
+                  {/* CAMPO DE LEGENDA: Se estiver editando, mostra caixa de texto. Se não, mostra o texto. */}
+                  {editingId === file.id ? (
+                    <div className="flex items-center gap-1">
+                      <input 
+                        className="text-xs border rounded p-1 w-full outline-blue-500"
+                        value={tempDescription}
+                        onChange={(e) => setTempDescription(e.target.value)}
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && updateAttachmentMutation.mutate({ id: file.id, description: tempDescription })}
+                      />
+                      <Button size="icon" className="h-6 w-6 bg-green-600" onClick={() => updateAttachmentMutation.mutate({ id: file.id, description: tempDescription })}>
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <p 
+                      className="text-[11px] text-slate-500 italic cursor-pointer hover:text-blue-600" 
+                      onClick={() => { setEditingId(file.id); setTempDescription(file.description || ""); }}
+                    >
+                      {file.description || "Clique para adicionar legenda..."}
+                    </p>
+                  )}
+
+                  {/* BOTÕES DE BAIXO: Abrir link ou Excluir */}
+                  <div className="flex gap-2 pt-2 border-t mt-2">
+                    <Button variant="ghost" size="sm" className="flex-1 h-7 text-[10px]" asChild>
+                      <a href={file.fileUrl} target="_blank" rel="noreferrer">
+                        <ExternalLink className="mr-1 h-3 w-3" /> Ver Original
+                      </a>
+                    </Button>
+                    <Button 
+                      variant="ghost" size="sm" 
+                      className="h-7 w-7 text-red-400 hover:text

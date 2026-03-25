@@ -3,7 +3,7 @@ import { getDb } from "./db";
 import {
   workOrderTasks,
   workOrderMaterials,
-  workOrderAttachments,
+  workOrderAttachments, // Tabela onde ficam guardadas as fotos
   workOrderComments,
   workOrderTimeTracking,
   InsertWorkOrderTask,
@@ -13,12 +13,14 @@ import {
   InsertWorkOrderTimeTracking,
 } from "../drizzle/schema";
 
-// ==================== TASKS ====================
+// ============================================================
+// SEÇÃO: TAREFAS (CHECKLIST)
+// Funções para criar, ver, editar e excluir os itens do checklist da OS.
+// ============================================================
 
 export async function createTask(task: InsertWorkOrderTask) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   const result = await db.insert(workOrderTasks).values(task);
   return result;
 }
@@ -26,7 +28,6 @@ export async function createTask(task: InsertWorkOrderTask) {
 export async function getTasksByWorkOrderId(workOrderId: number) {
   const db = await getDb();
   if (!db) return [];
-  
   return await db
     .select()
     .from(workOrderTasks)
@@ -36,22 +37,19 @@ export async function getTasksByWorkOrderId(workOrderId: number) {
 
 export async function updateTask(id: number, updates: Partial<InsertWorkOrderTask>) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.update(workOrderTasks).set(updates).where(eq(workOrderTasks.id, id));
 }
 
 export async function deleteTask(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.delete(workOrderTasks).where(eq(workOrderTasks.id, id));
 }
 
 export async function toggleTaskCompletion(id: number, isCompleted: boolean, completedBy?: string) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.update(workOrderTasks).set({
     isCompleted: isCompleted ? 1 : 0,
     completedAt: isCompleted ? new Date() : null,
@@ -59,12 +57,14 @@ export async function toggleTaskCompletion(id: number, isCompleted: boolean, com
   }).where(eq(workOrderTasks.id, id));
 }
 
-// ==================== MATERIALS ====================
+// ============================================================
+// SEÇÃO: MATERIAIS
+// Funções para gerenciar peças e insumos usados no serviço.
+// ============================================================
 
 export async function createMaterial(material: InsertWorkOrderMaterial) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   const result = await db.insert(workOrderMaterials).values(material);
   return result;
 }
@@ -72,7 +72,6 @@ export async function createMaterial(material: InsertWorkOrderMaterial) {
 export async function getMaterialsByWorkOrderId(workOrderId: number) {
   const db = await getDb();
   if (!db) return [];
-  
   return await db
     .select()
     .from(workOrderMaterials)
@@ -82,40 +81,44 @@ export async function getMaterialsByWorkOrderId(workOrderId: number) {
 
 export async function updateMaterial(id: number, updates: Partial<InsertWorkOrderMaterial>) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.update(workOrderMaterials).set(updates).where(eq(workOrderMaterials.id, id));
 }
 
 export async function deleteMaterial(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.delete(workOrderMaterials).where(eq(workOrderMaterials.id, id));
 }
 
 export async function getTotalMaterialsCost(workOrderId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
-  
   const materials = await getMaterialsByWorkOrderId(workOrderId);
   return materials.reduce((sum, m) => sum + (m.totalCost || 0), 0);
 }
 
-// ==================== ATTACHMENTS ====================
+// ============================================================
+// SEÇÃO: ANEXOS E FOTOS (AQUI ESTÁ A NOVIDADE)
+// Funções para gerenciar as fotos de Antes/Depois e documentos.
+// ============================================================
 
+/**
+ * ADICIONAR FOTO: Salva o link da foto que o técnico acabou de subir.
+ */
 export async function createAttachment(attachment: InsertWorkOrderAttachment) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   const result = await db.insert(workOrderAttachments).values(attachment);
   return result;
 }
 
+/**
+ * BUSCAR TODAS AS FOTOS: Pega tudo que foi anexado a uma Ordem de Serviço.
+ */
 export async function getAttachmentsByWorkOrderId(workOrderId: number) {
   const db = await getDb();
   if (!db) return [];
-  
   return await db
     .select()
     .from(workOrderAttachments)
@@ -123,10 +126,12 @@ export async function getAttachmentsByWorkOrderId(workOrderId: number) {
     .orderBy(desc(workOrderAttachments.uploadedAt));
 }
 
+/**
+ * BUSCAR POR CATEGORIA: Pega fotos específicas (ex: só o que for de "Antes").
+ */
 export async function getAttachmentsByCategory(workOrderId: number, category: string) {
   const db = await getDb();
   if (!db) return [];
-  
   return await db
     .select()
     .from(workOrderAttachments)
@@ -139,19 +144,40 @@ export async function getAttachmentsByCategory(workOrderId: number, category: st
     .orderBy(desc(workOrderAttachments.uploadedAt));
 }
 
+/** * 🚀 FUNÇÃO NOVA: ATUALIZAR DADOS DO ANEXO (LEGENDA)
+ * Essa função permite que você mude o texto da legenda ou a categoria
+ * de uma foto sem ter que apagar ela e subir de novo.
+ */
+export async function updateAttachment(id: number, updates: Partial<InsertWorkOrderAttachment>) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados não disponível");
+  
+  // O comando 'update' altera a linha da foto no banco usando o ID como endereço.
+  await db
+    .update(workOrderAttachments)
+    .set(updates)
+    .where(eq(workOrderAttachments.id, id));
+    
+  return true;
+}
+
+/**
+ * EXCLUIR FOTO: Apaga o registro da foto do banco de dados.
+ */
 export async function deleteAttachment(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.delete(workOrderAttachments).where(eq(workOrderAttachments.id, id));
 }
 
-// ==================== COMMENTS ====================
+// ============================================================
+// SEÇÃO: COMENTÁRIOS
+// Funções para o chat interno ou notas do cliente.
+// ============================================================
 
 export async function createComment(comment: InsertWorkOrderComment) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   const result = await db.insert(workOrderComments).values(comment);
   return result;
 }
@@ -182,17 +208,18 @@ export async function getCommentsByWorkOrderId(workOrderId: number, includeInter
 
 export async function deleteComment(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.delete(workOrderComments).where(eq(workOrderComments.id, id));
 }
 
-// ==================== TIME TRACKING ====================
+// ============================================================
+// SEÇÃO: CONTROLE DE TEMPO (TIMER)
+// Funções para marcar início, fim e duração do trabalho.
+// ============================================================
 
 export async function createTimeEntry(entry: InsertWorkOrderTimeTracking) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   const result = await db.insert(workOrderTimeTracking).values(entry);
   return result;
 }
@@ -200,7 +227,6 @@ export async function createTimeEntry(entry: InsertWorkOrderTimeTracking) {
 export async function getTimeEntriesByWorkOrderId(workOrderId: number) {
   const db = await getDb();
   if (!db) return [];
-  
   return await db
     .select()
     .from(workOrderTimeTracking)
@@ -210,16 +236,17 @@ export async function getTimeEntriesByWorkOrderId(workOrderId: number) {
 
 export async function updateTimeEntry(id: number, updates: Partial<InsertWorkOrderTimeTracking>) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.update(workOrderTimeTracking).set(updates).where(eq(workOrderTimeTracking.id, id));
 }
 
+/**
+ * ENCERRAR TEMPO: Marca a hora final e calcula quanto tempo passou no total.
+ */
 export async function endTimeEntry(id: number, endedAt: Date) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
+  if (!db) throw new Error("Banco de dados não disponível");
   
-  // Buscar a entrada para calcular duração
   const entries = await db
     .select()
     .from(workOrderTimeTracking)
@@ -229,6 +256,7 @@ export async function endTimeEntry(id: number, endedAt: Date) {
   if (entries.length === 0) return;
   
   const entry = entries[0];
+  // Calcula a diferença entre agora e o início em minutos.
   const durationMinutes = Math.floor(
     (endedAt.getTime() - new Date(entry.startedAt).getTime()) / 1000 / 60
   );
@@ -242,14 +270,12 @@ export async function endTimeEntry(id: number, endedAt: Date) {
 export async function getTotalTimeSpent(workOrderId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
-  
   const entries = await getTimeEntriesByWorkOrderId(workOrderId);
   return entries.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
 }
 
 export async function deleteTimeEntry(id: number) {
   const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  
+  if (!db) throw new Error("Banco de dados não disponível");
   await db.delete(workOrderTimeTracking).where(eq(workOrderTimeTracking.id, id));
 }

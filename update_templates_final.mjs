@@ -119,6 +119,7 @@ const gerador = JSON.stringify(
         { id: 'tensao_alternador', type: 'number', label: 'Tensão do Alternador (V)' },
         { id: 'nivel_combustivel', type: 'number', label: 'Nível de Combustível (L)' },
         { id: 'horometro', type: 'number', label: 'Horômetro (h)' },
+        { id: 'frequencia', type: 'number', label: 'Frequência (Hz)' },
         { id: 'temperatura_arrefecimento', type: 'number', label: 'Temperatura (°C)' }
       ]
     },
