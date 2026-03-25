@@ -217,4 +217,18 @@ export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmen
                     </Button>
                     <Button 
                       variant="ghost" size="sm" 
-                      className="h-7 w-7 text-red-400 hover:text
+                      className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50" 
+                      onClick={() => { if(confirm("Deseja mesmo excluir esta foto?")) deleteAttachmentMutation.mutate({ id: file.id }) }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
