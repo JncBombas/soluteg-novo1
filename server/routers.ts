@@ -856,45 +856,58 @@ const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
     }),
 
     // ==================== ATTACHMENTS ====================
-    attachments: router({
-      list: publicProcedure
-        .input(z.object({
-          workOrderId: z.number(),
-          category: z.enum(["before", "during", "after", "document", "other"]).optional(),
-        }))
-        .query(async ({ input }) => {
-          const auxDb = await import("./workOrdersAuxDb");
-          if (input.category) {
-            return await auxDb.getAttachmentsByCategory(input.workOrderId, input.category);
-          }
-          return await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
-        }),
-
-      create: publicProcedure
-        .input(z.object({
-          workOrderId: z.number(),
-          fileName: z.string().min(1),
-          fileKey: z.string().min(1),
-          fileUrl: z.string().min(1),
-          fileType: z.string().optional(),
-          fileSize: z.number().optional(),
-          category: z.enum(["before", "during", "after", "document", "other"]).default("other"),
-          uploadedBy: z.string().optional(),
-        }))
-        .mutation(async ({ input }) => {
-          const auxDb = await import("./workOrdersAuxDb");
-          await auxDb.createAttachment(input);
-          return { success: true, message: "Anexo adicionado com sucesso" };
-        }),
-
-      delete: publicProcedure
-        .input(z.object({ id: z.number() }))
-        .mutation(async ({ input }) => {
-          const auxDb = await import("./workOrdersAuxDb");
-          await auxDb.deleteAttachment(input.id);
-          return { success: true, message: "Anexo deletado com sucesso" };
-        }),
+   // ==================== ATTACHMENTS ====================
+attachments: router({
+  list: publicProcedure
+    .input(z.object({
+      workOrderId: z.number(),
+      category: z.enum(["before", "during", "after", "document", "other"]).optional(),
+    }))
+    .query(async ({ input }) => {
+      const auxDb = await import("./workOrdersAuxDb");
+      if (input.category) {
+        return await auxDb.getAttachmentsByCategory(input.workOrderId, input.category);
+      }
+      return await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
     }),
+
+  create: publicProcedure
+    .input(z.object({
+      workOrderId: z.number(),
+      fileName: z.string().min(1),
+      fileKey: z.string().min(1),
+      fileUrl: z.string().min(1),
+      fileType: z.string().optional(),
+      fileSize: z.number().optional(),
+      category: z.enum(["before", "during", "after", "document", "other"]).default("other"),
+      uploadedBy: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const auxDb = await import("./workOrdersAuxDb");
+      await auxDb.createAttachment(input);
+      return { success: true, message: "Anexo adicionado com sucesso" };
+    }),
+
+  update: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const auxDb = await import("./workOrdersAuxDb");
+      const { id, description } = input;
+      await auxDb.updateAttachment(id, { description });
+      return { success: true, message: "Legenda atualizada com sucesso" };
+    }),
+
+  delete: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const auxDb = await import("./workOrdersAuxDb");
+      await auxDb.deleteAttachment(input.id);
+      return { success: true, message: "Anexo deletado com sucesso" };
+    }),
+}),
 
     // ==================== COMMENTS ====================
     comments: router({
