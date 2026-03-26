@@ -19,6 +19,7 @@ interface Client {
   username: string;
   cnpjCpf?: string;
   phone?: string;
+  address?: string;
   type?: "com_portal" | "sem_portal";
   createdAt: Date;
 }
@@ -26,8 +27,6 @@ interface Client {
 export default function AdminClients() {
   const [, setLocation] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -44,76 +43,36 @@ export default function AdminClients() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const totalPages = Math.ceil(clients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedClients = clients.slice(startIndex, startIndex + itemsPerPage);
+  const itemsPerPage = 10;
 
+  // FIX: Pegar adminId do localStorage no useEffect — sem chamar loadClients (não existe)
   useEffect(() => {
-    // Pegar adminId do localStorage (setado no login)
     const id = localStorage.getItem("adminId");
     if (id) {
       setAdminId(parseInt(id));
-      loadClients(parseInt(id));
     }
   }, []);
 
-  const loadClients = async (id: number) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/admin-clients?adminId=${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setClients(data);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar clientes:", error);
-      setError("Erro ao carregar clientes");
-    } finally {
-      setLoading(false);
+  // FIX: Única fonte de verdade para clients — removido o useState<Client[]> duplicado
+  const {
+    data: clients = [],
+    isLoading,
+    isError,
+    refetch,
+  } = trpc.admin.getClients.useQuery(
+    { adminId: adminId ?? 0 },
+    {
+      enabled: !!adminId,
+      onError: (err) => {
+        console.error("Erro ao carregar clientes:", err);
+        setError("Erro ao carregar clientes");
+      },
     }
-  };
+  );
 
-  const handleCreateClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
-    if (!adminId) {
-      setError("Admin ID não encontrado");
-      return;
-    }
-
-    // Validação específica para cliente com portal
-    if (formData.type === "com_portal") {
-      if (!formData.username.trim()) {
-        setError("Nome de usuário é obrigatório para clientes com acesso ao portal");
-        return;
-      }
-      if (!formData.password.trim()) {
-        setError("Senha é obrigatória para clientes com acesso ao portal");
-        return;
-      }
-    }
-
-    try {
-      const response = await fetch("/api/admin-clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          // Para clientes sem portal, enviar username e password vazios
-          username: formData.type === "sem_portal" ? `sem_portal_${Date.now()}` : formData.username,
-          password: formData.type === "sem_portal" ? `disabled_${Date.now()}` : formData.password,
-          adminId,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Erro ao criar cliente");
-      }
-
+  // FIX: createClient mutation no nível do componente (não dentro de função)
+  const createClient = trpc.admin.createClient.useMutation({
+    onSuccess: () => {
       setSuccess("Cliente criado com sucesso!");
       setFormData({
         name: "",
@@ -126,60 +85,96 @@ export default function AdminClients() {
         type: "com_portal",
       });
       setIsOpen(false);
-      loadClients(adminId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao criar cliente");
+      refetch();
+    },
+    onError: (err) => {
+      setError(err.message || "Erro ao criar cliente");
+    },
+  });
+
+  // FIX: deleteClient mutation no nível do componente (não dentro de confirmDelete)
+  const deleteClient = trpc.admin.deleteClient.useMutation({
+    onSuccess: () => {
+      setSuccess("Cliente deletado com sucesso!");
+      setDeleteConfirmOpen(false);
+      setClientToDelete(null);
+      refetch();
+    },
+    onError: (err) => {
+      setError(err.message || "Erro ao deletar cliente");
+    },
+  });
+
+  // FIX: handleCreateClient agora chama createClient.mutate()
+  const handleCreateClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!adminId) {
+      setError("Admin ID não encontrado");
+      return;
     }
+
+    if (formData.type === "com_portal") {
+      if (!formData.username.trim()) {
+        setError("Nome de usuário é obrigatório para clientes com acesso ao portal");
+        return;
+      }
+      if (!formData.password.trim()) {
+        setError("Senha é obrigatória para clientes com acesso ao portal");
+        return;
+      }
+    }
+
+    createClient.mutate({ ...formData, adminId });
   };
 
-  const handleDeleteClient = async (client: Client) => {
+  const handleDeleteClient = (client: Client) => {
     setClientToDelete(client);
     setDeleteConfirmOpen(true);
   };
 
-  const confirmDelete = async () => {
-    if (!clientToDelete) return;
-
-    try {
-      const response = await fetch(`/api/admin-clients/${clientToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        setClients(clients.filter((c) => c.id !== clientToDelete.id));
-        setSuccess("Cliente deletado com sucesso!");
-        setDeleteConfirmOpen(false);
-        setClientToDelete(null);
-      } else {
-        setError("Erro ao deletar cliente");
-      }
-    } catch (error) {
-      setError("Erro ao deletar cliente");
-    }
+  // FIX: confirmDelete apenas chama deleteClient.mutate() — sem hook dentro
+  const confirmDelete = () => {
+    if (!clientToDelete || !adminId) return;
+    deleteClient.mutate({ clientId: clientToDelete.id, adminId });
   };
 
-  // Validação do formulário
   const isFormValid = () => {
     if (!formData.name.trim()) return false;
     if (!isValidCnpjCpf(formData.cnpjCpf)) return false;
     if (!isValidPhone(formData.phone)) return false;
-    
-    // Para clientes com portal, exigir username e senha
     if (formData.type === "com_portal") {
       if (!formData.username.trim()) return false;
       if (!formData.password.trim()) return false;
     }
-    
     return true;
   };
 
-  if (loading) {
+  const totalPages = Math.ceil(clients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedClients = clients.slice(startIndex, startIndex + itemsPerPage);
+
+  // FIX: usar isLoading do tRPC em vez de loading manual que nunca mudava
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
           <p className="text-slate-600">Carregando clientes...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Alert variant="destructive" className="max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Erro ao carregar clientes. Tente novamente.</AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -218,9 +213,7 @@ export default function AdminClients() {
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Novo Cliente</DialogTitle>
-              <DialogDescription>
-                Preencha os dados do cliente
-              </DialogDescription>
+              <DialogDescription>Preencha os dados do cliente</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleCreateClient} className="space-y-4">
@@ -231,16 +224,14 @@ export default function AdminClients() {
                 </Alert>
               )}
 
-              {/* Tipo de Cliente - PRIMEIRO para condicionar os outros campos */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tipo de Cliente *</label>
-                <Select 
-                  value={formData.type} 
+                <Select
+                  value={formData.type}
                   onValueChange={(value: "com_portal" | "sem_portal") => {
-                    setFormData({ 
-                      ...formData, 
+                    setFormData({
+                      ...formData,
                       type: value,
-                      // Limpar username e senha ao mudar para sem_portal
                       username: value === "sem_portal" ? "" : formData.username,
                       password: value === "sem_portal" ? "" : formData.password,
                     });
@@ -255,7 +246,7 @@ export default function AdminClients() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-500">
-                  {formData.type === "com_portal" 
+                  {formData.type === "com_portal"
                     ? "Cliente terá acesso ao portal para ver documentos e abrir OS"
                     : "Cliente será cadastrado apenas para vincular em Ordens de Serviço (sem login)"}
                 </p>
@@ -322,11 +313,9 @@ export default function AdminClients() {
                 />
               </div>
 
-              {/* Campos de login - APENAS para clientes com portal */}
               {formData.type === "com_portal" && (
                 <div className="border-t pt-4 mt-4">
                   <p className="text-sm font-medium text-slate-700 mb-3">Dados de Acesso ao Portal</p>
-                  
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Nome de Usuário *</label>
@@ -340,7 +329,6 @@ export default function AdminClients() {
                         O cliente usará este nome para fazer login no portal
                       </p>
                     </div>
-
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Senha *</label>
                       <Input
@@ -355,12 +343,19 @@ export default function AdminClients() {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={!isFormValid()}
+                disabled={!isFormValid() || createClient.isLoading}
               >
-                Criar Cliente
+                {createClient.isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  "Criar Cliente"
+                )}
               </Button>
             </form>
           </DialogContent>
@@ -412,11 +407,13 @@ export default function AdminClients() {
                       </TableCell>
                       <TableCell className="text-sm">{client.phone || "-"}</TableCell>
                       <TableCell className="text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          client.type === "com_portal"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            client.type === "com_portal"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
                           {client.type === "com_portal" ? "Com Portal" : "Sem Portal"}
                         </span>
                       </TableCell>
@@ -442,7 +439,7 @@ export default function AdminClients() {
                   ))}
                 </TableBody>
               </Table>
-              {/* Controles de Paginação */}
+
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <p className="text-sm text-slate-600">
@@ -486,7 +483,6 @@ export default function AdminClients() {
         </CardContent>
       </Card>
 
-      {/* Dialog de Confirmação de Deleção */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -503,8 +499,19 @@ export default function AdminClients() {
           </div>
           <div className="flex gap-3 justify-end">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Deletar Cliente
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={deleteClient.isLoading}
+            >
+              {deleteClient.isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deletando...
+                </>
+              ) : (
+                "Deletar Cliente"
+              )}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
