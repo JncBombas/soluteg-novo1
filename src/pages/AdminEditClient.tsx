@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,16 +28,19 @@ export default function AdminEditClient() {
     { enabled: !!clientId }
   );
 
-  // Update form when client data loads
-  if (client && !formData.name) {
-    setFormData({
-      name: client.name || "",
-      email: client.email || "",
-      phone: client.phone || "",
-      cnpjCpf: client.cnpjCpf || "",
-      address: client.address || "",
-    });
-  }
+  // FIX: usar useEffect para popular o form — evita loop de re-render
+  // e não bloqueia edição do usuário
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        name: client.name || "",
+        email: client.email || "",
+        phone: client.phone || "",
+        cnpjCpf: client.cnpjCpf || "",
+        address: client.address || "",
+      });
+    }
+  }, [client]);
 
   const updateClientMutation = trpc.clients.update.useMutation();
   const updatePasswordMutation = trpc.clients.updatePassword.useMutation();
@@ -49,7 +52,7 @@ export default function AdminEditClient() {
 
   const handleUpdateClient = async () => {
     if (!clientId) return;
-    
+
     setIsLoading(true);
     try {
       await updateClientMutation.mutateAsync({
@@ -127,7 +130,7 @@ export default function AdminEditClient() {
         {/* Edit Form */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-900">Dados do Cliente</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
@@ -182,10 +185,10 @@ export default function AdminEditClient() {
 
             <Button
               onClick={handleUpdateClient}
-              disabled={isLoading}
+              disabled={isLoading || updateClientMutation.isLoading}
               className="w-full bg-primary hover:bg-primary/90"
             >
-              {isLoading ? "Salvando..." : "Salvar Dados"}
+              {isLoading || updateClientMutation.isLoading ? "Salvando..." : "Salvar Dados"}
             </Button>
           </div>
         </div>
@@ -193,7 +196,7 @@ export default function AdminEditClient() {
         {/* Change Password */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-6 text-gray-900">Alterar Senha</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
@@ -215,10 +218,10 @@ export default function AdminEditClient() {
 
             <Button
               onClick={handleUpdatePassword}
-              disabled={isLoading || !newPassword}
+              disabled={isLoading || !newPassword || updatePasswordMutation.isLoading}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              {isLoading ? "Alterando..." : "Alterar Senha"}
+              {isLoading || updatePasswordMutation.isLoading ? "Alterando..." : "Alterar Senha"}
             </Button>
           </div>
         </div>
