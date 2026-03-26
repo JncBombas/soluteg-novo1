@@ -119,6 +119,7 @@ export async function createAttachment(attachment: InsertWorkOrderAttachment) {
 export async function getAttachmentsByWorkOrderId(workOrderId: number) {
   const db = await getDb();
   if (!db) return [];
+  
   return await db
     .select()
     .from(workOrderAttachments)

@@ -95,6 +95,8 @@ function splitValueUnit(key: string, value: any): [string, string] {
 // ============================================================
 export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer> {
 
+    // Buscar anexos/fotos
+  const attachments = await getAttachmentsByWorkOrderId(workOrderId);
   const workOrder = await getWorkOrderById(workOrderId);
   if (!workOrder) throw new Error('Ordem de serviço não encontrada');
 
@@ -448,6 +450,97 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     // Avança após a última linha
                     currentY += cellH + 8;
                   }
+                  
+                        // === ANEXOS/FOTOS COM LEGENDAS ===
+      if (attachments && attachments.length > 0) {
+        // Separar fotos por categoria
+        const imageAttachments = attachments.filter((a: any) => a.fileType?.startsWith('image/'));
+        
+        if (imageAttachments.length > 0) {
+          // Verificar se precisa de nova página
+          if (currentY > doc.page.height - 150) {
+            doc.addPage();
+            currentY = 40;
+          }
+
+          doc.fontSize(11)
+             .fillColor('#D4A84B')
+             .font('Helvetica-Bold')
+             .text('Fotos e Anexos', leftMargin, currentY);
+          
+          currentY += 20;
+
+          // Exibir fotos em grid 2x2
+          let photosPerRow = 2;
+          let photoWidth = (contentWidth / photosPerRow) - 10;
+          let photoHeight = 120;
+          let rowPhotos = 0;
+          let rowStartY = currentY;
+
+          imageAttachments.forEach((attachment: any, index: number) => {
+            if (rowPhotos === 0) {
+              rowStartY = currentY;
+            }
+
+            const colX = leftMargin + (rowPhotos * (photoWidth + 10));
+
+            try {
+              // Tentar carregar e exibir a imagem do URL
+              // Nota: PDFKit pode ter limitações com URLs remotas
+              // Para melhor resultado, baixe a imagem primeiro
+              
+              // Por enquanto, vamos criar um retângulo com informações
+              doc.rect(colX, currentY, photoWidth, photoHeight)
+                 .stroke();
+              
+              doc.fontSize(9)
+                 .fillColor('#333333')
+                 .font('Helvetica-Bold')
+                 .text(`${attachment.fileName}`, colX + 5, currentY + 5, { 
+                   width: photoWidth - 10,
+                   ellipsis: true 
+                 });
+              
+              currentY += 20;
+              
+              // Legenda
+              const categoryLabel = getCategoryLabel(attachment.category);
+              doc.fontSize(8)
+                 .fillColor('#666666')
+                 .font('Helvetica')
+                 .text(`Categoria: ${categoryLabel}`, colX + 5, currentY, { 
+                   width: photoWidth - 10 
+                 });
+              
+              currentY += 15;
+              
+              // Descrição/Legenda
+              if (attachment.description) {
+                doc.fontSize(7)
+                   .fillColor('#333333')
+                   .font('Helvetica')
+                   .text(`Legenda: ${attachment.description}`, colX + 5, currentY, { 
+                     width: photoWidth - 10,
+                     align: 'justify'
+                   });
+              }
+              
+              currentY = Math.max(currentY, rowStartY + photoHeight + 10);
+              
+            } catch (e) {
+              console.error(`[PDF] Erro ao processar foto ${attachment.fileName}:`, e);
+            }
+
+            rowPhotos++;
+            if (rowPhotos >= photosPerRow) {
+              rowPhotos = 0;
+              currentY = rowStartY + photoHeight + 20;
+            }
+          });
+
+          currentY += 15;
+        }
+      }
 
                   // ================================================
                   // 📝 OBSERVAÇÕES TÉCNICAS — blockquote dourado
