@@ -59,7 +59,7 @@ export default function AdminClients() {
     isLoading,
     isError,
     refetch,
-  } = trpc.admin.getClients.useQuery(
+  } = trpc.clients.list.useQuery(
     { adminId: adminId ?? 0 },
     {
       enabled: !!adminId,
@@ -71,7 +71,7 @@ export default function AdminClients() {
   );
 
   // FIX: createClient mutation no nível do componente (não dentro de função)
-  const createClient = trpc.admin.createClient.useMutation({
+  const createClient = trpc.clients.create.useMutation({
     onSuccess: () => {
       setSuccess("Cliente criado com sucesso!");
       setFormData({
@@ -93,7 +93,7 @@ export default function AdminClients() {
   });
 
   // FIX: deleteClient mutation no nível do componente (não dentro de confirmDelete)
-  const deleteClient = trpc.admin.deleteClient.useMutation({
+  const deleteClient = trpc.clients.delete.useMutation({
     onSuccess: () => {
       setSuccess("Cliente deletado com sucesso!");
       setDeleteConfirmOpen(false);
