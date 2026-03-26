@@ -103,7 +103,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
   const materials       = await getMaterialsByWorkOrderId(workOrderId);
   const comments        = await getCommentsByWorkOrderId(workOrderId, false);
   const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
-  const attachments     = await getAttachmentsByWorkOrderId(workOrderId);
+
 
   const tasksWithChecklists = await Promise.all(
     inspectionTasks.map(async (task) => ({
