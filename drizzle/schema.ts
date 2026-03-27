@@ -1,5 +1,5 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
-
+import { mysqlTable, int, varchar, text, tinyint, datetime, mysqlEnum } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 /**
  * Core user table backing auth flow.
  * Extend this file with additional tables as your product grows.
@@ -171,6 +171,7 @@ export const clients = mysqlTable("clients", {
   username: varchar("username", { length: 100 }).notNull().unique(), // Login do cliente
   password: varchar("password", { length: 255 }).notNull(), // Senha criptografada
   cnpjCpf: varchar("cnpjCpf", { length: 20 }),
+   syndicName: varchar("syndic_name", { length: 255 }),   // <-- LINHA NOVA
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
   type: mysqlEnum("type", ["com_portal", "sem_portal"]).default("com_portal").notNull(), // com_portal: acesso ao painel | sem_portal: apenas cadastro
