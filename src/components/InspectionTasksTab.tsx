@@ -140,20 +140,21 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
     );
   }
 
+  const addButton = (
+    <Button onClick={handleOpenAddChecklist} disabled={createTaskMutation.isPending}>
+      {createTaskMutation.isPending ? (
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      ) : (
+        <Plus className="h-4 w-4 mr-2" />
+      )}
+      Adicionar Checklist
+    </Button>
+  );
+
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Checklists de Equipamentos</h3>
-        <Button onClick={handleOpenAddChecklist} disabled={createTaskMutation.isPending}>
-          {createTaskMutation.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4 mr-2" />
-          )}
-          Adicionar Checklist
-        </Button>
-      </div>
+      <h3 className="text-lg font-medium">Checklists de Equipamentos</h3>
 
       {/* Lista de checklists */}
       {checklists.length === 0 ? (
@@ -164,6 +165,7 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
             <p className="text-sm text-muted-foreground mb-4">
               Clique em "Adicionar Checklist" para incluir equipamentos a inspecionar.
             </p>
+            {addButton}
           </CardContent>
         </Card>
       ) : (
@@ -279,6 +281,10 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
               </Card>
             );
           })}
+          {/* Botão abaixo do último checklist */}
+          <div className="flex justify-start pt-1">
+            {addButton}
+          </div>
         </div>
       )}
 
