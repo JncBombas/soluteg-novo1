@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, tinyint, datetime, mysqlEnum } from "drizzle-orm/mysql-core";
+import { mysqlTable, int, varchar, text, tinyint, datetime, mysqlEnum, timestamp } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 /**
  * Core user table backing auth flow.
