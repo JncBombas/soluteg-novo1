@@ -1,17 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { APP_LOGO, APP_TITLE } from "@/const";
+import { FileText, Users, Wrench, TrendingUp } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
-  const [adminId, setAdminId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     openWorkOrders: 0,
@@ -21,10 +16,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
-    if (id) {
-      setAdminId(parseInt(id));
-      loadMetrics(parseInt(id));
-    }
+    if (id) loadMetrics(parseInt(id));
   }, []);
 
   const loadMetrics = async (id: number) => {
@@ -35,308 +27,165 @@ export default function AdminDashboard() {
         setMetrics(data);
       }
     } catch (error) {
-      console.error("Erro ao carregar metricas:", error);
+      console.error("Erro ao carregar métricas:", error);
     }
   };
 
-  const logoutMutation = trpc.adminAuth.logout.useMutation({
-    onSuccess: () => {
-      toast.success("Logout realizado com sucesso!");
-      setLocation("/");
+  const metricCards = [
+    {
+      label: "Total de Clientes",
+      value: metrics.totalClients,
+      sub: `${metrics.activeClients} ativos`,
+      icon: Users,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+      border: "border-blue-200",
     },
-    onError: (error) => {
-      toast.error("Erro ao fazer logout: " + error.message);
+    {
+      label: "Ordens Abertas",
+      value: metrics.openWorkOrders,
+      sub: "Aguardando conclusão",
+      icon: Wrench,
+      color: "text-amber-600",
+      bg: "bg-amber-50",
+      border: "border-amber-200",
     },
-  });
+    {
+      label: "Total de Documentos",
+      value: metrics.totalDocuments,
+      sub: "Enviados aos clientes",
+      icon: FileText,
+      color: "text-green-600",
+      bg: "bg-green-50",
+      border: "border-green-200",
+    },
+    {
+      label: "Taxa de Atividade",
+      value: `${metrics.totalClients > 0 ? Math.round((metrics.activeClients / metrics.totalClients) * 100) : 0}%`,
+      sub: "Clientes ativos",
+      icon: TrendingUp,
+      color: "text-purple-600",
+      bg: "bg-purple-50",
+      border: "border-purple-200",
+    },
+  ];
 
-  const handleLogout = async () => {
-    // Limpar dados do admin do localStorage
-    localStorage.removeItem("adminId");
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    localStorage.removeItem("adminName");
-    await logoutMutation.mutateAsync();
-  };
+  const actionCards = [
+    {
+      title: "Ordens de Serviço",
+      desc: "Gerencie atendimentos e orçamentos",
+      action: () => setLocation("/admin/work-orders"),
+      label: "Acessar Ordens",
+      colorClass: "bg-amber-600 hover:bg-amber-700",
+      icon: Wrench,
+    },
+    {
+      title: "Clientes",
+      desc: "Criar e gerenciar clientes",
+      action: () => setLocation("/admin/clientes"),
+      label: "Acessar Clientes",
+      colorClass: "bg-blue-600 hover:bg-blue-700",
+      icon: Users,
+    },
+    {
+      title: "Documentos",
+      desc: "Editar, deletar e substituir documentos",
+      action: () => setLocation("/admin/documentos"),
+      label: "Gerenciar Documentos",
+      colorClass: "bg-green-600 hover:bg-green-700",
+      icon: FileText,
+    },
+    {
+      title: "Relatórios",
+      desc: "Relatórios de inspeção de bombas",
+      action: () => setLocation("/admin/relatorios"),
+      label: "Acessar Relatórios",
+      colorClass: "bg-purple-600 hover:bg-purple-700",
+      icon: FileText,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header - Responsivo */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
-          {/* Logo e Título */}
-          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-            <img src={APP_LOGO} alt={APP_TITLE} className="h-8 md:h-10" />
-            <div className="flex-1">
-              <h1 className="font-bold text-lg md:text-xl text-gray-900">Painel Administrativo</h1>
-              <p className="text-xs md:text-sm text-gray-500">Bem-vindo à área restrita</p>
-            </div>
-          </div>
-
-          {/* Busca Global */}
-          <div className="mb-3 md:mb-0 md:flex-1 md:mx-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar clientes, documentos, OS..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter" && searchQuery.trim()) {
-                    setLocation(`/admin/search?q=${encodeURIComponent(searchQuery)}`);
-                  }
-                }}
-                className="pl-10 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Botões - Responsivos */}
-          <div className="flex flex-wrap gap-2 md:gap-3 mt-3 md:mt-0 md:justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/admin/profile")}
-              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden md:inline">Meu Perfil</span>
-              <span className="md:hidden">Perfil</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/")}
-              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden md:inline">Página Inicial</span>
-              <span className="md:hidden">Início</span>
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="gap-1 md:gap-2 text-xs md:text-sm flex-1 md:flex-none"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden md:inline">Sair</span>
-              <span className="md:hidden">Sair</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 md:py-8">
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Total Clientes */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-blue-900">Total de Clientes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-blue-600">{metrics.totalClients}</span>
-                <Users className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-xs text-blue-600 mt-1">{metrics.activeClients} ativos</p>
-            </CardContent>
-          </Card>
-
-          {/* Ordens Abertas */}
-          <Card className="border-orange-200 bg-orange-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-orange-900">Ordens Abertas</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-orange-600">{metrics.openWorkOrders}</span>
-                <Wrench className="w-5 h-5 text-orange-500" />
-              </div>
-              <p className="text-xs text-orange-600 mt-1">Aguardando conclusão</p>
-            </CardContent>
-          </Card>
-
-          {/* Total Documentos */}
-          <Card className="border-green-200 bg-green-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-green-900">Total de Documentos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-green-600">{metrics.totalDocuments}</span>
-                <FileText className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-xs text-green-600 mt-1">Enviados aos clientes</p>
-            </CardContent>
-          </Card>
-
-          {/* Taxa de Atividade */}
-          <Card className="border-purple-200 bg-purple-50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-purple-900">Taxa de Atividade</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-purple-600">{metrics.totalClients > 0 ? Math.round((metrics.activeClients / metrics.totalClients) * 100) : 0}%</span>
-                <TrendingUp className="w-5 h-5 text-purple-500" />
-              </div>
-              <p className="text-xs text-purple-600 mt-1">Clientes ativos</p>
-            </CardContent>
-          </Card>
+    <DashboardLayout>
+      <div className="space-y-6 max-w-6xl mx-auto">
+        {/* Cabeçalho da página */}
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Visão geral do sistema Soluteg
+          </p>
         </div>
 
-        {/* Welcome Card */}
-        <Card className="mb-6">
-          <CardHeader className="pb-3 md:pb-4">
-            <CardTitle className="text-xl md:text-2xl">Bem-vindo ao Painel Administrativo</CardTitle>
-            <CardDescription>
-              Você está logado e tem acesso à área restrita do sistema
-            </CardDescription>
+        {/* Cards de métricas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {metricCards.map((m) => {
+            const Icon = m.icon;
+            return (
+              <Card key={m.label} className={`border ${m.border}`}>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {m.label}
+                  </CardTitle>
+                  <div className={`h-8 w-8 rounded-lg ${m.bg} flex items-center justify-center`}>
+                    <Icon className={`h-4 w-4 ${m.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-3xl font-bold ${m.color}`}>{m.value}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{m.sub}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Status do sistema */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Status do Sistema</CardTitle>
+            <CardDescription>Monitoramento em tempo real</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm md:text-base text-gray-600">
-              Este é o painel administrativo da Soluteg. Aqui você pode gerenciar as operações do sistema.
-            </p>
+            <div className="flex flex-wrap gap-4">
+              {["Sistema Operacional", "Banco de Dados", "API"].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                  {item}
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Sistema Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg">Sistema</CardTitle>
-              <CardDescription className="text-xs">Status do sistema</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-gray-600">
-                  <span className="inline-block w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full mr-2"></span>
-                  Sistema Operacional
-                </p>
-                <p className="text-xs md:text-sm text-gray-600">
-                  <span className="inline-block w-2 h-2 md:w-3 md:h-3 bg-green-500 rounded-full mr-2"></span>
-                  Banco de Dados
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Acesso Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg">Acesso</CardTitle>
-              <CardDescription className="text-xs">Informações de acesso</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-gray-600">
-                  <strong>Tipo:</strong> Administrador
-                </p>
-                <p className="text-xs md:text-sm text-gray-600">
-                  <strong>Status:</strong> Autenticado
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Ações Card */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg">Ações</CardTitle>
-              <CardDescription className="text-xs">Operações disponíveis</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-xs md:text-sm text-gray-600">
-                  ✓ Gerenciar perfil
-                </p>
-                <p className="text-xs md:text-sm text-gray-600">
-                  ✓ Alterar senha
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Relatórios Card - NOVO */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base md:text-lg text-blue-900">Relatórios</CardTitle>
-              <CardDescription className="text-xs">Inspeção de bombas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                onClick={() => setLocation("/admin/relatorios")}
-                className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm"
-              >
-                <FileText className="w-4 h-4" />
-                Acessar Relatórios
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Portal do Cliente Section */}
-        <div className="mt-8">
-          <h2 className="text-xl md:text-2xl font-bold mb-4">Portal do Cliente</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Gerenciar Clientes Card */}
-            <Card className="border-orange-200 bg-orange-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base md:text-lg text-orange-900">Gerenciar Clientes</CardTitle>
-                <CardDescription className="text-xs">Criar e gerenciar clientes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setLocation("/admin/clientes")}
-                  className="w-full gap-2 bg-orange-600 hover:bg-orange-700 text-white text-xs md:text-sm"
-                >
-                  <Users className="w-4 h-4" />
-                  Acessar Clientes
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Gerenciar Documentos Card */}
-            <Card className="border-purple-200 bg-purple-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base md:text-lg text-purple-900">Gerenciar Documentos</CardTitle>
-                <CardDescription className="text-xs">Editar, deletar e substituir documentos</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setLocation("/admin/documentos")}
-                  className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs md:text-sm"
-                >
-                  <FileText className="w-4 h-4" />
-                  Gerenciar Documentos
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Ordens de Serviço Card */}
-            <Card className="border-indigo-200 bg-indigo-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base md:text-lg text-indigo-900">Ordens de Serviço</CardTitle>
-                <CardDescription className="text-xs">Criar e gerenciar ordens de serviço</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={() => setLocation("/admin/work-orders")}
-                  className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm"
-                >
-                  <Wrench className="w-4 h-4" />
-                  Ordens de Serviço
-                </Button>
-              </CardContent>
-            </Card>
+        {/* Ações rápidas */}
+        <div>
+          <h2 className="text-base font-semibold text-foreground mb-3">Acesso Rápido</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {actionCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <Card key={card.title} className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <CardTitle className="text-sm">{card.title}</CardTitle>
+                    </div>
+                    <CardDescription className="text-xs">{card.desc}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      onClick={card.action}
+                      className={`w-full text-white text-xs h-8 gap-1.5 ${card.colorClass}`}
+                    >
+                      {card.label}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

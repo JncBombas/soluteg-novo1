@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find src:*)",
+      "Bash(wc -l src/hooks/* src/lib/* src/Config/*)",
+      "Bash(grep -E \"\\\\.tsx$\")"
+    ]
+  }
+}
