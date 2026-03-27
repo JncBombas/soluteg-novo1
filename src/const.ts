@@ -8,7 +8,13 @@ export const APP_LOGO = "/logo-jnc.webp";
 export const getLoginUrl = () => {
   const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
   const appId = import.meta.env.VITE_APP_ID;
-const redirectUri = `https://jnc.soluteg.com.br/api/oauth/callback`;
+
+  // Guard: se as env vars não estiverem configuradas, retorna a rota de login local.
+  if (!oauthPortalUrl || !appId) {
+    return "/admin/login";
+  }
+
+  const redirectUri = `https://jnc.soluteg.com.br/api/oauth/callback`;
   const state = btoa(redirectUri);
 
   const url = new URL(`${oauthPortalUrl}/app-auth`);
