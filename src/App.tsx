@@ -13,7 +13,6 @@ import ClientLogin from "./pages/ClientLogin";
 import ClientPortal from "./pages/ClientPortal";
 import WaterTankMonitoring from "./pages/WaterTankMonitoring";
 import AdminClients from "./pages/AdminClients";
-import AdminEditClient from "./pages/AdminEditClient";
 import EditClient from "./pages/EditClient";
 import AdminDocuments from "./pages/AdminDocuments";
 import AdminManageDocuments from "./pages/AdminManageDocuments";
