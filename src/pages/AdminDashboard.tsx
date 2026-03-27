@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { FileText, Users, Wrench, TrendingUp } from "lucide-react";
-import DashboardLayout from "@/components/DashboardLayout";
+import { toast } from "sonner";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp } from "lucide-react";
+import { APP_LOGO } from "@/const";
+import { SolutegFooter } from "@/components/SolutegFooter";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -16,7 +19,11 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
-    if (id) loadMetrics(parseInt(id));
+    if (!id) {
+      setLocation("/admin/login");
+      return;
+    }
+    loadMetrics(parseInt(id));
   }, []);
 
   const loadMetrics = async (id: number) => {
@@ -29,6 +36,28 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erro ao carregar métricas:", error);
     }
+  };
+
+  const logoutMutation = trpc.adminAuth.logout.useMutation({
+    onSuccess: () => {
+      localStorage.removeItem("adminId");
+      localStorage.removeItem("adminToken");
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminName");
+      toast.success("Logout realizado com sucesso!");
+      setLocation("/");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao fazer logout: " + error.message);
+    },
+  });
+
+  const handleLogout = async () => {
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminEmail");
+    localStorage.removeItem("adminName");
+    await logoutMutation.mutateAsync();
   };
 
   const metricCards = [
@@ -75,55 +104,97 @@ export default function AdminDashboard() {
       title: "Ordens de Serviço",
       desc: "Gerencie atendimentos e orçamentos",
       action: () => setLocation("/admin/work-orders"),
-      label: "Acessar Ordens",
-      colorClass: "bg-amber-600 hover:bg-amber-700",
+      label: "Acessar",
+      color: "bg-amber-600 hover:bg-amber-700",
       icon: Wrench,
     },
     {
       title: "Clientes",
       desc: "Criar e gerenciar clientes",
       action: () => setLocation("/admin/clientes"),
-      label: "Acessar Clientes",
-      colorClass: "bg-blue-600 hover:bg-blue-700",
+      label: "Acessar",
+      color: "bg-blue-600 hover:bg-blue-700",
       icon: Users,
     },
     {
       title: "Documentos",
       desc: "Editar, deletar e substituir documentos",
       action: () => setLocation("/admin/documentos"),
-      label: "Gerenciar Documentos",
-      colorClass: "bg-green-600 hover:bg-green-700",
+      label: "Acessar",
+      color: "bg-green-600 hover:bg-green-700",
       icon: FileText,
     },
     {
       title: "Relatórios",
       desc: "Relatórios de inspeção de bombas",
       action: () => setLocation("/admin/relatorios"),
-      label: "Acessar Relatórios",
-      colorClass: "bg-purple-600 hover:bg-purple-700",
+      label: "Acessar",
+      color: "bg-purple-600 hover:bg-purple-700",
       icon: FileText,
     },
   ];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-6xl mx-auto">
-        {/* Cabeçalho da página */}
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Header */}
+      <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={APP_LOGO} alt="Soluteg" className="h-8 object-contain" />
+            <div className="leading-tight hidden sm:block">
+              <p className="font-bold text-sm text-white">Soluteg</p>
+              <p className="text-[10px] text-slate-400">Painel Administrativo</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/admin/profile")}
+              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden sm:flex"
+            >
+              <User className="w-4 h-4" />
+              Perfil
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLocation("/")}
+              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden sm:flex"
+            >
+              <Home className="w-4 h-4" />
+              Início
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 text-white gap-1.5"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Conteúdo */}
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
+        {/* Título */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visão geral do sistema Soluteg
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-sm text-slate-500 mt-1">Visão geral do sistema Soluteg</p>
         </div>
 
-        {/* Cards de métricas */}
+        {/* Métricas */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {metricCards.map((m) => {
             const Icon = m.icon;
             return (
               <Card key={m.label} className={`border ${m.border}`}>
                 <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-sm font-medium text-slate-600">
                     {m.label}
                   </CardTitle>
                   <div className={`h-8 w-8 rounded-lg ${m.bg} flex items-center justify-center`}>
@@ -132,24 +203,23 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className={`text-3xl font-bold ${m.color}`}>{m.value}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{m.sub}</p>
+                  <p className="text-xs text-slate-500 mt-1">{m.sub}</p>
                 </CardContent>
               </Card>
             );
           })}
         </div>
 
-        {/* Status do sistema */}
+        {/* Status */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Status do Sistema</CardTitle>
-            <CardDescription>Monitoramento em tempo real</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Status do Sistema</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4">
               {["Sistema Operacional", "Banco de Dados", "API"].map((item) => (
-                <div key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full bg-green-500 inline-block" />
+                <div key={item} className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
                   {item}
                 </div>
               ))}
@@ -157,9 +227,9 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Ações rápidas */}
+        {/* Acesso rápido */}
         <div>
-          <h2 className="text-base font-semibold text-foreground mb-3">Acesso Rápido</h2>
+          <h2 className="text-base font-semibold text-slate-900 mb-3">Acesso Rápido</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {actionCards.map((card) => {
               const Icon = card.icon;
@@ -167,7 +237,7 @@ export default function AdminDashboard() {
                 <Card key={card.title} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
                     <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <Icon className="h-4 w-4 text-slate-500" />
                       <CardTitle className="text-sm">{card.title}</CardTitle>
                     </div>
                     <CardDescription className="text-xs">{card.desc}</CardDescription>
@@ -175,7 +245,7 @@ export default function AdminDashboard() {
                   <CardContent>
                     <Button
                       onClick={card.action}
-                      className={`w-full text-white text-xs h-8 gap-1.5 ${card.colorClass}`}
+                      className={`w-full text-white text-xs h-8 ${card.color}`}
                     >
                       {card.label}
                     </Button>
@@ -185,7 +255,9 @@ export default function AdminDashboard() {
             })}
           </div>
         </div>
-      </div>
-    </DashboardLayout>
+      </main>
+
+      <SolutegFooter full={false} />
+    </div>
   );
 }
