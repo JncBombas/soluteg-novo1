@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { 
   checklistTemplates, 
@@ -299,8 +299,26 @@ export async function getFullInspectionTask(id: number): Promise<{
 
 export async function areAllChecklistsComplete(inspectionTaskId: number): Promise<boolean> {
   const checklists = await getChecklistsByInspectionTask(inspectionTaskId);
-  
+
   if (checklists.length === 0) return false;
-  
+
   return checklists.every(c => c.isComplete === 1);
+}
+
+export async function getChecklistsByWorkOrderId(workOrderId: number): Promise<ChecklistInstance[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const tasks = await db
+    .select({ id: inspectionTasks.id })
+    .from(inspectionTasks)
+    .where(eq(inspectionTasks.workOrderId, workOrderId));
+
+  if (tasks.length === 0) return [];
+
+  const taskIds = tasks.map(t => t.id);
+  return await db
+    .select()
+    .from(checklistInstances)
+    .where(inArray(checklistInstances.inspectionTaskId, taskIds));
 }

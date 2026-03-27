@@ -57,6 +57,17 @@ export async function toggleTaskCompletion(id: number, isCompleted: boolean, com
   }).where(eq(workOrderTasks.id, id));
 }
 
+// status: 0 = pendente, 1 = concluída, 2 = não concluída (X)
+export async function setTaskStatus(id: number, status: number, completedBy?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco de dados não disponível");
+  await db.update(workOrderTasks).set({
+    isCompleted: status,
+    completedAt: status === 1 ? new Date() : null,
+    completedBy: status === 1 ? (completedBy ?? null) : null,
+  }).where(eq(workOrderTasks.id, id));
+}
+
 // ============================================================
 // SEÇÃO: MATERIAIS
 // Funções para gerenciar peças e insumos usados no serviço.

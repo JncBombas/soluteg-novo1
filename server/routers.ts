@@ -800,6 +800,18 @@ const msg = `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
           return { success: true, message: "Tarefa atualizada com sucesso" };
         }),
 
+      setStatus: publicProcedure
+        .input(z.object({
+          id: z.number(),
+          status: z.number().min(0).max(2),
+          completedBy: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const auxDb = await import("./workOrdersAuxDb");
+          await auxDb.setTaskStatus(input.id, input.status, input.completedBy);
+          return { success: true };
+        }),
+
       delete: publicProcedure
         .input(z.object({ id: z.number() }))
         .mutation(async ({ input }) => {
@@ -1282,6 +1294,13 @@ attachments: router({
         .query(async ({ input }) => {
           const checklistDb = await import("./checklistsDb");
           return await checklistDb.getChecklistsByInspectionTask(input.inspectionTaskId);
+        }),
+
+      listByWorkOrder: publicProcedure
+        .input(z.object({ workOrderId: z.number() }))
+        .query(async ({ input }) => {
+          const checklistDb = await import("./checklistsDb");
+          return await checklistDb.getChecklistsByWorkOrderId(input.workOrderId);
         }),
 
       getById: publicProcedure

@@ -5,7 +5,7 @@
 
 import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
-import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId, getAttachmentsByWorkOrderId } from './workOrdersAuxDb';
+import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId, getAttachmentsByWorkOrderId, getTasksByWorkOrderId } from './workOrdersAuxDb';
 import { getInspectionTasksByWorkOrder, getChecklistsByInspectionTask } from './checklistsDb';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -102,6 +102,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
 
   const materials       = await getMaterialsByWorkOrderId(workOrderId);
   const comments        = await getCommentsByWorkOrderId(workOrderId, false);
+  const workOrderTasks  = await getTasksByWorkOrderId(workOrderId);
   const inspectionTasks = await getInspectionTasksByWorkOrder(workOrderId);
 
 
@@ -237,19 +238,62 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         if (workOrder.finalValue)     { doc.text(`Valor Final: R$ ${workOrder.finalValue.toFixed(2)}`, leftMargin, currentY); currentY += 14; }
       }
 
-      // ── INSPEÇÕES E CHECKLISTS ────────────────────────────────
+      // ── TAREFAS ───────────────────────────────────────────────
+      if (workOrderTasks && workOrderTasks.length > 0) {
+        if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
+
+        doc.fontSize(11).fillColor(goldColor).font('Helvetica-Bold').text('Tarefas', leftMargin, currentY);
+        currentY += 15;
+
+        const taskRowH = 18;
+        workOrderTasks.forEach((task: any, i: number) => {
+          if (currentY > doc.page.height - 60) { doc.addPage(); currentY = 40; }
+
+          // Fundo alternado
+          if (i % 2 === 0) doc.rect(leftMargin, currentY, contentWidth, taskRowH).fill('#F8F8F8');
+
+          // Ícone de status
+          const status = task.isCompleted as number;
+          const iconX = leftMargin + 4;
+          const iconY = currentY + (taskRowH - 10) / 2;
+          if (status === 1) {
+            // Concluída: círculo verde com ✓
+            doc.circle(iconX + 5, iconY + 5, 5).fill('#2E7D32');
+            doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold').text('✓', iconX + 2, iconY + 2);
+          } else if (status === 2) {
+            // Não concluída: círculo vermelho com ✗
+            doc.circle(iconX + 5, iconY + 5, 5).fill('#C62828');
+            doc.fontSize(6).fillColor('#FFFFFF').font('Helvetica-Bold').text('✗', iconX + 2, iconY + 2);
+          } else {
+            // Pendente: círculo vazio
+            doc.circle(iconX + 5, iconY + 5, 5).strokeColor('#AAAAAA').lineWidth(1).stroke();
+          }
+
+          // Título
+          const titleStyle = status === 1 ? '#888888' : status === 2 ? '#C62828' : '#333333';
+          doc.fontSize(9).fillColor(titleStyle).font(status === 0 ? 'Helvetica' : 'Helvetica')
+             .text(task.title, leftMargin + 18, currentY + (taskRowH - 9) / 2, { width: contentWidth - 80 });
+
+          // Label de status à direita
+          const statusLabel = status === 1 ? 'Concluída' : status === 2 ? 'Não concluída' : 'Pendente';
+          const labelColor  = status === 1 ? '#2E7D32'  : status === 2 ? '#C62828'        : '#888888';
+          doc.fontSize(7).fillColor(labelColor).font('Helvetica')
+             .text(statusLabel, leftMargin + contentWidth - 70, currentY + (taskRowH - 7) / 2, { width: 70, align: 'right' });
+
+          currentY += taskRowH;
+        });
+
+        currentY += 16;
+      }
+
+      // ── CHECKLISTS DE EQUIPAMENTOS ────────────────────────────
       if (tasksWithChecklists && tasksWithChecklists.length > 0) {
         if (currentY > doc.page.height - 100) { doc.addPage(); currentY = 40; }
 
-        doc.fontSize(11).fillColor(goldColor).font('Helvetica-Bold').text('Inspeções', leftMargin, currentY);
+        doc.fontSize(11).fillColor(goldColor).font('Helvetica-Bold').text('Checklists de Equipamentos', leftMargin, currentY);
         currentY += 20;
 
         for (const task of tasksWithChecklists) {
-          doc.fontSize(10).fillColor('#333333').font('Helvetica-Bold').text(task.title, leftMargin, currentY);
-          currentY += 15;
-          const stTxt = task.status === 'concluida' ? 'Concluída' : task.status === 'em_andamento' ? 'Em Andamento' : 'Pendente';
-          doc.fontSize(8).fillColor('#666666').font('Helvetica').text(`Status: ${stTxt}`, leftMargin, currentY);
-          currentY += 14;
 
           if (task.checklists && task.checklists.length > 0) {
             for (const checklist of task.checklists) {

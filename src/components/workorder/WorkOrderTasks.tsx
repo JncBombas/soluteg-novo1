@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Trash2, GripVertical, CheckCircle2, Circle } from "lucide-react";
+import { Plus, Trash2, GripVertical, CheckCircle2, Circle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface WorkOrderTasksProps {
@@ -36,17 +35,17 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
       setIsDialogOpen(false);
       setNewTask({ title: "", description: "" });
     },
-    onError: (error) => {
-      toast.error(`Erro ao criar tarefa: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao criar tarefa: ${err.message}`);
     },
   });
 
-  const toggleTaskMutation = trpc.workOrders.tasks.toggle.useMutation({
+  const setStatusMutation = trpc.workOrders.tasks.setStatus.useMutation({
     onSuccess: () => {
       refetch();
     },
-    onError: (error) => {
-      toast.error(`Erro ao atualizar tarefa: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao atualizar tarefa: ${err.message}`);
     },
   });
 
@@ -55,8 +54,8 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
       toast.success("Tarefa deletada com sucesso");
       refetch();
     },
-    onError: (error) => {
-      toast.error(`Erro ao deletar tarefa: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao deletar tarefa: ${err.message}`);
     },
   });
 
@@ -74,10 +73,17 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
     });
   };
 
-  const handleToggleTask = (taskId: number, isCompleted: boolean) => {
-    toggleTaskMutation.mutate({
+  // Ciclo: 0 (pendente) → 1 (concluída) → 2 (não concluída/X) → 0
+  const getNextStatus = (current: number) => {
+    if (current === 0) return 1;
+    if (current === 1) return 2;
+    return 0;
+  };
+
+  const handleToggleTask = (taskId: number, currentStatus: number) => {
+    setStatusMutation.mutate({
       id: taskId,
-      isCompleted: !isCompleted,
+      status: getNextStatus(currentStatus),
       completedBy: "Admin",
     });
   };
@@ -88,7 +94,8 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
     }
   };
 
-  const completedCount = tasks?.filter((t) => t.isCompleted === 1).length || 0;
+  const completedCount = tasks?.filter((t: { isCompleted: number }) => t.isCompleted === 1).length || 0;
+  const notDoneCount = tasks?.filter((t: { isCompleted: number }) => t.isCompleted === 2).length || 0;
   const totalCount = tasks?.length || 0;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
@@ -100,6 +107,7 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
             <CardTitle>Tarefas / Checklist</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {completedCount} de {totalCount} concluídas ({progress.toFixed(0)}%)
+              {notDoneCount > 0 && ` • ${notDoneCount} não concluída(s)`}
             </p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -173,23 +181,34 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
         {/* Tasks List */}
         <div className="space-y-3">
           {tasks && tasks.length > 0 ? (
-            tasks.map((task) => (
+            tasks.map((task: { id: number; isCompleted: number; title: string; description?: string | null; completedAt?: Date | string | null; completedBy?: string | null }) => (
               <div
                 key={task.id}
                 className={`flex items-start gap-3 p-4 rounded-lg border ${
                   task.isCompleted === 1
                     ? "bg-green-50 border-green-200"
+                    : task.isCompleted === 2
+                    ? "bg-red-50 border-red-200"
                     : "bg-white border-gray-200"
                 }`}
               >
                 <GripVertical className="h-5 w-5 text-gray-400 mt-0.5 cursor-move" />
-                
+
                 <button
-                  onClick={() => handleToggleTask(task.id, task.isCompleted === 1)}
+                  onClick={() => handleToggleTask(task.id, task.isCompleted)}
                   className="mt-0.5"
+                  title={
+                    task.isCompleted === 0
+                      ? "Clique para marcar como concluída"
+                      : task.isCompleted === 1
+                      ? "Clique para marcar como não concluída"
+                      : "Clique para redefinir como pendente"
+                  }
                 >
                   {task.isCompleted === 1 ? (
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ) : task.isCompleted === 2 ? (
+                    <XCircle className="h-5 w-5 text-red-500" />
                   ) : (
                     <Circle className="h-5 w-5 text-gray-400" />
                   )}
@@ -200,6 +219,8 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
                     className={`font-medium ${
                       task.isCompleted === 1
                         ? "line-through text-gray-500"
+                        : task.isCompleted === 2
+                        ? "line-through text-red-500"
                         : "text-gray-900"
                     }`}
                   >
@@ -216,6 +237,9 @@ export default function WorkOrderTasks({ workOrderId }: WorkOrderTasksProps) {
                       {new Date(task.completedAt).toLocaleString("pt-BR")}
                       {task.completedBy && ` por ${task.completedBy}`}
                     </p>
+                  )}
+                  {task.isCompleted === 2 && (
+                    <p className="text-xs text-red-400 mt-2">Não concluída</p>
                   )}
                 </div>
 

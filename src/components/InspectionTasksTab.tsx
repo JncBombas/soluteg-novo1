@@ -1,34 +1,17 @@
 import { useState } from "react";
-import { InspectionTaskItem } from "./InspectionTaskItem";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,165 +24,107 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import {
-  Plus,
-  ClipboardList,
-  Loader2,
-  Trash2,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  FileText,
-  PenTool,
-  Edit2,
-  X,
-} from "lucide-react";
+import { Plus, ClipboardList, Loader2, Trash2, Edit2, X } from "lucide-react";
 import ChecklistForm from "./ChecklistForm";
-import SignaturePad from "./SignaturePad";
 
 interface InspectionTasksTabProps {
   workOrderId: number;
 }
 
 export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabProps) {
-  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isAddChecklistOpen, setIsAddChecklistOpen] = useState(false);
-  const [isCompleteTaskOpen, setIsCompleteTaskOpen] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [customTitle, setCustomTitle] = useState("");
   const [brand, setBrand] = useState("");
   const [power, setPower] = useState("");
-  
-  // Campos de conclusão
-  const [collaboratorName, setCollaboratorName] = useState("");
-  const [collaboratorDocument, setCollaboratorDocument] = useState("");
-  const [collaboratorSignature, setCollaboratorSignature] = useState("");
-  const [clientName, setClientName] = useState("");
-  const [clientSignature, setClientSignature] = useState("");
+  const [editingChecklistId, setEditingChecklistId] = useState<number | null>(null);
   const [deleteChecklistDialogOpen, setDeleteChecklistDialogOpen] = useState<number | null>(null);
+  const [savingChecklistId, setSavingChecklistId] = useState<number | null>(null);
 
-  const utils = trpc.useUtils();
-
-  // Queries
-  const { data: inspectionTasks, isLoading: isLoadingTasks } = trpc.checklists.inspectionTasks.listByWorkOrder.useQuery(
+  const { data: inspectionTasks, isLoading: isLoadingTasks, refetch: refetchTasks } = trpc.checklists.inspectionTasks.listByWorkOrder.useQuery(
     { workOrderId },
-    {
-      refetchOnMount: true,
-      refetchOnWindowFocus: false,
-    }
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+
+  const { data: checklists = [], isLoading: isLoadingChecklists, refetch: refetchChecklists } = trpc.checklists.instances.listByWorkOrder.useQuery(
+    { workOrderId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
   );
 
   const { data: templates = [] } = trpc.checklists.templates.list.useQuery();
 
-  // Mutations
+  const invalidate = async () => {
+    await Promise.all([refetchTasks(), refetchChecklists()]);
+  };
+
   const createTaskMutation = trpc.checklists.inspectionTasks.create.useMutation({
     onSuccess: async () => {
-      toast.success("Tarefa de inspeção criada com sucesso!");
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
-      setIsCreateTaskOpen(false);
-      setNewTaskTitle("");
-      setNewTaskDescription("");
+      await refetchTasks();
+      setIsAddChecklistOpen(true);
     },
-    onError: (error) => {
-      toast.error(`Erro ao criar tarefa: ${error.message}`);
-    },
-  });
-
-  const deleteTaskMutation = trpc.checklists.inspectionTasks.delete.useMutation({
-    onSuccess: async () => {
-      toast.success("Tarefa deletada com sucesso!");
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
-    },
-    onError: (error) => {
-      toast.error(`Erro ao deletar tarefa: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao inicializar inspeção: ${err.message}`);
     },
   });
 
   const createChecklistMutation = trpc.checklists.instances.create.useMutation({
     onSuccess: async () => {
       toast.success("Checklist adicionado com sucesso!");
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await invalidate();
       setIsAddChecklistOpen(false);
       setSelectedTemplateId("");
       setCustomTitle("");
       setBrand("");
       setPower("");
     },
-    onError: (error) => {
-      toast.error(`Erro ao adicionar checklist: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao adicionar checklist: ${err.message}`);
     },
   });
 
   const deleteChecklistMutation = trpc.checklists.instances.delete.useMutation({
     onSuccess: async () => {
       toast.success("Checklist removido com sucesso!");
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
-      await utils.checklists.inspectionTasks.listByWorkOrder.refetch({ workOrderId });
+      await invalidate();
       setDeleteChecklistDialogOpen(null);
     },
-    onError: (error) => {
-      toast.error(`Erro ao remover checklist: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao remover checklist: ${err.message}`);
       setDeleteChecklistDialogOpen(null);
     },
   });
-
-  // Estado para rastrear qual checklist está sendo salvo
-  const [savingChecklistId, setSavingChecklistId] = useState<number | null>(null);
 
   const updateResponsesMutation = trpc.checklists.instances.updateResponses.useMutation({
     onSuccess: async () => {
       toast.success("Respostas salvas com sucesso!");
       setSavingChecklistId(null);
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
+      await invalidate();
     },
-    onError: (error) => {
-      toast.error(`Erro ao salvar respostas: ${error.message}`);
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao salvar respostas: ${err.message}`);
       setSavingChecklistId(null);
     },
   });
 
-  const completeTaskMutation = trpc.checklists.inspectionTasks.complete.useMutation({
-    onSuccess: async () => {
-      toast.success("Tarefa concluída com sucesso!");
-      await utils.checklists.inspectionTasks.listByWorkOrder.invalidate({ workOrderId });
-      setIsCompleteTaskOpen(false);
-      resetCompleteForm();
-    },
-    onError: (error) => {
-      toast.error(`Erro ao concluir tarefa: ${error.message}`);
-    },
-  });
-
-  const resetCompleteForm = () => {
-    setCollaboratorName("");
-    setCollaboratorDocument("");
-    setCollaboratorSignature("");
-    setClientName("");
-    setClientSignature("");
-  };
-
-  const handleCreateTask = () => {
-    if (!newTaskTitle.trim()) {
-      toast.error("Digite um título para a tarefa");
-      return;
+  const handleOpenAddChecklist = () => {
+    if (!inspectionTasks || inspectionTasks.length === 0) {
+      createTaskMutation.mutate({
+        workOrderId,
+        title: "Checklists de Equipamentos",
+      });
+    } else {
+      setIsAddChecklistOpen(true);
     }
-    createTaskMutation.mutate({
-      workOrderId,
-      title: newTaskTitle,
-      description: newTaskDescription || undefined,
-    });
   };
 
   const handleAddChecklist = () => {
-    if (!selectedTaskId || !selectedTemplateId || !customTitle.trim()) {
+    const taskId = inspectionTasks?.[0]?.id;
+    if (!taskId || !selectedTemplateId || !customTitle.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
     createChecklistMutation.mutate({
-      inspectionTaskId: selectedTaskId,
+      inspectionTaskId: taskId,
       templateId: parseInt(selectedTemplateId),
       customTitle,
       brand: brand || undefined,
@@ -207,35 +132,7 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
     });
   };
 
-  const handleCompleteTask = () => {
-    if (!selectedTaskId || !collaboratorName || !collaboratorDocument || !collaboratorSignature) {
-      toast.error("Preencha todos os campos obrigatórios do colaborador");
-      return;
-    }
-    completeTaskMutation.mutate({
-      id: selectedTaskId,
-      collaboratorName,
-      collaboratorDocument,
-      collaboratorSignature,
-      clientName: clientName || undefined,
-      clientSignature: clientSignature || undefined,
-    });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pendente":
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
-      case "em_andamento":
-        return <Badge variant="outline" className="border-yellow-500 text-yellow-600"><AlertCircle className="h-3 w-3 mr-1" />Em Andamento</Badge>;
-      case "concluida":
-        return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Concluída</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  if (isLoadingTasks) {
+  if (isLoadingTasks || isLoadingChecklists) {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -245,282 +142,226 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
 
   return (
     <div className="space-y-4">
-      {/* Botão para criar nova tarefa */}
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Tarefas de Inspeção</h3>
-        <Dialog open={isCreateTaskOpen} onOpenChange={setIsCreateTaskOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Tarefa
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Tarefa de Inspeção</DialogTitle>
-              <DialogDescription>
-                Crie uma tarefa para agrupar os checklists de inspeção.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="taskTitle">Título *</Label>
-                <Input
-                  id="taskTitle"
-                  placeholder="Ex: Inspeção Mensal"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="taskDescription">Descrição</Label>
-                <Textarea
-                  id="taskDescription"
-                  placeholder="Descrição opcional da tarefa"
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateTaskOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateTask} disabled={createTaskMutation.isPending}>
-                {createTaskMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Criar Tarefa
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <h3 className="text-lg font-medium">Checklists de Equipamentos</h3>
+        <Button onClick={handleOpenAddChecklist} disabled={createTaskMutation.isPending}>
+          {createTaskMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          Adicionar Checklist
+        </Button>
       </div>
 
-      {/* Lista de tarefas */}
-      {!inspectionTasks || inspectionTasks.length === 0 ? (
+      {/* Lista de checklists */}
+      {checklists.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
             <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
-            <h4 className="font-medium mb-2">Nenhuma tarefa de inspeção</h4>
+            <h4 className="font-medium mb-2">Nenhum checklist adicionado</h4>
             <p className="text-sm text-muted-foreground mb-4">
-              Crie uma tarefa para adicionar checklists de inspeção.
+              Clique em "Adicionar Checklist" para incluir equipamentos a inspecionar.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <Accordion type="single" collapsible className="space-y-2">
-          {inspectionTasks.map((task) => (
-            <InspectionTaskItem
-              key={task.id}
-              task={task}
-              workOrderId={workOrderId}
-              templates={templates || []}
-              onAddChecklist={(taskId) => {
-                setSelectedTaskId(taskId);
-                setIsAddChecklistOpen(true);
-              }}
-              onDeleteTask={(taskId) => deleteTaskMutation.mutate({ id: taskId })}
-              onDeleteChecklist={(checklistId) => deleteChecklistMutation.mutate({ id: checklistId })}
-              onSaveResponses={(checklistId, responses, isComplete) => {
-                setSavingChecklistId(checklistId);
-                updateResponsesMutation.mutate({ id: checklistId, responses, isComplete });
-              }}
-              onCompleteTask={(taskId) => {
-                setSelectedTaskId(taskId);
-                setIsCompleteTaskOpen(true);
-              }}
-              isSavingResponses={savingChecklistId === task.id && updateResponsesMutation.isPending}
-              deleteChecklistDialogOpen={deleteChecklistDialogOpen}
-              setDeleteChecklistDialogOpen={setDeleteChecklistDialogOpen}
-              deleteChecklistMutation={deleteChecklistMutation}
-            />
-          ))}
-        </Accordion>
+        <div className="space-y-4">
+          {checklists.map((checklist: { id: number; templateId: number; customTitle: string; brand: string | null; power: string | null; responses: string | null; isComplete: number | null; inspectionTaskId: number }) => {
+            const template = templates.find((t: { id: number }) => t.id === checklist.templateId) ?? null;
+
+            let formStructure = null;
+            if (template?.formStructure) {
+              try {
+                const parsed = JSON.parse(template.formStructure);
+                formStructure = parsed.fields && !parsed.sections
+                  ? { sections: [{ id: "default", title: "Informações", fields: parsed.fields }] }
+                  : parsed;
+              } catch {
+                // ignore parse error
+              }
+            }
+
+            const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
+            const isSaving = savingChecklistId === checklist.id && updateResponsesMutation.isPending;
+            const isEditing = editingChecklistId === checklist.id;
+
+            return (
+              <Card key={checklist.id}>
+                <CardHeader className="py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">{checklist.customTitle}</CardTitle>
+                      <CardDescription className="text-xs">
+                        {template?.name}
+                        {checklist.brand && ` • ${checklist.brand}`}
+                        {checklist.power && ` • ${checklist.power}`}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={checklist.isComplete ? "default" : "secondary"}>
+                        {checklist.isComplete ? "Completo" : "Incompleto"}
+                      </Badge>
+                      {checklist.isComplete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingChecklistId(isEditing ? null : checklist.id)}
+                          className="h-8 px-2 text-xs"
+                        >
+                          {isEditing ? (
+                            <><X className="h-3 w-3 mr-1" />Cancelar</>
+                          ) : (
+                            <><Edit2 className="h-3 w-3 mr-1" />Editar</>
+                          )}
+                        </Button>
+                      )}
+                      <AlertDialog
+                        open={deleteChecklistDialogOpen === checklist.id}
+                        onOpenChange={(open) => {
+                          if (!open && !deleteChecklistMutation.isPending) {
+                            setDeleteChecklistDialogOpen(null);
+                          }
+                        }}
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setDeleteChecklistDialogOpen(checklist.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover Checklist?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. O checklist e todas as respostas serão removidos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel disabled={deleteChecklistMutation.isPending}>
+                              Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteChecklistMutation.mutate({ id: checklist.id })}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              disabled={deleteChecklistMutation.isPending}
+                            >
+                              {deleteChecklistMutation.isPending ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Removendo...</>
+                              ) : "Remover"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {formStructure && (
+                    <ChecklistForm
+                      formStructure={formStructure}
+                      initialResponses={responses}
+                      onSave={(newResponses, isComplete) => {
+                        setSavingChecklistId(checklist.id);
+                        updateResponsesMutation.mutate({ id: checklist.id, responses: newResponses, isComplete });
+                        setEditingChecklistId(null);
+                      }}
+                      isSaving={isSaving}
+                      readOnly={!!checklist.isComplete && !isEditing}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
-      {/* Modal para adicionar checklist */}
-      <Dialog open={isAddChecklistOpen} onOpenChange={setIsAddChecklistOpen}>
-        <DialogContent>
+      {/* Dialog para adicionar checklist */}
+      <Dialog
+        open={isAddChecklistOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsAddChecklistOpen(false);
+            setSelectedTemplateId("");
+            setCustomTitle("");
+            setBrand("");
+            setPower("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md w-full">
           <DialogHeader>
             <DialogTitle>Adicionar Checklist</DialogTitle>
-            <DialogDescription>
-              Selecione um tipo de checklist e personalize o título.
-            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Tipo de Checklist *</Label>
-              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates?.map((template) => (
-                    <SelectItem key={template.id} value={template.id.toString()}>
-                      {template.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => setSelectedTemplateId(e.target.value)}
+                className="w-full h-11 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                <option value="" disabled>Selecione o tipo</option>
+                {templates.map((template: { id: number; name: string }) => (
+                  <option key={template.id} value={template.id.toString()}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="customTitle">Título Personalizado *</Label>
+              <Label>Título Personalizado *</Label>
               <Input
-                id="customTitle"
                 placeholder="Ex: Bomba de Recalque Bloco 1"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
+                className="h-11"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="brand">Marca</Label>
+                <Label>Marca (opcional)</Label>
                 <Input
-                  id="brand"
                   placeholder="Ex: WEG"
                   value={brand}
                   onChange={(e) => setBrand(e.target.value)}
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="power">Potência</Label>
+                <Label>Potência (opcional)</Label>
                 <Input
-                  id="power"
                   placeholder="Ex: 5 CV"
                   value={power}
                   onChange={(e) => setPower(e.target.value)}
+                  className="h-11"
                 />
               </div>
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsAddChecklistOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleAddChecklist} disabled={createChecklistMutation.isPending}>
-              {createChecklistMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {createChecklistMutation.isPending && (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              )}
               Adicionar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para concluir tarefa */}
-      <Dialog open={isCompleteTaskOpen} onOpenChange={setIsCompleteTaskOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Concluir Tarefa de Inspeção</DialogTitle>
-            <DialogDescription>
-              Preencha os dados e colete as assinaturas para finalizar a tarefa.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Dados do Colaborador */}
-            <div className="space-y-4">
-              <h4 className="font-medium flex items-center gap-2">
-                <PenTool className="h-4 w-4" />
-                Dados do Colaborador *
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="collabName">Nome Completo *</Label>
-                  <Input
-                    id="collabName"
-                    placeholder="Nome do colaborador"
-                    value={collaboratorName}
-                    onChange={(e) => setCollaboratorName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="collabDoc">CPF ou RG *</Label>
-                  <Input
-                    id="collabDoc"
-                    placeholder="000.000.000-00"
-                    value={collaboratorDocument}
-                    onChange={(e) => setCollaboratorDocument(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Assinatura do Colaborador *</Label>
-                <SignaturePad
-                  onSave={setCollaboratorSignature}
-                  onClear={() => setCollaboratorSignature("")}
-                />
-                {collaboratorSignature && (
-                  <Badge variant="outline" className="text-green-600">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Assinatura capturada
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {/* Dados do Cliente (opcional) */}
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="font-medium flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Dados do Cliente (opcional)
-              </h4>
-              <div className="space-y-2">
-                <Label htmlFor="clientName">Nome do Cliente</Label>
-                <Input
-                  id="clientName"
-                  placeholder="Nome do responsável pelo cliente"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Assinatura do Cliente</Label>
-                <SignaturePad
-                  onSave={setClientSignature}
-                  onClear={() => setClientSignature("")}
-                />
-                {clientSignature && (
-                  <Badge variant="outline" className="text-green-600">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Assinatura capturada
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCompleteTaskOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleCompleteTask} 
-              disabled={completeTaskMutation.isPending || !collaboratorSignature}
-            >
-              {completeTaskMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Concluir Tarefa
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
-
-// Componente para cada tarefa de inspeção
-interface InspectionTaskItemProps {
-  task: {
-    id: number;
-    title: string;
-    description: string | null;
-    status: string;
-    completedAt: Date | null;
-  };
-  templates: Array<{ id: number; name: string; formStructure: string }>;
-  onAddChecklist: (taskId: number) => void;
-  onDeleteTask: (taskId: number) => void;
-  onDeleteChecklist: (checklistId: number) => void;
-  onSaveResponses: (checklistId: number, responses: Record<string, unknown>, isComplete: boolean) => void;
-  onCompleteTask: (taskId: number) => void;
-  isSavingResponses: boolean;
-  deleteChecklistDialogOpen: number | null;
-  setDeleteChecklistDialogOpen: (id: number | null) => void;
-  deleteChecklistMutation: { isPending: boolean };
-  onAddChecklistClick?: (taskId: number) => void;
 }
