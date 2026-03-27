@@ -11,11 +11,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Check, X, Minus, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Tipos para a estrutura do formulário
 interface ConditionalRule {
   field: string;
   operator: "eq" | "neq" | "gte" | "lte" | "gt" | "lt" | "==" | "!=" | ">=" | "<=" | ">" | "<";
@@ -59,86 +57,93 @@ interface ChecklistFormProps {
   readOnly?: boolean;
 }
 
-// Componente para botões Ok/NOk/N/A
+// ✅ FIX: Clicar no botão já selecionado agora DESSEleciona (toggle)
+// Isso evita o bug de "marcar duas respostas" por toque duplo no celular
 function OkNokNaButtons({
   value,
   onChange,
   disabled,
 }: {
   value?: string;
-  onChange: (val: string) => void;
+  onChange: (val: string | null) => void;
   disabled?: boolean;
 }) {
+  const handleClick = (val: string) => {
+    // Toggle: clicou no mesmo valor → desseleciona
+    onChange(value === val ? null : val);
+  };
+
   return (
-    <div className="flex gap-1">
-      <Button
+    // ✅ gap maior e botões maiores para facilitar toque no celular
+    <div className="flex gap-2">
+      <button
         type="button"
-        size="sm"
-        variant={value === "ok" ? "default" : "outline"}
-        className={cn(
-          "h-8 w-12",
-          value === "ok" && "bg-green-600 hover:bg-green-700"
-        )}
-        onClick={() => onChange("ok")}
+        onClick={() => handleClick("ok")}
         disabled={disabled}
+        className={cn(
+          "flex items-center justify-center h-10 w-14 rounded-md border text-sm font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          disabled && "opacity-50 cursor-not-allowed",
+          value === "ok"
+            ? "bg-green-600 border-green-600 text-white"
+            : "border-input bg-background text-foreground hover:bg-muted"
+        )}
       >
         <Check className="h-4 w-4" />
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        size="sm"
-        variant={value === "nok" ? "default" : "outline"}
-        className={cn(
-          "h-8 w-12",
-          value === "nok" && "bg-red-600 hover:bg-red-700"
-        )}
-        onClick={() => onChange("nok")}
+        onClick={() => handleClick("nok")}
         disabled={disabled}
+        className={cn(
+          "flex items-center justify-center h-10 w-14 rounded-md border text-sm font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          disabled && "opacity-50 cursor-not-allowed",
+          value === "nok"
+            ? "bg-red-600 border-red-600 text-white"
+            : "border-input bg-background text-foreground hover:bg-muted"
+        )}
       >
         <X className="h-4 w-4" />
-      </Button>
-      <Button
+      </button>
+      <button
         type="button"
-        size="sm"
-        variant={value === "na" ? "default" : "outline"}
-        className={cn(
-          "h-8 w-12",
-          value === "na" && "bg-gray-500 hover:bg-gray-600"
-        )}
-        onClick={() => onChange("na")}
+        onClick={() => handleClick("na")}
         disabled={disabled}
+        className={cn(
+          "flex items-center justify-center h-10 w-14 rounded-md border text-sm font-medium transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          disabled && "opacity-50 cursor-not-allowed",
+          value === "na"
+            ? "bg-gray-500 border-gray-500 text-white"
+            : "border-input bg-background text-foreground hover:bg-muted"
+        )}
       >
         <Minus className="h-4 w-4" />
-      </Button>
+      </button>
     </div>
   );
 }
 
-// Verifica se um campo deve ser exibido baseado na condição
-function shouldShowField(
-  field: FormField,
+function evaluateConditional(
+  conditional: ConditionalRule,
   responses: Record<string, unknown>
 ): boolean {
-  if (!field.conditional) return true;
-
-  const { field: condField, operator, value } = field.conditional;
+  const { field: condField, operator, value } = conditional;
   const currentValue = responses[condField];
 
-  console.log(`[shouldShowField] Field: ${field.id}, condField: ${condField}, operator: ${operator}, value: ${value}, currentValue: ${currentValue}, responses:`, responses);
+  if (currentValue === undefined || currentValue === null || currentValue === "") return false;
 
-  if (currentValue === undefined || currentValue === null) return false;
-
-  const numCurrent =
-    typeof currentValue === "string" ? parseInt(currentValue) : Number(currentValue);
-  const numValue = typeof value === "string" ? parseInt(value) : Number(value);
+  const numCurrent = Number(currentValue);
+  const numValue = Number(value);
 
   switch (operator) {
     case "eq":
     case "==":
-      return currentValue === value || numCurrent === numValue;
+      return String(currentValue) === String(value) || numCurrent === numValue;
     case "neq":
     case "!=":
-      return currentValue !== value && numCurrent !== numValue;
+      return String(currentValue) !== String(value) && numCurrent !== numValue;
     case "gte":
     case ">=":
       return !isNaN(numCurrent) && !isNaN(numValue) && numCurrent >= numValue;
@@ -156,40 +161,29 @@ function shouldShowField(
   }
 }
 
-// Verifica se todos os campos obrigatórios estão preenchidos
 function checkCompletion(
   formStructure: FormStructure,
   responses: Record<string, unknown>
 ): boolean {
   for (const section of formStructure.sections) {
-    // Verificar items (Ok/NOk/N/A)
     if (section.items) {
       for (const item of section.items) {
         if (item.required !== false) {
           const value = responses[item.id];
-          if (!value || (value !== "ok" && value !== "nok" && value !== "na")) {
-            return false;
-          }
+          if (!value || !["ok", "nok", "na"].includes(value as string)) return false;
         }
       }
     }
-
-    // Verificar fields
     if (section.fields) {
       for (const field of section.fields) {
-        // Pular campos condicionais que não devem ser exibidos
-        if (!shouldShowField(field, responses)) continue;
-
+        if (field.conditional && !evaluateConditional(field.conditional, responses)) continue;
         if (field.required) {
           const value = responses[field.id];
-          if (value === undefined || value === null || value === "") {
-            return false;
-          }
+          if (value === undefined || value === null || value === "") return false;
         }
       }
     }
   }
-
   return true;
 }
 
@@ -200,32 +194,36 @@ export default function ChecklistForm({
   isSaving = false,
   readOnly = false,
 }: ChecklistFormProps) {
-  const [responses, setResponses] = useState<Record<string, unknown>>(
-    initialResponses
-  );
+  const [responses, setResponses] = useState<Record<string, unknown>>(initialResponses);
 
-  // Parse formStructure se for string JSON
   let parsedFormStructure: FormStructure | null = formStructure as any;
-  if (typeof formStructure === 'string') {
+  if (typeof formStructure === "string") {
     try {
       parsedFormStructure = JSON.parse(formStructure);
     } catch (e) {
-      console.error('Erro ao fazer parse de formStructure:', e);
       parsedFormStructure = null;
     }
-  }// Atualizar responses quando initialResponses mudar
+  }
+
   useEffect(() => {
     setResponses(initialResponses);
   }, [initialResponses]);
 
-  // Temporariamente sempre marcar como completo
-  const isComplete = true;
+  const isComplete = useMemo(
+    () => parsedFormStructure ? checkCompletion(parsedFormStructure, responses) : false,
+    [parsedFormStructure, responses]
+  );
 
   const handleChange = (fieldId: string, value: unknown) => {
-    setResponses((prev) => ({
-      ...prev,
-      [fieldId]: value,
-    }));
+    // ✅ null significa "desselecionar" — remove a chave do mapa
+    setResponses((prev) => {
+      if (value === null) {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      }
+      return { ...prev, [fieldId]: value };
+    });
   };
 
   const handleSave = () => {
@@ -233,8 +231,7 @@ export default function ChecklistForm({
   };
 
   const renderField = (field: FormField) => {
-    // Verificar condição
-    if (!shouldShowField(field, responses)) return null;
+    if (field.conditional && !evaluateConditional(field.conditional, responses)) return null;
 
     const value = responses[field.id];
 
@@ -243,9 +240,9 @@ export default function ChecklistForm({
         return (
           <div
             key={field.id}
-            className="flex items-center justify-between py-2 border-b border-border/50"
+            className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
           >
-            <Label className="text-sm">{field.label}</Label>
+            <Label className="text-sm flex-1 pr-4">{field.label}</Label>
             <OkNokNaButtons
               value={value as string}
               onChange={(val) => handleChange(field.id, val)}
@@ -259,9 +256,7 @@ export default function ChecklistForm({
           <div key={field.id} className="space-y-1.5">
             <Label className="text-sm">
               {field.label}
-              {field.unit && (
-                <span className="text-muted-foreground ml-1">({field.unit})</span>
-              )}
+              {field.unit && <span className="text-muted-foreground ml-1">({field.unit})</span>}
             </Label>
             <Input
               value={(value as string) || ""}
@@ -277,13 +272,12 @@ export default function ChecklistForm({
           <div key={field.id} className="space-y-1.5">
             <Label className="text-sm">
               {field.label}
-              {field.unit && (
-                <span className="text-muted-foreground ml-1">({field.unit})</span>
-              )}
+              {field.unit && <span className="text-muted-foreground ml-1">({field.unit})</span>}
             </Label>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
+                inputMode="decimal"
                 step="0.01"
                 value={(value as string) || ""}
                 onChange={(e) => handleChange(field.id, e.target.value)}
@@ -292,9 +286,7 @@ export default function ChecklistForm({
                 className="flex-1"
               />
               {field.unit && (
-                <span className="text-sm text-muted-foreground w-8">
-                  {field.unit}
-                </span>
+                <span className="text-sm text-muted-foreground w-8">{field.unit}</span>
               )}
             </div>
           </div>
@@ -309,7 +301,7 @@ export default function ChecklistForm({
               onValueChange={(val) => handleChange(field.id, val)}
               disabled={readOnly}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-11">
                 <SelectValue placeholder={`Selecione ${field.label.toLowerCase()}`} />
               </SelectTrigger>
               <SelectContent>
@@ -354,20 +346,19 @@ export default function ChecklistForm({
                   </tr>
                 </thead>
                 <tbody>
-                  {field.items?.map((item, idx) => (
+                  {field.items?.map((item) => (
                     <tr key={item} className="border-b last:border-0">
                       <td className="px-3 py-2">{item}</td>
                       {field.options?.map((option) => {
                         const itemKey = `${field.id}_${item}_${option}`;
-                        const isChecked = responses[itemKey] === true;
                         return (
                           <td key={option} className="px-3 py-2 text-center">
                             <input
                               type="checkbox"
-                              checked={isChecked}
+                              checked={responses[itemKey] === true}
                               onChange={(e) => handleChange(itemKey, e.target.checked)}
                               disabled={readOnly}
-                              className="h-4 w-4 cursor-pointer"
+                              className="h-5 w-5 cursor-pointer"
                             />
                           </td>
                         );
@@ -385,8 +376,7 @@ export default function ChecklistForm({
     }
   };
 
-  // Validar formStructure
-  if (!parsedFormStructure || !parsedFormStructure.sections || !Array.isArray(parsedFormStructure.sections)) {
+  if (!parsedFormStructure?.sections || !Array.isArray(parsedFormStructure.sections)) {
     return (
       <div className="text-sm text-muted-foreground text-center py-4">
         Nenhuma estrutura de formulário disponível
@@ -402,13 +392,13 @@ export default function ChecklistForm({
             <CardTitle className="text-sm font-medium">{section.title}</CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {/* Renderizar items (Ok/NOk/N/A) */}
+            {/* ✅ Items Ok/NOk/NA — renderizados UMA VEZ apenas aqui */}
             {section.items?.map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
               >
-                <Label className="text-sm">{item.label}</Label>
+                <Label className="text-sm flex-1 pr-4">{item.label}</Label>
                 <OkNokNaButtons
                   value={responses[item.id] as string}
                   onChange={(val) => handleChange(item.id, val)}
@@ -417,52 +407,22 @@ export default function ChecklistForm({
               </div>
             ))}
 
-            {/* Renderizar fields */}
-            {section.fields?.map((field) => {
-              // Verificar se campo tem conditional
-              if (field.conditional) {
-                const { field: condField, operator, value } = field.conditional;
-                const condValue = responses[condField];
-                
-                // Se não há valor selecionado ainda, não mostrar campos condicionais
-                if (condValue === undefined || condValue === null || condValue === '') {
-                  return null;
-                }
-                
-                // Converter ambos para número para comparação numérica
-                const numCondValue = Number(condValue);
-                const numValue = Number(value);
-                
-                // Avaliar condição
-                let shouldShow = false;
-                if (operator === 'eq' || operator === '==') {
-                  // Comparar como string E como número para garantir
-                  shouldShow = String(condValue) === String(value) || numCondValue === numValue;
-                } else if (operator === 'gte' || operator === '>=') {
-                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue >= numValue;
-                } else if (operator === 'lte' || operator === '<=') {
-                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue <= numValue;
-                } else if (operator === 'gt' || operator === '>') {
-                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue > numValue;
-                } else if (operator === 'lt' || operator === '<') {
-                  shouldShow = !isNaN(numCondValue) && !isNaN(numValue) && numCondValue < numValue;
-                } else if (operator === 'neq' || operator === '!=') {
-                  shouldShow = String(condValue) !== String(value) && numCondValue !== numValue;
-                }
-                
-                if (!shouldShow) return null;
-              }
-              
-              return renderField(field);
-            })}
+            {/* Fields com avaliação de conditional centralizada */}
+            {section.fields?.map((field) => renderField(field))}
           </CardContent>
         </Card>
       ))}
 
-      {/* Botão de salvar */}
       {!readOnly && (
-        <div className="flex items-center justify-end pt-4 border-t">
-          <Button onClick={handleSave} disabled={isSaving}>
+        <div className="flex items-center justify-between pt-4 border-t">
+          <p className="text-xs text-muted-foreground">
+            {isComplete ? (
+              <span className="text-green-600 font-medium">✓ Todos os campos obrigatórios preenchidos</span>
+            ) : (
+              "Preencha todos os campos obrigatórios"
+            )}
+          </p>
+          <Button onClick={handleSave} disabled={isSaving} className="h-11 px-6">
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -471,7 +431,7 @@ export default function ChecklistForm({
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Respostas
+                Salvar
               </>
             )}
           </Button>
