@@ -110,7 +110,7 @@ export function InspectionTaskItem({
       ]);
     },
     onError: (error) => {
-      toast.error(`Erro ao adicionar o checklist: ${error.message}`);
+      toast.error(`Erro ao adicionar checklist: ${error.message}`);
     },
   });
 
