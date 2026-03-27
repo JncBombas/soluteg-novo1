@@ -235,15 +235,25 @@ export default function Home() {
                 </Button>
               </Link>
               {isAdminLoggedIn ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="border-slate-600 text-slate-300 gap-1.5"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Sair
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => { setLocation("/admin/dashboard"); setMobileMenuOpen(false); }}
+                    className="bg-amber-500 hover:bg-amber-400 text-slate-900 gap-1.5"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    Dashboard
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="border-slate-600 text-slate-300 gap-1.5"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    Sair
+                  </Button>
+                </div>
               ) : (
                 <Link href="/admin/login">
                   <Button
