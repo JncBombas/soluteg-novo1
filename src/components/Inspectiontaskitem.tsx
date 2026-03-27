@@ -17,12 +17,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
+} 
+
+from "@/components/ui/dialog";
+
 import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion";
+} 
+
+from "@/components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,7 +110,7 @@ export function InspectionTaskItem({
       ]);
     },
     onError: (error) => {
-      toast.error(`Erro ao adicionar checklist: ${error.message}`);
+      toast.error(`Erro ao adicionar o checklist: ${error.message}`);
     },
   });
 
