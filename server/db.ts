@@ -399,67 +399,101 @@ export async function updateInspectionReport(id: number, data: Partial<InsertIns
   await db.update(inspectionReports).set(data).where(eq(inspectionReports.id, id));
 }
 
+// ============================================================
+// SUBSTITUA estas funções no seu db.ts
+// Apenas as funções de cliente foram alteradas
+// ============================================================
+ 
 // Client queries
 export async function createClient(client: InsertClient) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+ 
   const result = await db.insert(clients).values(client);
   return result;
 }
-
+ 
 export async function getClientsByAdminId(adminId: number): Promise<Client[]> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  return await db.select().from(clients).where(eq(clients.adminId, adminId)).orderBy(desc(clients.createdAt));
+ 
+  return await db
+    .select()
+    .from(clients)
+    .where(eq(clients.adminId, adminId))
+    .orderBy(desc(clients.createdAt));
 }
-
+ 
 export async function getClientById(id: number): Promise<Client | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+ 
+  const result = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, id))
+    .limit(1);
+ 
   return result.length > 0 ? result[0] : undefined;
 }
-
+ 
 export async function getClientByUsername(username: string): Promise<Client | undefined> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  // Procura pelo username do cliente
-  const result = await db.select().from(clients).where(eq(clients.username, username)).limit(1);
+ 
+  const result = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.username, username))
+    .limit(1);
+ 
   return result.length > 0 ? result[0] : undefined;
 }
-
-export async function updateClient(id: number, data: Partial<InsertClient>) {
+ 
+export async function updateClient(
+  id: number,
+  data: Partial<InsertClient>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+ 
   // Verificar se o cliente existe
   const existingClient = await getClientById(id);
   if (!existingClient) {
     throw new Error("Cliente não encontrado");
   }
-  
-  await db.update(clients).set(data).where(eq(clients.id, id));
+ 
+  // Filtra apenas os campos definidos para não sobrescrever com undefined
+  const safeData: Partial<InsertClient> = {};
+  if (data.name       !== undefined) safeData.name       = data.name;
+  if (data.email      !== undefined) safeData.email      = data.email || null;
+  if (data.phone      !== undefined) safeData.phone      = data.phone;
+  if (data.address    !== undefined) safeData.address    = data.address;
+  if (data.cnpjCpf    !== undefined) safeData.cnpjCpf    = data.cnpjCpf;
+  if (data.syndicName !== undefined) safeData.syndicName = data.syndicName; // <-- NOVO
+  if (data.type       !== undefined) safeData.type       = data.type;
+  if (data.active     !== undefined) safeData.active     = data.active;
+ 
+  if (Object.keys(safeData).length === 0) return; // nada a atualizar
+ 
+  await db.update(clients).set(safeData).where(eq(clients.id, id));
 }
-
+ 
 export async function deleteClient(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  // Delete all documents first
+ 
+  // Deleta documentos vinculados primeiro
   await db.delete(clientDocuments).where(eq(clientDocuments.clientId, id));
-  
-  // Then delete client
+ 
+  // Depois deleta o cliente
   await db.delete(clients).where(eq(clients.id, id));
 }
-
+ 
 export async function updateClientLastLogin(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+ 
   await db.update(clients).set({ lastLogin: new Date() }).where(eq(clients.id, id));
 }
 
@@ -497,13 +531,12 @@ export async function deleteClientDocument(id: number) {
 export async function updateClientPassword(id: number, password: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  // Verificar se o cliente existe
+ 
   const existingClient = await getClientById(id);
   if (!existingClient) {
     throw new Error("Cliente não encontrado");
   }
-  
+ 
   await db.update(clients).set({ password }).where(eq(clients.id, id));
 }
 

@@ -214,101 +214,112 @@ export const appRouter = router({
   }),
 
   clients: router({
-    list: publicProcedure
-      .input(z.object({ 
-        adminId: z.number(),
-        search: z.string().optional(), // Adicionado para busca na lista de clientes
-      }))
-      .query(async ({ input }) => {
-        // Se o seu db.getClientsByAdminId não suporta search, 
-        // ele vai ignorar, mas o tRPC não dará erro.
-        return await db.getClientsByAdminId(input.adminId);
-      }),
-
-    create: publicProcedure
-      .input(z.object({
-        adminId: z.number(),
-        name: z.string().min(1),
-        email: z.string().email().optional(),
-        username: z.string().min(3).max(100),
-        password: z.string().min(6),
-        cnpjCpf: z.string().optional(),
-        phone: z.string().optional(),
-        address: z.string().optional(),
-        type: z.enum(["com_portal", "sem_portal"]).default("com_portal"),
-      }))
-      .mutation(async ({ input }) => {
-        const { password, ...clientData } = input;
-        const hashedPassword = await hashPassword(password);
-        
-        const result = await db.createClient({
-          ...clientData,
-          password: hashedPassword,
-          active: 1,
+  list: publicProcedure
+    .input(z.object({
+      adminId: z.number(),
+      search: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      return await db.getClientsByAdminId(input.adminId);
+    }),
+ 
+  create: publicProcedure
+    .input(z.object({
+      adminId: z.number(),
+      name: z.string().min(1),
+      email: z.string().email().optional().or(z.literal("")),
+      username: z.string().min(3).max(100),
+      password: z.string().min(6),
+      cnpjCpf: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      syndicName: z.string().optional(),           // <-- NOVO
+      type: z.enum(["com_portal", "sem_portal"]).default("com_portal"),
+    }))
+    .mutation(async ({ input }) => {
+      const { password, ...clientData } = input;
+      const hashedPassword = await hashPassword(password);
+ 
+      await db.createClient({
+        ...clientData,
+        email: clientData.email || null,
+        password: hashedPassword,
+        active: 1,
+      });
+ 
+      return { success: true, message: "Cliente criado com sucesso" };
+    }),
+ 
+  update: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      // Aceita string vazia (campo limpo) além de email válido
+      email: z.union([z.string().email(), z.literal("")]).optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      cnpjCpf: z.string().optional(),
+      syndicName: z.string().optional(),           // <-- NOVO
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...updateData } = input;
+      try {
+        await db.updateClient(id, updateData);
+        return { success: true, message: "Cliente atualizado com sucesso" };
+      } catch (error) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: error instanceof Error ? error.message : "Erro ao atualizar cliente",
         });
-        
-        return { success: true, message: "Cliente criado com sucesso" };
-      }),
-
-    update: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        email: z.string().email().optional(),
-        phone: z.string().optional(),
-        address: z.string().optional(),
-        cnpjCpf: z.string().optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { id, ...updateData } = input;
-        try {
-          await db.updateClient(id, updateData);
-          return { success: true, message: "Cliente atualizado com sucesso" };
-        } catch (error) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: error instanceof Error ? error.message : "Erro ao atualizar cliente",
-          });
-        }
-      }),
-
-    updatePassword: publicProcedure
-      .input(z.object({
-        id: z.number(),
-        newPassword: z.string().min(6),
-      }))
-      .mutation(async ({ input }) => {
-        try {
-          const hashedPassword = await hashPassword(input.newPassword);
-          await db.updateClientPassword(input.id, hashedPassword);
-          return { success: true, message: "Senha atualizada com sucesso" };
-        } catch (error) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: error instanceof Error ? error.message : "Erro ao atualizar senha",
-          });
-        }
-      }),
-
-    delete: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        await db.deleteClient(input.id);
-        return { success: true, message: "Cliente deletado com sucesso" };
-      }),
-
-    getById: publicProcedure
-      .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        return await db.getClientById(input.id);
-      }),
-
-    getByUsername: publicProcedure
-      .input(z.object({ username: z.string() }))
-      .query(async ({ input }) => {
-        return await db.getClientByUsername(input.username);
-      }),
-  }),
+      }
+    }),
+ 
+  updatePassword: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      newPassword: z.string().min(6),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        const hashedPassword = await hashPassword(input.newPassword);
+        await db.updateClientPassword(input.id, hashedPassword);
+        return { success: true, message: "Senha atualizada com sucesso" };
+      } catch (error) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: error instanceof Error ? error.message : "Erro ao atualizar senha",
+        });
+      }
+    }),
+ 
+  // CORRIGIDO: aceita { id } e também { clientId, adminId } para compatibilidade
+  delete: publicProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      clientId: z.number().optional(),
+      adminId: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const id = input.id ?? input.clientId;
+      if (!id) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "ID do cliente não informado" });
+      }
+      await db.deleteClient(id);
+      return { success: true, message: "Cliente deletado com sucesso" };
+    }),
+ 
+  getById: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return await db.getClientById(input.id);
+    }),
+ 
+  getByUsername: publicProcedure
+    .input(z.object({ username: z.string() }))
+    .query(async ({ input }) => {
+      return await db.getClientByUsername(input.username);
+    }),
+}),
 
   documents: router({
     list: publicProcedure
