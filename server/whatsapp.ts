@@ -1,5 +1,5 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, MessageMedia } = pkg as any;
 import qrcode from 'qrcode-terminal';
 
 // Configuração do Cliente Puppeteer para VPS
@@ -100,6 +100,33 @@ export const sendWhatsappToNumber = async (phone: string, message: string) => {
 };
 
 /**
+ * Envia mensagem + PDF para um número específico (ex: cliente)
+ */
+export const sendWhatsappToNumberWithPDF = async (phone: string, message: string, pdfBuffer: Buffer, filename: string) => {
+    if (!isReady) {
+        console.error('❌ ERRO: Zap não está pronto para envio ao cliente.');
+        return;
+    }
+
+    const digits = phone.replace(/\D/g, '');
+    const normalized = digits.startsWith('55') ? digits : `55${digits}`;
+
+    try {
+        const check = await client.getNumberId(`${normalized}@c.us`);
+        if (check) {
+            const chat = await client.getChatById(check._serialized);
+            const media = new MessageMedia('application/pdf', pdfBuffer.toString('base64'), filename);
+            await chat.sendMessage(media, { caption: message });
+            console.log(`🚀 PDF enviado para ${normalized}`);
+        } else {
+            console.error(`❌ Número ${normalized} não encontrado no WhatsApp.`);
+        }
+    } catch (err: any) {
+        console.error('❌ ERRO ao enviar PDF para número:', err?.message);
+    }
+};
+
+/**
  * Função exportada para enviar alertas de OS do sistema
  */
 export const sendWhatsappAlert = async (message: string) => {
@@ -134,5 +161,39 @@ export const sendWhatsappAlert = async (message: string) => {
         }
     } catch (err) {
         console.error('❌ ERRO CRÍTICO:', err.message);
+    }
+};
+
+/**
+ * Envia alerta + PDF para o admin (JNC)
+ */
+export const sendWhatsappAlertWithPDF = async (message: string, pdfBuffer: Buffer, filename: string) => {
+    if (!isReady) {
+        console.error('❌ ERRO: Zap não está pronto.');
+        return;
+    }
+
+    try {
+        const formatos = ["5513981301010@c.us", "551381301010@c.us"];
+        let idFinal = null;
+
+        for (const f of formatos) {
+            const check = await client.getNumberId(f);
+            if (check) {
+                idFinal = check._serialized;
+                break;
+            }
+        }
+
+        if (idFinal) {
+            const chat = await client.getChatById(idFinal);
+            const media = new MessageMedia('application/pdf', pdfBuffer.toString('base64'), filename);
+            await chat.sendMessage(media, { caption: message });
+            console.log('🚀 SUCESSO: PDF enviado para a JNC!');
+        } else {
+            console.error('❌ ERRO: O WhatsApp não encontrou o número 13-98130-1010 em nenhum formato.');
+        }
+    } catch (err: any) {
+        console.error('❌ ERRO CRÍTICO ao enviar PDF para admin:', err?.message);
     }
 };

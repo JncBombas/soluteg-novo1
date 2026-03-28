@@ -1135,15 +1135,19 @@ attachments: router({
         const cliente = await db.getClientById(wo.clientId);
         if (!cliente?.phone) throw new Error("Cliente sem telefone cadastrado");
 
-        const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${input.id}`;
+        const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
         const msg =
           `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
           `🏢 Condomínio: ${wo.clientName || cliente.name}\n` +
           `📌 Status: ${wo.status}\n\n` +
-          `🔗 *Acesse os detalhes:*\n${portalUrl}`;
+          `🔗 *Acesse seu portal:*\n${portalUrl}`;
 
-        const { sendWhatsappToNumber } = await import("./whatsapp");
-        await sendWhatsappToNumber(cliente.phone, msg);
+        const pdfGen = await import("./pdfGenerator");
+        const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+        const filename = `OS-${wo.osNumber || input.id}.pdf`;
+
+        const { sendWhatsappToNumberWithPDF } = await import("./whatsapp");
+        await sendWhatsappToNumberWithPDF(cliente.phone, msg, pdfBuffer, filename);
         return { success: true };
       }),
 
@@ -1162,7 +1166,12 @@ attachments: router({
           `📌 Tipo: ${wo.type?.toUpperCase()} | Status: ${wo.status}\n\n` +
           `🔗 *Ver no painel:*\n${portalUrl}`;
 
-        sendWhatsappAlert(msg).catch(e => console.error("Erro no Zap JNC:", e));
+        const pdfGen = await import("./pdfGenerator");
+        const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
+        const filename = `OS-${wo.osNumber || input.id}.pdf`;
+
+        const { sendWhatsappAlertWithPDF } = await import("./whatsapp");
+        sendWhatsappAlertWithPDF(msg, pdfBuffer, filename).catch(e => console.error("Erro no Zap JNC:", e));
         return { success: true };
       }),
 
