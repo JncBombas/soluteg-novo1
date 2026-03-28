@@ -8,11 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   LogOut, Download, FileText, Loader2, Search, AlertCircle,
   FileQuestion, Calendar, Droplet, ChevronDown, ClipboardList,
-  Home, FolderOpen, Activity, User, ChevronRight,
+  Home, FolderOpen, Activity, ChevronRight,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { APP_LOGO } from "@/const";
+import { SolutegFooter } from "@/components/SolutegFooter";
 import { trpc } from "@/lib/trpc";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -250,7 +252,7 @@ export default function ClientPortal() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <ClipboardList className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+              <ClipboardList className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
               <span className="font-mono text-xs text-slate-500">{wo.osNumber}</span>
               <Badge className={`text-xs px-1.5 py-0 ${STATUS_COLOR[wo.status] || "bg-gray-100 text-gray-800"}`}>
                 {STATUS_LABEL[wo.status] || wo.status}
@@ -283,7 +285,7 @@ export default function ClientPortal() {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+              <FileText className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
               <p className="font-semibold text-sm truncate">{doc.title}</p>
             </div>
             {doc.description && (
@@ -319,7 +321,7 @@ export default function ClientPortal() {
             onKeyDown={(e) => { if (e.key === "Enter") applySearch(tabKey); }}
           />
         </div>
-        <Button size="sm" className="h-9 bg-orange-500 hover:bg-orange-600 px-3" onClick={() => applySearch(tabKey)}>
+        <Button size="sm" className="h-9 bg-amber-600 hover:bg-amber-700 px-3" onClick={() => applySearch(tabKey)}>
           <Search className="w-4 h-4" />
         </Button>
       </div>
@@ -376,20 +378,26 @@ export default function ClientPortal() {
     <div className="min-h-screen bg-slate-50 pb-20">
 
       {/* ── Header ── */}
-      <header className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {getInitials(clientName)}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-slate-500 leading-none">Olá,</p>
-              <p className="font-semibold text-sm leading-tight truncate max-w-[160px]">{clientName}</p>
+      <header className="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={APP_LOGO} alt="Soluteg" className="h-8 object-contain" />
+            <div className="leading-tight hidden sm:block">
+              <p className="font-bold text-sm text-white">Portal do Cliente</p>
+              <p className="text-[10px] text-slate-400">JNC Elétrica &amp; Bombas</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 h-8 px-2">
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                {getInitials(clientName)}
+              </div>
+              <span className="text-sm text-slate-300 hidden sm:block truncate max-w-[140px]">{clientName}</span>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2">
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -398,16 +406,16 @@ export default function ClientPortal() {
         <div className="max-w-2xl mx-auto px-4 py-5 space-y-5">
 
           {/* Profile card */}
-          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0">
+          <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white border-0 shadow-md">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold flex-shrink-0">
+                <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-2xl font-bold flex-shrink-0">
                   {getInitials(clientName)}
                 </div>
                 <div>
-                  <p className="text-orange-100 text-sm">Portal do Cliente</p>
-                  <h2 className="text-xl font-bold leading-tight">{clientName}</h2>
-                  <p className="text-orange-100 text-xs mt-1">JNC Elétrica &amp; Bombas</p>
+                  <p className="text-slate-400 text-xs uppercase tracking-wide">Portal do Cliente</p>
+                  <h2 className="text-xl font-bold leading-tight mt-0.5">{clientName}</h2>
+                  <p className="text-amber-400 text-xs mt-1">JNC Elétrica &amp; Bombas</p>
                 </div>
               </div>
             </CardContent>
@@ -431,14 +439,14 @@ export default function ClientPortal() {
               </button>
               <button
                 onClick={() => { setOsType("orcamento"); setIsOpenDialogOpen(true); }}
-                className="flex flex-col items-center gap-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl p-4 transition-colors text-left"
+                className="flex flex-col items-center gap-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl p-4 transition-colors text-left"
               >
-                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center">
                   <FileQuestion className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-orange-700 text-sm">Orçamento</p>
-                  <p className="text-xs text-orange-500">Solicitar cotação</p>
+                  <p className="font-semibold text-amber-800 text-sm">Orçamento</p>
+                  <p className="text-xs text-amber-600">Solicitar cotação</p>
                 </div>
               </button>
             </div>
@@ -450,7 +458,7 @@ export default function ClientPortal() {
             <div className="space-y-2">
               <button
                 onClick={() => setActivePage("documents")}
-                className="w-full flex items-center gap-3 bg-white rounded-xl p-4 border hover:border-orange-300 transition-colors"
+                className="w-full flex items-center gap-3 bg-white rounded-xl p-4 border hover:border-amber-300 transition-colors"
               >
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FolderOpen className="w-5 h-5 text-blue-600" />
@@ -463,7 +471,7 @@ export default function ClientPortal() {
               </button>
               <button
                 onClick={() => window.location.href = "/client/water-tank"}
-                className="w-full flex items-center gap-3 bg-white rounded-xl p-4 border hover:border-orange-300 transition-colors"
+                className="w-full flex items-center gap-3 bg-white rounded-xl p-4 border hover:border-amber-300 transition-colors"
               >
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Droplet className="w-5 h-5 text-blue-600" />
@@ -482,7 +490,7 @@ export default function ClientPortal() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">OS Recentes</h3>
-                <button onClick={() => { setActivePage("documents"); setActiveTab("orcamentos"); }} className="text-xs text-orange-500 font-medium">
+                <button onClick={() => { setActivePage("documents"); setActiveTab("orcamentos"); }} className="text-xs text-amber-600 font-medium">
                   Ver todas
                 </button>
               </div>
@@ -497,7 +505,7 @@ export default function ClientPortal() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Docs. Recentes</h3>
-                <button onClick={() => setActivePage("documents")} className="text-xs text-orange-500 font-medium">
+                <button onClick={() => setActivePage("documents")} className="text-xs text-amber-600 font-medium">
                   Ver todos
                 </button>
               </div>
@@ -584,7 +592,7 @@ export default function ClientPortal() {
                         <Collapsible key={period} defaultOpen={true}>
                           <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">
                             <ChevronDown className="w-4 h-4 transition-transform flex-shrink-0" />
-                            <Calendar className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                            <Calendar className="w-4 h-4 text-amber-500 flex-shrink-0" />
                             <span className="font-semibold text-sm text-slate-900">{period}</span>
                             <span className="ml-auto text-xs text-slate-500">
                               {grouped[period].length} doc{grouped[period].length !== 1 ? "s" : ""}
@@ -608,30 +616,35 @@ export default function ClientPortal() {
         </div>
       )}
 
+      {/* ── Footer ── */}
+      <div className="mb-20">
+        <SolutegFooter full={false} />
+      </div>
+
       {/* ── Bottom Navigation ── */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t z-40 safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-40 safe-area-bottom">
         <div className="max-w-2xl mx-auto flex">
           <button
             onClick={() => setActivePage("home")}
             className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${
-              activePage === "home" ? "text-orange-500" : "text-slate-500 hover:text-slate-700"
+              activePage === "home" ? "text-amber-400" : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <Home className={`w-5 h-5 ${activePage === "home" ? "text-orange-500" : ""}`} />
+            <Home className="w-5 h-5" />
             <span>Início</span>
           </button>
           <button
             onClick={() => setActivePage("documents")}
             className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${
-              activePage === "documents" ? "text-orange-500" : "text-slate-500 hover:text-slate-700"
+              activePage === "documents" ? "text-amber-400" : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <FolderOpen className={`w-5 h-5 ${activePage === "documents" ? "text-orange-500" : ""}`} />
+            <FolderOpen className="w-5 h-5" />
             <span>Documentos</span>
           </button>
           <button
             onClick={() => window.location.href = "/client/water-tank"}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-slate-400 hover:text-slate-200 transition-colors"
           >
             <Activity className="w-5 h-5" />
             <span>Monitoramento</span>
@@ -679,7 +692,7 @@ export default function ClientPortal() {
               onChange={(e) => setOsFormData({ ...osFormData, description: e.target.value })}
               rows={3}
             />
-            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={osLoading}>
+            <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={osLoading}>
               {osLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</> : "Enviar Solicitação"}
             </Button>
           </form>
