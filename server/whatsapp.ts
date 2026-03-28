@@ -73,6 +73,33 @@ client.on('disconnected', () => {
 client.initialize();
 
 /**
+ * Envia mensagem para um número específico (ex: cliente)
+ */
+export const sendWhatsappToNumber = async (phone: string, message: string) => {
+    if (!isReady) {
+        console.error('❌ ERRO: Zap não está pronto para envio ao cliente.');
+        return;
+    }
+
+    // Normaliza o número: remove tudo que não é dígito, garante prefixo 55
+    const digits = phone.replace(/\D/g, '');
+    const normalized = digits.startsWith('55') ? digits : `55${digits}`;
+
+    try {
+        const check = await client.getNumberId(`${normalized}@c.us`);
+        if (check) {
+            const chat = await client.getChatById(check._serialized);
+            await chat.sendMessage(message);
+            console.log(`🚀 Mensagem enviada para ${normalized}`);
+        } else {
+            console.error(`❌ Número ${normalized} não encontrado no WhatsApp.`);
+        }
+    } catch (err: any) {
+        console.error('❌ ERRO ao enviar para número:', err?.message);
+    }
+};
+
+/**
  * Função exportada para enviar alertas de OS do sistema
  */
 export const sendWhatsappAlert = async (message: string) => {

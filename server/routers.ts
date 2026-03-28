@@ -1114,6 +1114,108 @@ attachments: router({
         };
       }),
 
+    // ==================== PORTAL / WHATSAPP SHARING ====================
+
+    // Buscar OSs compartilhadas para o portal do cliente
+    getSharedForPortal: publicProcedure
+      .input(z.object({ clientId: z.number() }))
+      .query(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        return await workOrdersDb.getSharedWorkOrdersForPortal(input.clientId);
+      }),
+
+    // Enviar link da OS para o WhatsApp do cliente
+    sendToClientWhatsapp: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        const wo = await workOrdersDb.getWorkOrderById(input.id);
+        if (!wo) throw new Error("OS não encontrada");
+
+        const cliente = await db.getClientById(wo.clientId);
+        if (!cliente?.phone) throw new Error("Cliente sem telefone cadastrado");
+
+        const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${input.id}`;
+        const msg =
+          `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
+          `🏢 Condomínio: ${wo.clientName || cliente.name}\n` +
+          `📌 Status: ${wo.status}\n\n` +
+          `🔗 *Acesse os detalhes:*\n${portalUrl}`;
+
+        const { sendWhatsappToNumber } = await import("./whatsapp");
+        await sendWhatsappToNumber(cliente.phone, msg);
+        return { success: true };
+      }),
+
+    // Enviar link da OS para o WhatsApp do Admin (JNC)
+    sendToAdminWhatsapp: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        const wo = await workOrdersDb.getWorkOrderById(input.id);
+        if (!wo) throw new Error("OS não encontrada");
+
+        const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${input.id}`;
+        const msg =
+          `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
+          `🏢 Cliente: ${wo.clientName}\n` +
+          `📌 Tipo: ${wo.type?.toUpperCase()} | Status: ${wo.status}\n\n` +
+          `🔗 *Ver no painel:*\n${portalUrl}`;
+
+        sendWhatsappAlert(msg).catch(e => console.error("Erro no Zap JNC:", e));
+        return { success: true };
+      }),
+
+    // Compartilhar OS no portal do cliente + notificar via WhatsApp
+    shareToClientPortal: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const workOrdersDb = await import("./workOrdersDb");
+        const wo = await workOrdersDb.getWorkOrderById(input.id);
+        if (!wo) throw new Error("OS não encontrada");
+
+        // Determina a aba de destino conforme tipo/status
+        let portalTab: string;
+        if (wo.type === "rotina") {
+          portalTab = "vistoria";
+        } else if (wo.type === "emergencial") {
+          portalTab = "visita";
+        } else if (wo.type === "orcamento" && wo.status === "concluida") {
+          portalTab = "servico";
+        } else {
+          portalTab = "orcamentos"; // orcamento em aberto/andamento
+        }
+
+        await workOrdersDb.shareWorkOrderToPortal(input.id, portalTab);
+
+        // Notifica o cliente via WhatsApp com credenciais de acesso
+        const cliente = await db.getClientById(wo.clientId);
+        if (cliente?.phone) {
+          const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
+          const tabLabel: Record<string, string> = {
+            vistoria: "Vistoria",
+            visita: "Visita",
+            servico: "Serviços",
+            orcamentos: "Orçamentos",
+          };
+          const msg =
+            `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
+            `Olá, ${cliente.name}!\n\n` +
+            `A OS *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
+            `🔗 Acesse: ${portalUrl}\n` +
+            `👤 Login: ${cliente.username}\n` +
+            `🔑 Senha: (sua senha cadastrada)\n\n` +
+            `Em caso de dúvidas, entre em contato conosco.`;
+
+          const { sendWhatsappToNumber } = await import("./whatsapp");
+          sendWhatsappToNumber(cliente.phone, msg).catch(e =>
+            console.error("Erro ao notificar cliente via WhatsApp:", e)
+          );
+        }
+
+        return { success: true, portalTab };
+      }),
+
     // ==================== TIME TRACKING ====================
     timeTracking: router({
       list: publicProcedure

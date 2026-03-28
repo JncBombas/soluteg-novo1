@@ -19,8 +19,19 @@ import {
   FileDown,
   Trash2,
   Play,
-  FileText
+  FileText,
+  Download,
+  MessageCircle,
+  Globe,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -45,7 +56,8 @@ export default function AdminWorkOrderDetail() {
   // --- CONFIGURAÇÕES INICIAIS ---
   const params = useParams(); // Pega o ID da OS na URL do navegador
   const [, navigate] = useLocation(); // Função para mudar de página
-  const [exportingPDF, setExportingPDF] = useState(false); // Controla se o PDF está sendo gerado
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false); // Abre/fecha o modal de finalizar
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false); // Abre/fecha o aviso de deletar
   const workOrderId = Number(params.id);
@@ -103,6 +115,29 @@ export default function AdminWorkOrderDetail() {
     setExportingPDF(true);
     exportPDFMutation.mutate({ id: workOrderId });
   };
+
+  const sendToClientWhatsappMutation = trpc.workOrders.sendToClientWhatsapp.useMutation({
+    onSuccess: () => toast.success("Mensagem enviada para o WhatsApp do cliente!"),
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const sendToAdminWhatsappMutation = trpc.workOrders.sendToAdminWhatsapp.useMutation({
+    onSuccess: () => toast.success("Mensagem enviada para o WhatsApp Admin!"),
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const shareToClientPortalMutation = trpc.workOrders.shareToClientPortal.useMutation({
+    onSuccess: (data) => {
+      const tabLabel: Record<string, string> = {
+        vistoria: "Vistoria",
+        visita: "Visita",
+        servico: "Serviços",
+        orcamentos: "Orçamentos",
+      };
+      toast.success(`OS enviada para a aba "${tabLabel[data.portalTab] || data.portalTab}" do portal! Cliente notificado via WhatsApp.`);
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
 
   // Finalizar a OS (Envia assinaturas e dados finais)
   const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
@@ -251,17 +286,50 @@ export default function AdminWorkOrderDetail() {
             <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
           </div>
           
-          {/* Botões de Exportar e Deletar no topo */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportPDF}
-            disabled={exportingPDF}
-            className="gap-2"
-          >
-            {exportingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-            {exportingPDF ? "Gerando..." : "Exportar PDF"}
-          </Button>
+          {/* Dropdown PDF */}
+          <DropdownMenu open={pdfMenuOpen} onOpenChange={setPdfMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2" disabled={exportingPDF}>
+                {exportingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                {exportingPDF ? "Gerando..." : "Exportar PDF"}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => { setPdfMenuOpen(false); handleExportPDF(); }}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" /> Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { setPdfMenuOpen(false); sendToClientWhatsappMutation.mutate({ id: workOrderId }); }}
+                disabled={sendToClientWhatsappMutation.isPending}
+                className="gap-2"
+              >
+                <MessageCircle className="h-4 w-4 text-green-600" />
+                Enviar para o Cliente (WhatsApp)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setPdfMenuOpen(false); sendToAdminWhatsappMutation.mutate({ id: workOrderId }); }}
+                disabled={sendToAdminWhatsappMutation.isPending}
+                className="gap-2"
+              >
+                <MessageCircle className="h-4 w-4 text-blue-600" />
+                Enviar para WhatsApp (Admin)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => { setPdfMenuOpen(false); shareToClientPortalMutation.mutate({ id: workOrderId }); }}
+                disabled={shareToClientPortalMutation.isPending}
+                className="gap-2"
+              >
+                <Globe className="h-4 w-4 text-orange-600" />
+                Enviar para o Cliente (Portal)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <Button
             variant="destructive"

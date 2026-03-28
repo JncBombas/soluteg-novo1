@@ -307,3 +307,30 @@ export async function getRecurringWorkOrders() {
 
   return result;
 }
+
+/**
+ * Compartilhar OS no portal do cliente, definindo a aba de destino
+ */
+export async function shareWorkOrderToPortal(id: number, portalTab: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(workOrders)
+    .set({ sharedWithPortal: 1, portalTab })
+    .where(eq(workOrders.id, id));
+}
+
+/**
+ * Buscar OSs compartilhadas com o portal de um cliente
+ */
+export async function getSharedWorkOrdersForPortal(clientId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return db
+    .select()
+    .from(workOrders)
+    .where(and(eq(workOrders.clientId, clientId), eq(workOrders.sharedWithPortal, 1)))
+    .orderBy(desc(workOrders.createdAt));
+}

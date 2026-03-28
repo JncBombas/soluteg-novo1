@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion, Calendar, Droplet, ChevronDown, ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, Download, FileText, Loader2, Search, Filter, AlertCircle, FileQuestion, Calendar, Droplet, ChevronDown, ArrowLeft, ClipboardList } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,6 +49,7 @@ export default function ClientPortal() {
     visita: "",
     nota_fiscal: "",
     servico: "",
+    orcamentos: "",
   });
 
   useEffect(() => {
@@ -72,6 +74,33 @@ export default function ClientPortal() {
     },
     { enabled: !!clientId }
   );
+
+  const { data: sharedWorkOrders = [] } = trpc.workOrders.getSharedForPortal.useQuery(
+    { clientId: clientId || 0 },
+    { enabled: !!clientId }
+  );
+
+  const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
+    onSuccess: (data) => {
+      const byteCharacters = atob(data.pdf);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success("PDF baixado com sucesso!");
+    },
+    onError: () => toast.error("Erro ao baixar PDF"),
+  });
 
   const handleTabSearch = (tabName: string, value: string) => {
     setTabSearches({ ...tabSearches, [tabName]: value });
@@ -179,6 +208,63 @@ export default function ClientPortal() {
     }
   };
 
+  const statusLabel: Record<string, string> = {
+    aberta: "Aberta",
+    aguardando_aprovacao: "Aguardando Aprovação",
+    aprovada: "Aprovada",
+    rejeitada: "Rejeitada",
+    em_andamento: "Em Andamento",
+    concluida: "Concluída",
+    aguardando_pagamento: "Aguardando Pagamento",
+    cancelada: "Cancelada",
+  };
+
+  const statusColor: Record<string, string> = {
+    aberta: "bg-blue-100 text-blue-800",
+    aguardando_aprovacao: "bg-yellow-100 text-yellow-800",
+    aprovada: "bg-green-100 text-green-800",
+    rejeitada: "bg-red-100 text-red-800",
+    em_andamento: "bg-purple-100 text-purple-800",
+    concluida: "bg-green-200 text-green-900",
+    aguardando_pagamento: "bg-orange-100 text-orange-800",
+    cancelada: "bg-gray-100 text-gray-800",
+  };
+
+  const WorkOrderCard = ({ wo }: { wo: typeof sharedWorkOrders[0] }) => (
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
+              <ClipboardList className="w-4 h-4 text-orange-500 flex-shrink-0" />
+              <span className="font-mono text-xs text-slate-500">{wo.osNumber}</span>
+              <Badge className={`text-xs ${statusColor[wo.status] || "bg-gray-100 text-gray-800"}`}>
+                {statusLabel[wo.status] || wo.status}
+              </Badge>
+            </div>
+            <h3 className="font-semibold truncate mb-1">{wo.title}</h3>
+            {wo.description && (
+              <p className="text-sm text-slate-600 mb-2 line-clamp-2">{wo.description}</p>
+            )}
+            <p className="text-xs text-slate-500">
+              {wo.scheduledDate
+                ? new Date(wo.scheduledDate).toLocaleDateString("pt-BR")
+                : new Date(wo.createdAt).toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportPDFMutation.mutate({ id: wo.id })}
+            disabled={exportPDFMutation.isPending}
+          >
+            <Download className="w-4 h-4 mr-1" /> PDF
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const DocumentCard = ({ doc }: { doc: Document }) => (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="p-4">
@@ -267,12 +353,49 @@ export default function ClientPortal() {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
                 <TabsTrigger value="vistoria">Vistoria</TabsTrigger>
                 <TabsTrigger value="visita">Visita</TabsTrigger>
                 <TabsTrigger value="nota_fiscal">NF</TabsTrigger>
                 <TabsTrigger value="servico">Serviço</TabsTrigger>
+                <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
               </TabsList>
+
+              {/* Aba Orçamentos — mostra OSs compartilhadas do tipo orcamento em aberto */}
+              <TabsContent value="orcamentos" className="space-y-4">
+                <div className="flex gap-2 bg-slate-50 p-4 rounded-lg">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      className="pl-10"
+                      placeholder="Buscar orçamento..."
+                      value={tabSearches["orcamentos"]}
+                      onChange={(e) => handleTabSearch("orcamentos", e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {sharedWorkOrders
+                    .filter((wo) => wo.portalTab === "orcamentos")
+                    .filter((wo) =>
+                      !tabSearches["orcamentos"] ||
+                      wo.title.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase()) ||
+                      wo.osNumber.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase())
+                    )
+                    .length > 0 ? (
+                    sharedWorkOrders
+                      .filter((wo) => wo.portalTab === "orcamentos")
+                      .filter((wo) =>
+                        !tabSearches["orcamentos"] ||
+                        wo.title.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase()) ||
+                        wo.osNumber.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase())
+                      )
+                      .map((wo) => <WorkOrderCard key={wo.id} wo={wo} />)
+                  ) : (
+                    <p className="text-center py-10 text-slate-500">Nenhum orçamento disponível.</p>
+                  )}
+                </div>
+              </TabsContent>
 
               {["vistoria", "visita", "nota_fiscal", "servico"].map((tab) => {
                 const tabDocs = getTabDocuments(tab);
@@ -297,6 +420,12 @@ export default function ClientPortal() {
                     </div>
 
                     <div className="space-y-3">
+                      {/* OSs compartilhadas nesta aba */}
+                      {sharedWorkOrders
+                        .filter((wo) => wo.portalTab === tab)
+                        .map((wo) => <WorkOrderCard key={`wo-${wo.id}`} wo={wo} />)}
+
+                      {/* Documentos da aba */}
                       {periods.length > 0 ? (
                         periods.map((period) => (
                           <Collapsible key={period} defaultOpen={true}>
@@ -315,9 +444,9 @@ export default function ClientPortal() {
                             </CollapsibleContent>
                           </Collapsible>
                         ))
-                      ) : (
+                      ) : sharedWorkOrders.filter((wo) => wo.portalTab === tab).length === 0 ? (
                         <p className="text-center py-10 text-slate-500">Nenhum documento encontrado.</p>
-                      )}
+                      ) : null}
                     </div>
                   </TabsContent>
                 );

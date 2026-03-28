@@ -271,6 +271,10 @@ export const workOrders = mysqlTable("workOrders", {
   clientName: varchar("clientName", { length: 255 }),
   signedAt: timestamp("signedAt"),
   
+  // Portal do Cliente
+  sharedWithPortal: int("sharedWithPortal").default(0).notNull(),
+  portalTab: varchar("portalTab", { length: 50 }),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
