@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 interface WorkOrder {
   id: number;
@@ -15,8 +16,8 @@ interface WorkOrder {
   title: string;
   description?: string;
   serviceType?: string;
-  status: "aberta" | "em_andamento" | "concluida" | "cancelada";
-  priority: "baixa" | "media" | "alta";
+  status: string;
+  priority: string;
   scheduledDate?: Date;
   completedDate?: Date;
   estimatedHours?: number;
@@ -30,20 +31,31 @@ export default function AdminEditWorkOrder() {
   const [match, params] = useRoute("/admin/work-orders/:id/edit");
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     serviceType: "",
-    status: "aberta" as const,
-    priority: "media" as const,
+    status: "aberta" as string,
+    priority: "normal" as string,
     scheduledDate: "",
     estimatedHours: "",
     actualHours: "",
   });
 
   const osId = params?.id ? parseInt(params.id) : null;
+
+  const updateMutation = trpc.workOrders.update.useMutation({
+    onSuccess: () => {
+      toast.success("OS atualizada com sucesso!");
+      setTimeout(() => {
+        setLocation(`/admin/work-orders/${osId}`);
+      }, 500);
+    },
+    onError: (err) => {
+      toast.error(err.message || "Erro ao salvar OS");
+    },
+  });
 
   useEffect(() => {
     if (!osId) {
@@ -57,11 +69,11 @@ export default function AdminEditWorkOrder() {
 
   const loadWorkOrder = async () => {
     if (!osId) return;
-    
+
     try {
       setLoading(true);
       const response = await fetch(`/api/work-orders/${osId}`);
-      
+
       if (!response.ok) {
         throw new Error("Erro ao carregar OS");
       }
@@ -73,7 +85,7 @@ export default function AdminEditWorkOrder() {
         description: data.description || "",
         serviceType: data.serviceType || "",
         status: data.status || "aberta",
-        priority: data.priority || "media",
+        priority: data.priority || "normal",
         scheduledDate: data.scheduledDate ? new Date(data.scheduledDate).toISOString().split('T')[0] : "",
         estimatedHours: data.estimatedHours?.toString() || "",
         actualHours: data.actualHours?.toString() || "",
@@ -87,41 +99,27 @@ export default function AdminEditWorkOrder() {
     }
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.title.trim()) {
       toast.error("Título é obrigatório");
       return;
     }
 
-    setSaving(true);
-    try {
-      const response = await fetch(`/api/work-orders/${osId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate) : null,
-          estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : null,
-          actualHours: formData.actualHours ? parseInt(formData.actualHours) : null,
-        }),
-      });
+    if (!osId) return;
 
-      if (!response.ok) {
-        throw new Error("Erro ao salvar OS");
-      }
-
-      toast.success("OS atualizada com sucesso!");
-      setTimeout(() => {
-        setLocation(`/admin/work-orders/${osId}`);
-      }, 500);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Erro ao salvar OS";
-      toast.error(errorMsg);
-    } finally {
-      setSaving(false);
-    }
+    updateMutation.mutate({
+      id: osId,
+      title: formData.title,
+      description: formData.description || undefined,
+      serviceType: formData.serviceType || undefined,
+      status: formData.status as any,
+      priority: formData.priority as any,
+      scheduledDate: formData.scheduledDate || undefined,
+      estimatedHours: formData.estimatedHours ? parseInt(formData.estimatedHours) : undefined,
+      actualHours: formData.actualHours ? parseInt(formData.actualHours) : undefined,
+    });
   };
 
   if (loading) {
@@ -247,9 +245,9 @@ export default function AdminEditWorkOrder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
                       <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="critica">Crítica</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -290,9 +288,9 @@ export default function AdminEditWorkOrder() {
                 <Button
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700"
-                  disabled={saving}
+                  disabled={updateMutation.isPending}
                 >
-                  {saving ? "Salvando..." : "Salvar Alterações"}
+                  {updateMutation.isPending ? "Salvando..." : "Salvar Alterações"}
                 </Button>
               </div>
             </form>
