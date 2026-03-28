@@ -6,8 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X, File, Image, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 type FileCategory = "antes" | "durante" | "depois" | "documento" | "outro";
+
+const categoryMap: Record<FileCategory, "before" | "during" | "after" | "document" | "other"> = {
+  antes: "before",
+  durante: "during",
+  depois: "after",
+  documento: "document",
+  outro: "other",
+};
 
 interface FileUploadProps {
   workOrderId: number;
@@ -20,6 +29,7 @@ export default function FileUpload({ workOrderId, onUploadComplete }: FileUpload
   const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const createAttachment = trpc.workOrders.attachments.create.useMutation();
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -41,22 +51,33 @@ export default function FileUpload({ workOrderId, onUploadComplete }: FileUpload
     setUploading(true);
 
     try {
-      // Upload cada arquivo para S3
+      const formData = new FormData();
       for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("workOrderId", workOrderId.toString());
-        formData.append("category", category);
-        formData.append("description", description || file.name);
+        formData.append("files", file);
+      }
 
-        const response = await fetch("/api/upload-attachment", {
-          method: "POST",
-          body: formData,
+      const response = await fetch("/api/work-orders/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao fazer upload dos arquivos");
+      }
+
+      const data = await response.json();
+
+      for (const uploaded of data.urls) {
+        await createAttachment.mutateAsync({
+          workOrderId,
+          fileName: uploaded.fileName,
+          fileKey: uploaded.key,
+          fileUrl: uploaded.url,
+          fileType: uploaded.fileType,
+          fileSize: uploaded.fileSize,
+          category: categoryMap[category],
+          uploadedBy: description || undefined,
         });
-
-        if (!response.ok) {
-          throw new Error(`Erro ao fazer upload de ${file.name}`);
-        }
       }
 
       toast.success(`${selectedFiles.length} arquivo(s) enviado(s) com sucesso!`);
