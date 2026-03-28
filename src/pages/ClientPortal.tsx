@@ -88,7 +88,10 @@ export default function ClientPortal() {
   });
   const [osLoading, setOsLoading] = useState(false);
 
-  // Per-tab search and month/year filters
+  // Per-tab: input value (typed) and applied value (on button click / Enter)
+  const [tabSearchInputs, setTabSearchInputs] = useState<Record<string, string>>({
+    vistoria: "", visita: "", nota_fiscal: "", servico: "", orcamentos: "",
+  });
   const [tabSearches, setTabSearches] = useState<Record<string, string>>({
     vistoria: "", visita: "", nota_fiscal: "", servico: "", orcamentos: "",
   });
@@ -98,6 +101,10 @@ export default function ClientPortal() {
   const [tabYears, setTabYears] = useState<Record<string, string>>({
     vistoria: "all", visita: "all", nota_fiscal: "all", servico: "all", orcamentos: "all",
   });
+
+  const applySearch = (tabKey: string) => {
+    setTabSearches((prev) => ({ ...prev, [tabKey]: tabSearchInputs[tabKey] || "" }));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("clientToken");
@@ -301,14 +308,20 @@ export default function ClientPortal() {
 
   const TabFilterBar = ({ tabKey }: { tabKey: string }) => (
     <div className="space-y-2 bg-slate-50 p-3 rounded-lg">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          className="pl-9 h-9"
-          placeholder="Buscar..."
-          value={tabSearches[tabKey] || ""}
-          onChange={(e) => setTabSearches({ ...tabSearches, [tabKey]: e.target.value })}
-        />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            className="pl-9 h-9"
+            placeholder="Buscar..."
+            value={tabSearchInputs[tabKey] || ""}
+            onChange={(e) => setTabSearchInputs({ ...tabSearchInputs, [tabKey]: e.target.value })}
+            onKeyDown={(e) => { if (e.key === "Enter") applySearch(tabKey); }}
+          />
+        </div>
+        <Button size="sm" className="h-9 bg-orange-500 hover:bg-orange-600 px-3" onClick={() => applySearch(tabKey)}>
+          <Search className="w-4 h-4" />
+        </Button>
       </div>
       <div className="flex gap-2">
         <Select
@@ -549,7 +562,11 @@ export default function ClientPortal() {
               const tabDocs = getTabDocuments(tab);
               const grouped = groupDocumentsByPeriod(tabDocs);
               const periods = sortedPeriods(grouped);
-              const tabWorkOrders = (sharedWorkOrders as any[]).filter((wo: any) => wo.portalTab === tab);
+              const tabWorkOrders = (sharedWorkOrders as any[])
+                .filter((wo: any) => wo.portalTab === tab)
+                .filter((wo: any) => !tabSearches[tab] ||
+                  wo.title.toLowerCase().includes(tabSearches[tab].toLowerCase()) ||
+                  wo.osNumber.toLowerCase().includes(tabSearches[tab].toLowerCase()));
 
               return (
                 <TabsContent key={tab} value={tab} className="space-y-3 mt-0">
