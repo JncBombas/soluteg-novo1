@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, Image, Trash2, Download, ExternalLink, Edit2, Check, X } from "lucide-react";
+import { FileText, Image, Trash2, ExternalLink, Edit2, Check, X } from "lucide-react";
 import { toast } from "sonner";
+import FileUpload from "./FileUpload";
 
 interface WorkOrderAttachmentsProps {
   workOrderId: number;
@@ -58,13 +59,6 @@ export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmen
       id: attachmentId,
       description: editDescription,
     });
-  };
-
-  const handleFileUpload = async (category: string, files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    // TODO: Implementar upload para S3
-    toast.info("Upload de arquivos será implementado na próxima fase");
   };
 
   const getCategoryLabel = (category: string) => {
@@ -130,18 +124,7 @@ export default function WorkOrderAttachments({ workOrderId }: WorkOrderAttachmen
           </TabsList>
 
           <TabsContent value="all" className="space-y-4">
-            <div className="flex gap-2">
-              <Button variant="outline" className="relative">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload de Arquivo
-                <input
-                  type="file"
-                  multiple
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => handleFileUpload("other", e.target.files)}
-                />
-              </Button>
-            </div>
+            <FileUpload workOrderId={workOrderId} onUploadComplete={refetch} />
 
             {attachments && attachments.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
