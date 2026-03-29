@@ -40,6 +40,7 @@ import {
   ChevronDown,
   Home,
   User,
+  MessageSquare,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
@@ -68,6 +69,7 @@ const navMain = [
       { icon: Users, label: "Clientes", path: "/admin/clientes" },
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
       { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },
+      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
     ],
   },
   {

@@ -340,6 +340,50 @@ export const appRouter = router({
     .query(async ({ input }) => {
       return await db.getClientByUsername(input.username);
     }),
+
+  broadcastMessage: publicProcedure
+    .input(z.object({
+      adminId: z.number(),
+      message: z.string().min(1),
+      targetType: z.enum(["all", "com_portal", "sem_portal", "selected"]),
+      clientIds: z.array(z.number()).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const allClients = await db.getClientsByAdminId(input.adminId);
+
+      let targets = allClients;
+      if (input.targetType === "com_portal") {
+        targets = allClients.filter(c => c.type === "com_portal");
+      } else if (input.targetType === "sem_portal") {
+        targets = allClients.filter(c => c.type === "sem_portal");
+      } else if (input.targetType === "selected") {
+        const ids = new Set(input.clientIds ?? []);
+        targets = allClients.filter(c => ids.has(c.id));
+      }
+
+      const { sendWhatsappToNumber } = await import("./whatsapp");
+
+      const results: Array<{ id: number; name: string; phone: string; status: "sent" | "failed" | "skipped"; reason?: string }> = [];
+
+      for (const client of targets) {
+        if (!client.phone) {
+          results.push({ id: client.id, name: client.name, phone: "", status: "skipped", reason: "Sem telefone cadastrado" });
+          continue;
+        }
+        try {
+          await sendWhatsappToNumber(client.phone, input.message);
+          results.push({ id: client.id, name: client.name, phone: client.phone, status: "sent" });
+        } catch (err: any) {
+          results.push({ id: client.id, name: client.name, phone: client.phone, status: "failed", reason: err?.message ?? "Erro desconhecido" });
+        }
+      }
+
+      const sent = results.filter(r => r.status === "sent").length;
+      const failed = results.filter(r => r.status === "failed").length;
+      const skipped = results.filter(r => r.status === "skipped").length;
+
+      return { total: targets.length, sent, failed, skipped, results };
+    }),
 }),
 
   documents: router({

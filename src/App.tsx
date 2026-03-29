@@ -25,6 +25,7 @@ import AdminWorkOrderDetail from "./pages/AdminWorkOrderDetail";
 import AdminWorkOrderDashboard from "./pages/AdminWorkOrderDashboard";
 import AdminWorkOrderKanban from "./pages/AdminWorkOrderKanban";
 import AdminEditWorkOrder from "./pages/AdminEditWorkOrder";
+import AdminMassMessage from "./pages/AdminMassMessage";
 import ReportClientRegistration from "./pages/ReportClientRegistration";
 import ReportInspectionVisit from "./pages/ReportInspectionVisit";
 import ReportInspectionVisit2 from "./pages/ReportInspectionVisit2";
@@ -39,6 +40,7 @@ function Router() {
         <Route path="/admin/profile" component={AdminProfile} />
       <Route path="/admin/relatorios" component={InspectionReports} />
       <Route path="/admin/clientes" component={AdminClients} />
+      <Route path="/admin/mensagens" component={AdminMassMessage} />
       <Route path="/admin/clientes/editar/:id" component={EditClient} />
       <Route path="/admin/documentos/enviar" component={AdminDocuments} />
       <Route path="/admin/documentos" component={AdminManageDocuments} />
