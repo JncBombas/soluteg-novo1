@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Edit2, Users, Loader2, AlertCircle, ArrowLeft, AlertTriangle, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -44,6 +44,8 @@ export default function AdminClients() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "com_portal" | "sem_portal">("all");
   const itemsPerPage = 10;
 
   // FIX: Pegar adminId do localStorage no useEffect — sem chamar loadClients (não existe)
@@ -154,9 +156,20 @@ export default function AdminClients() {
     return true;
   };
 
-  const totalPages = Math.ceil(clients.length / itemsPerPage);
+  const filteredClients = clients.filter((c) => {
+    const q = search.toLowerCase();
+    const matchesSearch = !q ||
+      c.name.toLowerCase().includes(q) ||
+      (c.username || "").toLowerCase().includes(q) ||
+      (c.phone || "").includes(q) ||
+      (c.cnpjCpf || "").includes(q);
+    const matchesType = typeFilter === "all" || c.type === typeFilter;
+    return matchesSearch && matchesType;
+  });
+
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedClients = clients.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedClients = filteredClients.slice(startIndex, startIndex + itemsPerPage);
 
   // FIX: usar isLoading do tRPC em vez de loading manual que nunca mudava
   if (isLoading) {
@@ -384,15 +397,50 @@ export default function AdminClients() {
         <CardHeader>
           <CardTitle>Clientes Cadastrados</CardTitle>
           <CardDescription>
-            Total de {clients.length} cliente{clients.length !== 1 ? "s" : ""}
+            {filteredClients.length} de {clients.length} cliente{clients.length !== 1 ? "s" : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Input
+                className="pl-9"
+                placeholder="Buscar por nome, usuário, telefone ou CNPJ..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              />
+              {search && (
+                <button
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => { setSearch(""); setCurrentPage(1); }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <Select value={typeFilter} onValueChange={(v: any) => { setTypeFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full sm:w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="com_portal">Com Portal</SelectItem>
+                <SelectItem value="sem_portal">Sem Portal</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {clients.length === 0 ? (
             <div className="text-center py-8">
               <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <p className="text-slate-600">Nenhum cliente cadastrado ainda</p>
               <p className="text-sm text-slate-500">Crie o primeiro cliente clicando em "Novo Cliente"</p>
+            </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Search className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">Nenhum cliente encontrado para este filtro.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -455,7 +503,7 @@ export default function AdminClients() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <p className="text-sm text-slate-600">
-                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, clients.length)} de {clients.length} clientes
+                    Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredClients.length)} de {filteredClients.length} clientes
                   </p>
                   <div className="flex gap-2">
                     <Button
