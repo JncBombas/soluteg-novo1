@@ -470,9 +470,10 @@ export async function updateClient(
   if (data.phone      !== undefined) safeData.phone      = data.phone;
   if (data.address    !== undefined) safeData.address    = data.address;
   if (data.cnpjCpf    !== undefined) safeData.cnpjCpf    = data.cnpjCpf;
-  if (data.syndicName !== undefined) safeData.syndicName = data.syndicName; // <-- NOVO
-  if (data.type       !== undefined) safeData.type       = data.type;
-  if (data.active     !== undefined) safeData.active     = data.active;
+  if (data.syndicName   !== undefined) safeData.syndicName   = data.syndicName;
+  if (data.profilePhoto !== undefined) (safeData as any).profilePhoto = data.profilePhoto;
+  if (data.type         !== undefined) safeData.type         = data.type;
+  if (data.active       !== undefined) safeData.active       = data.active;
  
   if (Object.keys(safeData).length === 0) return; // nada a atualizar
  
