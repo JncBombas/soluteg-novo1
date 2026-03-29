@@ -278,7 +278,8 @@ export const appRouter = router({
       phone: z.string().optional(),
       address: z.string().optional(),
       cnpjCpf: z.string().optional(),
-      syndicName: z.string().optional(),           // <-- NOVO
+      syndicName: z.string().optional(),
+      profilePhoto: z.string().optional(),
       type: z.enum(["com_portal", "sem_portal"]).optional(),
     }))
     .mutation(async ({ input }) => {
@@ -413,7 +414,29 @@ export const appRouter = router({
           phone: client.phone,
           cnpjCpf: client.cnpjCpf,
           address: client.address,
+          syndicName: client.syndicName,
+          profilePhoto: client.profilePhoto,
+          username: client.username,
         };
+      }),
+
+    uploadPhoto: publicProcedure
+      .input(z.object({
+        clientId: z.number(),
+        imageBase64: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { storagePut } = await import("./storage");
+        const base64Data = input.imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        if (buffer.length > 5 * 1024 * 1024) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Imagem muito grande. Máximo 5MB." });
+        }
+        const mimeMatch = input.imageBase64.match(/^data:(image\/\w+);base64,/);
+        const contentType = mimeMatch ? mimeMatch[1] : "image/jpeg";
+        const { url } = await storagePut(`client_photo_${input.clientId}`, buffer, contentType, "client_photos");
+        await db.updateClient(input.clientId, { profilePhoto: url } as any);
+        return { success: true, photoUrl: url };
       }),
 
     updateProfile: publicProcedure
@@ -423,6 +446,7 @@ export const appRouter = router({
         email: z.string().email().optional(),
         phone: z.string().optional(),
         address: z.string().optional(),
+        syndicName: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         const { clientId, ...updateData } = input;

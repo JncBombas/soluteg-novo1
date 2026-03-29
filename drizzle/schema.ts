@@ -171,9 +171,10 @@ export const clients = mysqlTable("clients", {
   username: varchar("username", { length: 100 }).notNull().unique(), // Login do cliente
   password: varchar("password", { length: 255 }).notNull(), // Senha criptografada
   cnpjCpf: varchar("cnpjCpf", { length: 20 }),
-   syndicName: varchar("syndic_name", { length: 255 }),   // <-- LINHA NOVA
+   syndicName: varchar("syndic_name", { length: 255 }),
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
+  profilePhoto: varchar("profilePhoto", { length: 500 }),
   type: mysqlEnum("type", ["com_portal", "sem_portal"]).default("com_portal").notNull(), // com_portal: acesso ao painel | sem_portal: apenas cadastro
   active: int("active").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle, Upload } from "lucide-react";
 import { maskCnpjCpf, maskPhone, isValidCnpjCpf, isValidPhone } from "@/lib/masks";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function EditClient() {
   const [, setLocation] = useLocation();
@@ -29,9 +30,10 @@ export default function EditClient() {
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // ── Busca dados do cliente via tRPC ──────────────────────────
-  const { data: client, isLoading } = trpc.clients.getById.useQuery(
+  const { data: client, isLoading, refetch: refetchClient } = trpc.clients.getById.useQuery(
     { id: clientId ?? 0 },
     { enabled: !!clientId }
   );
@@ -55,6 +57,28 @@ export default function EditClient() {
   // ── Mutations via tRPC ───────────────────────────────────────
   const updateMutation = trpc.clients.update.useMutation();
   const updatePasswordMutation = trpc.clients.updatePassword.useMutation();
+  const uploadPhotoMutation = trpc.clientProfile.uploadPhoto.useMutation({
+    onSuccess: (data: any) => {
+      toast.success("Foto atualizada!");
+      refetchClient();
+      setPhotoPreview(null);
+    },
+    onError: (e: any) => toast.error("Erro ao enviar foto: " + e.message),
+  });
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Imagem muito grande. Máximo 5MB."); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!clientId || !photoPreview) return;
+    await uploadPhotoMutation.mutateAsync({ clientId, imageBase64: photoPreview });
+  };
 
   // ── Submit ───────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
@@ -150,6 +174,44 @@ export default function EditClient() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Foto de Perfil */}
+            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
+              {photoPreview || (client as any)?.profilePhoto ? (
+                <img
+                  src={photoPreview || (client as any)?.profilePhoto}
+                  alt="Foto"
+                  className="w-16 h-16 rounded-full object-cover ring-2 ring-amber-400"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-xl font-bold text-white">
+                  {(client?.name || "?").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 space-y-2">
+                <p className="text-sm font-medium">Foto de Perfil</p>
+                <div className="flex gap-2 flex-wrap">
+                  <label className="cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
+                    <span className="inline-flex items-center gap-1.5 text-xs border border-slate-300 rounded px-2.5 py-1.5 hover:bg-white transition-colors cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" /> Selecionar foto
+                    </span>
+                  </label>
+                  {photoPreview && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs bg-amber-600 hover:bg-amber-700"
+                      onClick={handleUploadPhoto}
+                      disabled={uploadPhotoMutation.isPending}
+                    >
+                      {uploadPhotoMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Enviar para Cloudinary"}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400">Máximo 5MB. JPG, PNG ou WebP.</p>
+              </div>
+            </div>
+
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

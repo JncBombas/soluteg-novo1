@@ -1,0 +1,1 @@
+ALTER TABLE clients ADD COLUMN profilePhoto VARCHAR(500) NULL;

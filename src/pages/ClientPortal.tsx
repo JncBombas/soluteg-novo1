@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   LogOut, Download, FileText, Loader2, Search, AlertCircle,
   FileQuestion, Calendar, Droplet, ChevronDown, ClipboardList,
-  Home, FolderOpen, Activity, ChevronRight,
+  Home, FolderOpen, Activity, ChevronRight, Upload, Lock, User,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -79,6 +79,15 @@ export default function ClientPortal() {
   const [clientName, setClientName] = useState("");
   const [activeTab, setActiveTab] = useState("vistoria");
 
+  // Profile edit dialog
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "", syndicName: "", phone: "",
+    currentPassword: "", newPassword: "", confirmPassword: "",
+  });
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+
   // Dialog state
   const [isOpenDialogOpen, setIsOpenDialogOpen] = useState(false);
   const [osType, setOsType] = useState<"emergencial" | "orcamento">("emergencial");
@@ -120,6 +129,58 @@ export default function ClientPortal() {
     setClientName(name || "Cliente");
   }, []);
 
+  // profileData useEffect is below the query declaration
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Máximo 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfilePhotoPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!clientId) return;
+    // Upload photo if new one selected
+    if (profilePhotoPreview && profilePhotoPreview !== profilePhoto) {
+      await uploadPhotoMutation.mutateAsync({ clientId, imageBase64: profilePhotoPreview });
+    }
+    // Update profile data
+    await updateProfileMutation.mutateAsync({
+      clientId,
+      name: profileForm.name || undefined,
+      syndicName: profileForm.syndicName || undefined,
+      phone: profileForm.phone || undefined,
+    });
+  };
+
+  const handleSavePassword = async () => {
+    if (!clientId) return;
+    if (!profileForm.currentPassword || !profileForm.newPassword) {
+      toast.error("Preencha a senha atual e a nova senha");
+      return;
+    }
+    if (profileForm.newPassword !== profileForm.confirmPassword) {
+      toast.error("As senhas não conferem");
+      return;
+    }
+    if (profileForm.newPassword.length < 6) {
+      toast.error("A nova senha deve ter ao menos 6 caracteres");
+      return;
+    }
+    await changePasswordMutation.mutateAsync({
+      clientId,
+      currentPassword: profileForm.currentPassword,
+      newPassword: profileForm.newPassword,
+    });
+  };
+
   const { data: documents = [], isLoading } = trpc.documents.list.useQuery(
     { clientId: clientId || 0 },
     { enabled: !!clientId }
@@ -129,6 +190,48 @@ export default function ClientPortal() {
     { clientId: clientId || 0 },
     { enabled: !!clientId }
   );
+
+  const { data: profileData, refetch: refetchProfile } = trpc.clientProfile.getProfile.useQuery(
+    { clientId: clientId || 0 },
+    { enabled: !!clientId }
+  );
+
+  useEffect(() => {
+    if (!profileData) return;
+    setProfileForm((f) => ({
+      ...f,
+      name: (profileData as any).name || "",
+      syndicName: (profileData as any).syndicName || "",
+      phone: (profileData as any).phone || "",
+    }));
+    setProfilePhoto((profileData as any).profilePhoto || null);
+  }, [profileData]);
+
+  const updateProfileMutation = trpc.clientProfile.updateProfile.useMutation({
+    onSuccess: () => {
+      toast.success("Perfil atualizado!");
+      refetchProfile();
+      setIsProfileOpen(false);
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+
+  const uploadPhotoMutation = trpc.clientProfile.uploadPhoto.useMutation({
+    onSuccess: (data: any) => {
+      setProfilePhoto(data.photoUrl);
+      refetchProfile();
+      toast.success("Foto atualizada!");
+    },
+    onError: (e: any) => toast.error("Erro ao enviar foto: " + e.message),
+  });
+
+  const changePasswordMutation = trpc.clientProfile.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha alterada!");
+      setProfileForm((f) => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
 
   const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
     onSuccess: (data: any) => {
@@ -388,12 +491,16 @@ export default function ClientPortal() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                {getInitials(clientName)}
-              </div>
+            <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Foto" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                  {getInitials(clientName)}
+                </div>
+              )}
               <span className="text-sm text-slate-300 hidden sm:block truncate max-w-[140px]">{clientName}</span>
-            </div>
+            </button>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2">
               <LogOut className="w-4 h-4" />
             </Button>
@@ -409,13 +516,32 @@ export default function ClientPortal() {
           <Card className="bg-gradient-to-br from-slate-800 to-slate-900 text-white border-0 shadow-md">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-2xl font-bold flex-shrink-0">
-                  {getInitials(clientName)}
-                </div>
-                <div>
+                <button onClick={() => setIsProfileOpen(true)} className="relative flex-shrink-0 group">
+                  {profilePhotoPreview || profilePhoto ? (
+                    <img
+                      src={profilePhotoPreview || profilePhoto!}
+                      alt="Foto"
+                      className="w-16 h-16 rounded-full object-cover ring-2 ring-amber-400"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-amber-500 flex items-center justify-center text-2xl font-bold">
+                      {getInitials(clientName)}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-white" />
+                  </div>
+                </button>
+                <div className="flex-1 min-w-0">
                   <p className="text-slate-400 text-xs uppercase tracking-wide">Portal do Cliente</p>
-                  <h2 className="text-xl font-bold leading-tight mt-0.5">{clientName}</h2>
-                  <p className="text-amber-400 text-xs mt-1">JNC Elétrica &amp; Bombas</p>
+                  <h2 className="text-xl font-bold leading-tight mt-0.5 truncate">{clientName}</h2>
+                  <p className="text-amber-400 text-xs mt-0.5">JNC Elétrica &amp; Bombas</p>
+                  <button
+                    onClick={() => setIsProfileOpen(true)}
+                    className="text-xs text-slate-400 hover:text-white mt-1 transition-colors underline underline-offset-2"
+                  >
+                    Editar perfil
+                  </button>
                 </div>
               </div>
             </CardContent>
@@ -651,6 +777,123 @@ export default function ClientPortal() {
           </button>
         </div>
       </nav>
+
+      {/* ── Dialog: Profile Edit ── */}
+      <Dialog open={isProfileOpen} onOpenChange={setIsProfileOpen}>
+        <DialogContent className="max-w-sm mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Perfil</DialogTitle>
+            <DialogDescription>Atualize seus dados e foto de perfil.</DialogDescription>
+          </DialogHeader>
+
+          {/* Photo */}
+          <div className="flex flex-col items-center gap-3 py-2">
+            <div className="relative">
+              {profilePhotoPreview || profilePhoto ? (
+                <img
+                  src={profilePhotoPreview || profilePhoto!}
+                  alt="Foto"
+                  className="w-20 h-20 rounded-full object-cover ring-2 ring-amber-400"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-amber-500 flex items-center justify-center text-3xl font-bold text-white">
+                  {getInitials(clientName)}
+                </div>
+              )}
+            </div>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              <span className="flex items-center gap-1.5 text-xs text-amber-600 font-medium border border-amber-300 rounded-lg px-3 py-1.5 hover:bg-amber-50 transition-colors">
+                <Upload className="w-3.5 h-3.5" /> Alterar foto (máx. 5MB)
+              </span>
+            </label>
+          </div>
+
+          <hr className="border-slate-200" />
+
+          {/* Profile data */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5" /> Dados
+            </p>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Nome do Cliente / Condomínio</label>
+              <Input
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                placeholder="Nome"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Nome do Síndico</label>
+              <Input
+                value={profileForm.syndicName}
+                onChange={(e) => setProfileForm({ ...profileForm, syndicName: e.target.value })}
+                placeholder="Nome do síndico"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Telefone</label>
+              <Input
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <Button
+              className="w-full bg-amber-600 hover:bg-amber-700"
+              onClick={handleSaveProfile}
+              disabled={updateProfileMutation.isPending || uploadPhotoMutation.isPending}
+            >
+              {(updateProfileMutation.isPending || uploadPhotoMutation.isPending)
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
+                : "Salvar Dados"}
+            </Button>
+          </div>
+
+          <hr className="border-slate-200" />
+
+          {/* Password change */}
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <Lock className="w-3.5 h-3.5" /> Alterar Senha
+            </p>
+            <Input
+              type="password"
+              placeholder="Senha atual"
+              value={profileForm.currentPassword}
+              onChange={(e) => setProfileForm({ ...profileForm, currentPassword: e.target.value })}
+            />
+            <Input
+              type="password"
+              placeholder="Nova senha (mín. 6 caracteres)"
+              value={profileForm.newPassword}
+              onChange={(e) => setProfileForm({ ...profileForm, newPassword: e.target.value })}
+            />
+            <Input
+              type="password"
+              placeholder="Confirmar nova senha"
+              value={profileForm.confirmPassword}
+              onChange={(e) => setProfileForm({ ...profileForm, confirmPassword: e.target.value })}
+            />
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleSavePassword}
+              disabled={changePasswordMutation.isPending}
+            >
+              {changePasswordMutation.isPending
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Alterando...</>
+                : "Alterar Senha"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Dialog: Create Work Order ── */}
       <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>

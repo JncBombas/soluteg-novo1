@@ -11,12 +11,13 @@ cloudinary.config({
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
-  contentType = "application/octet-stream"
+  contentType = "application/octet-stream",
+  folder = "os_attachments"
 ): Promise<{ key: string; url: string }> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: "os_attachments", // Organiza em pastas no Cloudinary
+        folder, // Organiza em pastas no Cloudinary
         resource_type: "auto",
         transformation: [{ quality: "auto", fetch_format: "auto" }] // Comprime sozinho!
       },
