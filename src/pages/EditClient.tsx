@@ -77,6 +77,7 @@ export default function EditClient() {
         address: formData.address,
         cnpjCpf: formData.cnpjCpf,
         syndicName: formData.syndicName,
+        type: formData.type,
       });
 
       // Atualiza senha separadamente só se foi preenchida

@@ -228,8 +228,8 @@ export const appRouter = router({
       adminId: z.number(),
       name: z.string().min(1),
       email: z.string().email().optional().or(z.literal("")),
-      username: z.string().min(3).max(100),
-      password: z.string().min(6),
+      username: z.string().max(100).optional().or(z.literal("")),
+      password: z.string().optional().or(z.literal("")),
       cnpjCpf: z.string().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
@@ -237,16 +237,35 @@ export const appRouter = router({
       type: z.enum(["com_portal", "sem_portal"]).default("com_portal"),
     }))
     .mutation(async ({ input }) => {
-      const { password, ...clientData } = input;
-      const hashedPassword = await hashPassword(password);
- 
+      const { password, username, type, ...clientData } = input;
+
+      if (type === "com_portal") {
+        if (!username || username.length < 3) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Nome de usuário é obrigatório para clientes com portal (mínimo 3 caracteres)" });
+        }
+        if (!password || password.length < 6) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Senha é obrigatória para clientes com portal (mínimo 6 caracteres)" });
+        }
+      }
+
+      const finalUsername = (type === "sem_portal" && (!username || !username.trim()))
+        ? `_sp_${input.adminId}_${Date.now()}`
+        : username!;
+      const finalPassword = (type === "sem_portal" && (!password || !password.trim()))
+        ? Math.random().toString(36) + Math.random().toString(36)
+        : password!;
+
+      const hashedPassword = await hashPassword(finalPassword);
+
       await db.createClient({
         ...clientData,
+        username: finalUsername,
+        type,
         email: clientData.email || null,
         password: hashedPassword,
         active: 1,
       });
- 
+
       return { success: true, message: "Cliente criado com sucesso" };
     }),
  
@@ -260,6 +279,7 @@ export const appRouter = router({
       address: z.string().optional(),
       cnpjCpf: z.string().optional(),
       syndicName: z.string().optional(),           // <-- NOVO
+      type: z.enum(["com_portal", "sem_portal"]).optional(),
     }))
     .mutation(async ({ input }) => {
       const { id, ...updateData } = input;

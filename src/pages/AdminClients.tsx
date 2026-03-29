@@ -32,10 +32,11 @@ export default function AdminClients() {
     name: "",
     email: "",
     username: "",
-    password: "",
+    password: "senha123",
     cnpjCpf: "",
     phone: "",
     address: "",
+    syndicName: "",
     type: "com_portal" as "com_portal" | "sem_portal",
   });
   const [error, setError] = useState("");
@@ -78,10 +79,11 @@ export default function AdminClients() {
         name: "",
         email: "",
         username: "",
-        password: "",
+        password: "senha123",
         cnpjCpf: "",
         phone: "",
         address: "",
+        syndicName: "",
         type: "com_portal",
       });
       setIsOpen(false);
@@ -233,7 +235,7 @@ export default function AdminClients() {
                       ...formData,
                       type: value,
                       username: value === "sem_portal" ? "" : formData.username,
-                      password: value === "sem_portal" ? "" : formData.password,
+                      password: value === "sem_portal" ? "" : (formData.password || "senha123"),
                     });
                   }}
                 >
@@ -313,6 +315,15 @@ export default function AdminClients() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome do Síndico (opcional)</label>
+                <Input
+                  placeholder="Nome do síndico responsável"
+                  value={formData.syndicName}
+                  onChange={(e) => setFormData({ ...formData, syndicName: e.target.value })}
+                />
+              </div>
+
               {formData.type === "com_portal" && (
                 <div className="border-t pt-4 mt-4">
                   <p className="text-sm font-medium text-slate-700 mb-3">Dados de Acesso ao Portal</p>
@@ -332,12 +343,13 @@ export default function AdminClients() {
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Senha *</label>
                       <Input
-                        type="password"
-                        placeholder="••••••••"
+                        type="text"
+                        placeholder="senha123"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         required
                       />
+                      <p className="text-xs text-slate-500">Padrão: senha123 — o cliente pode alterar depois</p>
                     </div>
                   </div>
                 </div>
