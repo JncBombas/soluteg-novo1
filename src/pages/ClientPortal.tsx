@@ -147,17 +147,21 @@ export default function ClientPortal() {
 
   const handleSaveProfile = async () => {
     if (!clientId) return;
-    // Upload photo if new one selected
-    if (profilePhotoPreview && profilePhotoPreview !== profilePhoto) {
-      await uploadPhotoMutation.mutateAsync({ clientId, imageBase64: profilePhotoPreview });
+    try {
+      // Upload photo first (if a new one was selected)
+      if (profilePhotoPreview) {
+        await uploadPhotoMutation.mutateAsync({ clientId, imageBase64: profilePhotoPreview });
+      }
+      // Then update the text fields
+      await updateProfileMutation.mutateAsync({
+        clientId,
+        name: profileForm.name || undefined,
+        syndicName: profileForm.syndicName || undefined,
+        phone: profileForm.phone || undefined,
+      });
+    } catch {
+      // errors already shown via onError
     }
-    // Update profile data
-    await updateProfileMutation.mutateAsync({
-      clientId,
-      name: profileForm.name || undefined,
-      syndicName: profileForm.syndicName || undefined,
-      phone: profileForm.phone || undefined,
-    });
   };
 
   const handleSavePassword = async () => {
@@ -219,6 +223,7 @@ export default function ClientPortal() {
   const uploadPhotoMutation = trpc.clientProfile.uploadPhoto.useMutation({
     onSuccess: (data: any) => {
       setProfilePhoto(data.photoUrl);
+      setProfilePhotoPreview(null);
       refetchProfile();
       toast.success("Foto atualizada!");
     },
@@ -243,10 +248,10 @@ export default function ClientPortal() {
       const link = document.createElement("a");
       link.href = url;
       link.download = data.filename;
+      link.style.display = "none";
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      setTimeout(() => { link.remove(); window.URL.revokeObjectURL(url); }, 100);
       toast.success("PDF baixado com sucesso!");
     },
     onError: () => toast.error("Erro ao baixar PDF"),
