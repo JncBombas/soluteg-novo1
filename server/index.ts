@@ -226,6 +226,65 @@ async function startServer() {
  
  
   // ============================================================
+  // 📋 ROTA: Criar OS pelo Portal do Cliente
+  // Endereço: POST /api/work-orders
+  //
+  // Recebe a solicitação do cliente, cria a OS no banco e
+  // envia notificação via WhatsApp para o admin.
+  // ============================================================
+  app.post("/api/work-orders", async (req, res) => {
+    try {
+      const { clientId, type, title, description, serviceType, priority } = req.body;
+
+      if (!clientId || !title || !type) {
+        return res.status(400).json({ message: "clientId, title e type são obrigatórios" });
+      }
+
+      const { getClientById } = await import("./db");
+      const client = await getClientById(parseInt(clientId));
+
+      if (!client) {
+        return res.status(404).json({ message: "Cliente não encontrado" });
+      }
+
+      const workOrdersDb = await import("./workOrdersDb");
+      const result = await workOrdersDb.createWorkOrder({
+        adminId: client.adminId,
+        clientId: parseInt(clientId),
+        type,
+        title,
+        description: description || null,
+        serviceType: serviceType || null,
+        priority: priority || "normal",
+        status: "aberta",
+      } as any);
+
+      const osId = (result as any)?.insertId || (result as any)?.id;
+
+      // Notifica o admin via WhatsApp
+      const { sendWhatsappAlert } = await import("./whatsapp");
+      const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+      const msg =
+        `🔔 *SOLICITAÇÃO VIA PORTAL - JNC SOLUTEG*\n\n` +
+        `🏢 *Condomínio:* ${client.name}\n` +
+        `🛠️ *Serviço:* ${title}\n` +
+        `📋 *Tipo:* ${String(type).toUpperCase()}\n` +
+        `⚡ *Prioridade:* ${String(priority || "normal").toUpperCase()}\n` +
+        (description ? `📝 *Descrição:* ${description}\n` : "") +
+        `\n🔗 *Ver OS:*\n${portalUrl}`;
+
+      sendWhatsappAlert(msg).catch((e: any) => console.error("Erro no Zap (portal):", e));
+
+      res.json({ success: true, message: "Solicitação enviada com sucesso", id: osId });
+
+    } catch (error: any) {
+      console.error("Erro ao criar OS pelo portal:", error);
+      res.status(500).json({ message: "Erro ao criar solicitação" });
+    }
+  });
+
+
+  // ============================================================
   // 🔍 ROTA: Buscar uma Ordem de Serviço pelo ID
   // Endereço: GET /api/work-orders/789
   //
