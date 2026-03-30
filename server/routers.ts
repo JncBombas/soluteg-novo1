@@ -1757,7 +1757,7 @@ attachments: router({
               title: budget.title,
               description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
               status: "aberta",
-              estimatedValue: budget.totalValue ?? undefined,
+              estimatedValue: budget.totalValue != null ? budget.totalValue / 100 : undefined,
               internalNotes: `Orçamento de origem: ${budget.budgetNumber}`,
             } as any);
             osId = osResult.id;
@@ -1854,7 +1854,7 @@ attachments: router({
           title: budget.title,
           description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
           status: "aberta",
-          estimatedValue: budget.totalValue ?? undefined,
+          estimatedValue: budget.totalValue != null ? budget.totalValue / 100 : undefined,
           internalNotes: `Orçamento de origem: ${budget.budgetNumber}`,
         } as any);
 
