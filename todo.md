@@ -733,3 +733,56 @@
 - [x] Corrigir renderização de comentários do Gerador no PDF - aparecer igual aos outros checklists
 
 - [ ] Investigar por que as Ordens de Serviço não estão aparecendo na aplicação
+
+
+## Sistema de Orçamentos (Março 2026)
+
+### Estrutura e Banco de Dados
+- [x] Criar tabelas `budgets`, `budgetItems`, `budgetHistory` (migration-budgets.sql)
+- [x] Atualizar enum `workOrders.type` (remover `orcamento`, adicionar `rotina`/`emergencial`)
+- [x] Criar `server/budgetsDb.ts` com todas as funções de banco de dados
+
+### Backend (tRPC)
+- [x] Endpoint `budgets.list` com filtros e paginação
+- [x] Endpoint `budgets.getById`
+- [x] Endpoint `budgets.create`
+- [x] Endpoint `budgets.update`
+- [x] Endpoint `budgets.delete`
+- [x] Endpoint `budgets.getItems` / `budgets.saveItems`
+- [x] Endpoint `budgets.finalize` (gera token de aprovação, assinatura do técnico)
+- [x] Endpoint `budgets.approve` (assinatura do cliente, gera OS automaticamente)
+- [x] Endpoint `budgets.reject`
+- [x] Endpoint `budgets.generateOs` (gerar OS manualmente para orçamentos já aprovados)
+- [x] Endpoint `budgets.exportPDF`
+- [x] Endpoint `budgets.shareToPortal`
+- [x] Endpoint `budgets.getForPortal`
+- [x] Endpoint `budgets.getHistory`
+- [x] Endpoint `budgets.getMetrics`
+
+### Frontend - Admin
+- [x] Página `AdminBudgets.tsx` (listagem com métricas, filtros, paginação)
+- [x] Página `AdminBudgetDetail.tsx` (criação/edição com abas: Dados / Itens / Histórico)
+- [x] Fluxo de finalização com assinatura digital do técnico
+- [x] Fluxo de aprovação pelo admin com assinatura do cliente
+- [x] Fluxo de reprovação com motivo
+- [x] Botão "Gerar OS" para orçamentos aprovados sem OS vinculada
+- [x] Botão "Ver OS Gerada" quando OS já existe
+- [x] Botão de copiar link de aprovação
+- [x] Exportação de PDF do orçamento
+
+### Frontend - Cliente
+- [x] Página pública `BudgetApproval.tsx` via token (`/orcamento/:token`)
+- [x] Aprovação com assinatura digital pelo cliente (sem login)
+- [x] Reprovação com motivo pelo cliente
+- [x] Portal do cliente: aba orçamentos mostra budgets reais
+- [x] "Solicitar Orçamento" no portal cria um `budget` (não OS)
+
+### Utilitários
+- [x] `src/lib/budgetUtils.ts` com constantes e formatadores compartilhados
+- [x] PDF de orçamento com tabela de itens, assinaturas e prazo de validade
+
+### Correções
+- [x] Corrigir carregamento de clientes no formulário (clientsData vs clientsData.items)
+- [x] Corrigir conversão de centavos para reais no valor estimado da OS gerada
+- [x] Permitir gerar nova OS quando OS anterior foi deletada
+- [x] Corrigir enum `workOrders.type` no banco (migration executada manualmente)
