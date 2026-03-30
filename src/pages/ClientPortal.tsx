@@ -94,7 +94,7 @@ export default function ClientPortal() {
   const [osFormData, setOsFormData] = useState({
     title: "",
     description: "",
-    serviceType: "",
+    serviceType: "manutencao" as string,
     priority: "normal" as "critica" | "alta" | "normal",
   });
   const [osLoading, setOsLoading] = useState(false);
@@ -195,6 +195,11 @@ export default function ClientPortal() {
     { enabled: !!clientId }
   );
 
+  const { data: clientBudgets, refetch: refetchBudgets } = trpc.budgets.getForPortal.useQuery(
+    { clientId: clientId || 0 },
+    { enabled: !!clientId }
+  );
+
   const { data: profileData, refetch: refetchProfile } = trpc.clientProfile.getProfile.useQuery(
     { clientId: clientId || 0 },
     { enabled: !!clientId }
@@ -236,6 +241,16 @@ export default function ClientPortal() {
       setProfileForm((f) => ({ ...f, currentPassword: "", newPassword: "", confirmPassword: "" }));
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+
+  const createBudgetMutation = trpc.budgets.create.useMutation({
+    onSuccess: () => {
+      toast.success("Solicitação de orçamento enviada com sucesso!");
+      setOsFormData({ title: "", description: "", serviceType: "manutencao", priority: "normal" });
+      setIsOpenDialogOpen(false);
+      refetchBudgets();
+    },
+    onError: (e: any) => toast.error("Erro ao solicitar orçamento: " + e.message),
   });
 
   const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
@@ -329,7 +344,20 @@ export default function ClientPortal() {
 
   const handleCreateWorkOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!osFormData.title.trim()) { toast.error("Título da OS é obrigatório"); return; }
+    if (!osFormData.title.trim()) { toast.error("Título é obrigatório"); return; }
+
+    if (osType === "orcamento") {
+      createBudgetMutation.mutate({
+        adminId: 1,
+        clientId: clientId!,
+        serviceType: osFormData.serviceType as any,
+        priority: osFormData.priority,
+        title: osFormData.title,
+        description: osFormData.description || undefined,
+      });
+      return;
+    }
+
     setOsLoading(true);
     try {
       const response = await fetch("/api/work-orders", {
@@ -343,7 +371,7 @@ export default function ClientPortal() {
       });
       if (!response.ok) throw new Error("Erro ao criar OS");
       toast.success("Solicitação enviada com sucesso!");
-      setOsFormData({ title: "", description: "", serviceType: "", priority: "normal" });
+      setOsFormData({ title: "", description: "", serviceType: "manutencao", priority: "normal" });
       setIsOpenDialogOpen(false);
     } catch {
       toast.error("Erro ao criar OS");
@@ -382,6 +410,42 @@ export default function ClientPortal() {
           >
             <Download className="w-3.5 h-3.5" />
           </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const BUDGET_STATUS_LABEL: Record<string, string> = {
+    pendente: "Solicitado",
+    finalizado: "Pend. Aprovação",
+    aprovado: "Aprovado",
+    reprovado: "Reprovado",
+  };
+  const BUDGET_STATUS_COLOR: Record<string, string> = {
+    pendente: "bg-slate-100 text-slate-700",
+    finalizado: "bg-blue-100 text-blue-800",
+    aprovado: "bg-green-100 text-green-800",
+    reprovado: "bg-red-100 text-red-700",
+  };
+
+  const BudgetCard = ({ budget }: { budget: any }) => (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <FileQuestion className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+              <span className="font-mono text-xs text-slate-500">{budget.budgetNumber}</span>
+              <Badge className={`text-xs px-1.5 py-0 ${BUDGET_STATUS_COLOR[budget.status] || "bg-gray-100 text-gray-800"}`}>
+                {BUDGET_STATUS_LABEL[budget.status] || budget.status}
+              </Badge>
+            </div>
+            <p className="font-semibold text-sm truncate">{budget.title}</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {new Date(budget.createdAt).toLocaleDateString("pt-BR")}
+              {budget.totalValue ? ` · R$ ${(budget.totalValue / 100).toFixed(2).replace(".", ",")}` : ""}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -672,24 +736,11 @@ export default function ClientPortal() {
 
             {/* Orcamentos tab */}
             <TabsContent value="orcamentos" className="space-y-3 mt-0">
-              <TabFilterBar tabKey="orcamentos" />
               <div className="space-y-2">
-                {(sharedWorkOrders as any[])
-                  .filter((wo: any) => wo.portalTab === "orcamentos")
-                  .filter((wo: any) =>
-                    !tabSearches["orcamentos"] ||
-                    wo.title.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase()) ||
-                    wo.osNumber.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase())
-                  )
-                  .length > 0 ? (
-                  (sharedWorkOrders as any[])
-                    .filter((wo: any) => wo.portalTab === "orcamentos")
-                    .filter((wo: any) =>
-                      !tabSearches["orcamentos"] ||
-                      wo.title.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase()) ||
-                      wo.osNumber.toLowerCase().includes(tabSearches["orcamentos"].toLowerCase())
-                    )
-                    .map((wo: any) => <WorkOrderCard key={wo.id} wo={wo} />)
+                {(clientBudgets?.items ?? []).length > 0 ? (
+                  (clientBudgets?.items ?? []).map((b: any) => (
+                    <BudgetCard key={b.id} budget={b} />
+                  ))
                 ) : (
                   <p className="text-center py-10 text-slate-400 text-sm">Nenhum orçamento disponível.</p>
                 )}
@@ -916,11 +967,28 @@ export default function ClientPortal() {
               onChange={(e) => setOsFormData({ ...osFormData, title: e.target.value })}
               required
             />
-            <Input
-              placeholder="Tipo de serviço"
-              value={osFormData.serviceType}
-              onChange={(e) => setOsFormData({ ...osFormData, serviceType: e.target.value })}
-            />
+            {osType === "orcamento" ? (
+              <Select
+                value={osFormData.serviceType}
+                onValueChange={(v) => setOsFormData({ ...osFormData, serviceType: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Tipo de serviço *" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instalacao">Instalação</SelectItem>
+                  <SelectItem value="manutencao">Manutenção</SelectItem>
+                  <SelectItem value="corretiva">Corretiva</SelectItem>
+                  <SelectItem value="preventiva">Preventiva</SelectItem>
+                  <SelectItem value="rotina">Rotina</SelectItem>
+                  <SelectItem value="emergencial">Emergencial</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                placeholder="Tipo de serviço"
+                value={osFormData.serviceType}
+                onChange={(e) => setOsFormData({ ...osFormData, serviceType: e.target.value })}
+              />
+            )}
             <Select
               value={osFormData.priority}
               onValueChange={(value: any) => setOsFormData({ ...osFormData, priority: value })}
@@ -940,8 +1008,8 @@ export default function ClientPortal() {
               onChange={(e) => setOsFormData({ ...osFormData, description: e.target.value })}
               rows={3}
             />
-            <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={osLoading}>
-              {osLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</> : "Enviar Solicitação"}
+            <Button type="submit" className="w-full bg-amber-600 hover:bg-amber-700" disabled={osLoading || createBudgetMutation.isPending}>
+              {(osLoading || createBudgetMutation.isPending) ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...</> : "Enviar Solicitação"}
             </Button>
           </form>
         </DialogContent>

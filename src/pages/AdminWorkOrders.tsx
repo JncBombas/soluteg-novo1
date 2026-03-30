@@ -149,7 +149,10 @@ export default function AdminWorkOrders() {
                 <SelectItem value="all">Todos os Tipos</SelectItem>
                 <SelectItem value="emergencial">Emergencial</SelectItem>
                 <SelectItem value="rotina">Rotina</SelectItem>
-                <SelectItem value="orcamento">Orçamento</SelectItem>
+                <SelectItem value="instalacao">Instalação</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
+                <SelectItem value="corretiva">Corretiva</SelectItem>
+                <SelectItem value="preventiva">Preventiva</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -165,7 +168,7 @@ export default function AdminWorkOrders() {
             <div className="space-y-4">
               {workOrders.map((order) => {
                 // Lógica de cores baseada no tipo e prioridade
-                const typeColor = order.type === 'emergencial' ? '#dc2626' : order.type === 'orcamento' ? '#7e22ce' : '#059669';
+                const typeColor = order.type === 'emergencial' ? '#dc2626' : order.type === 'corretiva' ? '#ea580c' : order.type === 'preventiva' ? '#7c3aed' : '#059669';
                 const priorityColor = order.priority === 'critica' || order.priority === 'urgente' ? '#dc2626' : order.priority === 'alta' ? '#f97316' : '#10b981';
 
                 return (

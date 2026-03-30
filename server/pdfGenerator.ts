@@ -7,6 +7,7 @@ import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
 import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId, getAttachmentsByWorkOrderId, getTasksByWorkOrderId } from './workOrdersAuxDb';
 import { getInspectionTasksByWorkOrder, getChecklistsByInspectionTask } from './checklistsDb';
+import { getBudgetById, getBudgetItems } from './budgetsDb';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -668,7 +669,12 @@ function translatePriority(p: string): string {
   return ({ normal: 'Normal', alta: 'Alta', critica: 'Crítica' } as any)[p] || p;
 }
 function translateType(t: string): string {
-  return ({ rotina: 'Rotina', emergencial: 'Emergencial', orcamento: 'Orçamento' } as any)[t] || t;
+  const map: Record<string, string> = {
+    rotina: 'Rotina', emergencial: 'Emergencial',
+    instalacao: 'Instalação', manutencao: 'Manutenção',
+    corretiva: 'Corretiva', preventiva: 'Preventiva',
+  };
+  return map[t] || t;
 }
 function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString('pt-BR');
@@ -685,4 +691,215 @@ function formatFieldValue(value: any): string {
     return t[value.toLowerCase()] || value;
   }
   return String(value);
+}
+
+// ============================================================
+// 📄 GERADOR DE PDF — ORÇAMENTO
+// ============================================================
+export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
+  const budget = await getBudgetById(budgetId);
+  if (!budget) throw new Error('Orçamento não encontrado');
+
+  const items = await getBudgetItems(budgetId);
+
+  const serviceTypeLabel: Record<string, string> = {
+    instalacao: 'Instalação', manutencao: 'Manutenção',
+    corretiva: 'Corretiva', preventiva: 'Preventiva',
+    rotina: 'Rotina', emergencial: 'Emergencial',
+  };
+  const statusLabel: Record<string, string> = {
+    pendente: 'Pendente', finalizado: 'Ag. Aprovação',
+    aprovado: 'Aprovado', reprovado: 'Reprovado',
+  };
+  const fmtCurrency = (cents: number | null | undefined) => {
+    if (!cents && cents !== 0) return '—';
+    return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
+  };
+
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 40, bottom: 60, left: 40, right: 40 },
+        autoFirstPage: true,
+        bufferPages: true,
+      });
+
+      const chunks: Buffer[] = [];
+      doc.on('data', (chunk) => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const pageW   = doc.page.width;
+      const L       = 40;   // left margin
+      const R       = pageW - 40;
+      const CW      = pageW - 80;
+      const GOLD    = '#D4A84B';
+      const DARK    = '#1e293b';
+      const MUTED   = '#64748b';
+
+      // ── LOGO ──────────────────────────────────────────────────
+      const possibleLogoPaths = [
+        path.join(__dirname, 'logo-jnc-transparente.png'),
+        path.join(process.cwd(), 'server', 'logo-jnc-transparente.png'),
+        path.join(process.cwd(), 'logo-jnc-transparente.png'),
+        '/home/ubuntu/soluteg-novo/server/logo-jnc-transparente.png',
+      ];
+      let logoPath = '';
+      for (const p of possibleLogoPaths) { if (fs.existsSync(p)) { logoPath = p; break; } }
+
+      let y = 30;
+      if (logoPath) {
+        doc.image(logoPath, (pageW - 70) / 2, y, { width: 70, height: 70 });
+        y += 80;
+      }
+
+      // ── TÍTULO ────────────────────────────────────────────────
+      doc.fontSize(18).fillColor(DARK).font('Helvetica-Bold')
+         .text('ORÇAMENTO', L, y, { width: CW, align: 'center' });
+      y += 24;
+      doc.fontSize(13).fillColor(GOLD).font('Helvetica-Bold')
+         .text(budget.budgetNumber || `ORC-${budgetId}`, L, y, { width: CW, align: 'center' });
+      y += 20;
+      doc.fontSize(8).fillColor(MUTED).font('Helvetica')
+         .text(`Emissão: ${formatDate(budget.createdAt)}`, L, y, { width: CW, align: 'right' });
+      y += 10;
+      doc.strokeColor(GOLD).lineWidth(2).moveTo(L, y).lineTo(R, y).stroke();
+      y += 14;
+
+      // ── DADOS PRINCIPAIS ──────────────────────────────────────
+      const col2X = pageW / 2 + 10;
+      const half  = CW / 2 - 10;
+
+      doc.fontSize(10).fillColor(GOLD).font('Helvetica-Bold').text('Dados do Orçamento', L, y); y += 16;
+      doc.fontSize(9).fillColor(DARK).font('Helvetica');
+
+      const left: [string, string][] = [
+        ['Título',        budget.title || '—'],
+        ['Tipo de Serviço', serviceTypeLabel[budget.serviceType] || budget.serviceType],
+        ['Status',        statusLabel[budget.status] || budget.status],
+        ['Cliente',       budget.clientName || '—'],
+      ];
+      const right: [string, string][] = [
+        ['Válido até',    budget.validUntil ? formatDate(budget.validUntil) : '—'],
+        ['Validade',      `${budget.validityDays ?? '—'} dias`],
+        ['Valor Total',   fmtCurrency(budget.totalValue)],
+        ['Mão de Obra',   fmtCurrency(budget.laborValue)],
+      ];
+
+      const startY = y;
+      left.forEach(([label, value], i) => {
+        const rowY = startY + i * 16;
+        doc.font('Helvetica-Bold').text(`${label}: `, L, rowY, { continued: true, width: half });
+        doc.font('Helvetica').text(value, { width: half });
+      });
+      right.forEach(([label, value], i) => {
+        const rowY = startY + i * 16;
+        doc.font('Helvetica-Bold').text(`${label}: `, col2X, rowY, { continued: true, width: half });
+        doc.font('Helvetica').text(value, { width: half });
+      });
+      y = startY + left.length * 16 + 8;
+
+      // ── DESCRIÇÃO ─────────────────────────────────────────────
+      if (budget.description) {
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Descrição', L, y); y += 14;
+        doc.fontSize(9).fillColor(DARK).font('Helvetica').text(budget.description, L, y, { width: CW }); y += doc.heightOfString(budget.description, { width: CW }) + 8;
+      }
+
+      // ── ESCOPO ────────────────────────────────────────────────
+      if (budget.scope) {
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Escopo dos Serviços', L, y); y += 14;
+        doc.fontSize(9).fillColor(DARK).font('Helvetica').text(budget.scope, L, y, { width: CW }); y += doc.heightOfString(budget.scope, { width: CW }) + 8;
+      }
+
+      // ── TABELA DE ITENS ───────────────────────────────────────
+      if (items.length > 0) {
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(10).fillColor(GOLD).font('Helvetica-Bold').text('Detalhamento de Itens', L, y); y += 14;
+
+        // cabeçalho da tabela
+        const colDesc   = L;
+        const colQty    = R - 240;
+        const colUnit   = R - 190;
+        const colUPrice = R - 120;
+        const colTotal  = R - 50;
+
+        doc.rect(L, y, CW, 18).fill('#f1f5f9');
+        doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold');
+        doc.text('Descrição',   colDesc,   y + 4, { width: colQty - colDesc - 4 });
+        doc.text('Qtd.',        colQty,    y + 4, { width: 46, align: 'center' });
+        doc.text('Un.',         colUnit,   y + 4, { width: 46, align: 'center' });
+        doc.text('Vl. Unit.',   colUPrice, y + 4, { width: 66, align: 'right' });
+        doc.text('Total',       colTotal,  y + 4, { width: 50, align: 'right' });
+        y += 18;
+
+        items.forEach((item: any, idx: number) => {
+          if (idx % 2 === 1) doc.rect(L, y, CW, 16).fill('#f8fafc');
+          doc.fillColor(DARK).font('Helvetica').fontSize(8);
+          doc.text(item.description,                                colDesc,   y + 2, { width: colQty - colDesc - 4 });
+          doc.text((item.quantity / 100).toFixed(2),                colQty,    y + 2, { width: 46, align: 'center' });
+          doc.text(item.unit || '—',                                colUnit,   y + 2, { width: 46, align: 'center' });
+          doc.text(fmtCurrency(item.unitPrice),                     colUPrice, y + 2, { width: 66, align: 'right' });
+          doc.font('Helvetica-Bold').text(fmtCurrency(item.totalPrice), colTotal,  y + 2, { width: 50, align: 'right' });
+          y += 16;
+        });
+
+        // rodapé da tabela
+        doc.rect(L, y, CW, 18).fill('#1e293b');
+        doc.fontSize(9).fillColor('#ffffff').font('Helvetica-Bold');
+        doc.text('TOTAL',               colDesc,   y + 4, { width: colUPrice - colDesc - 4 });
+        doc.text(fmtCurrency(budget.totalValue), colTotal, y + 4, { width: 50, align: 'right' });
+        y += 22;
+      }
+
+      // ── OBSERVAÇÕES AO CLIENTE ────────────────────────────────
+      if (budget.clientNotes) {
+        y += 4;
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Observações', L, y); y += 14;
+        doc.fontSize(9).fillColor(DARK).font('Helvetica').text(budget.clientNotes, L, y, { width: CW }); y += doc.heightOfString(budget.clientNotes, { width: CW }) + 8;
+      }
+
+      // ── ASSINATURA DO TÉCNICO ─────────────────────────────────
+      if (budget.technicianSignature) {
+        y += 8;
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Responsável Técnico', L, y); y += 12;
+        const sigBase64 = budget.technicianSignature.replace(/^data:image\/\w+;base64,/, '');
+        const sigBuf = Buffer.from(sigBase64, 'base64');
+        doc.image(sigBuf, L, y, { height: 50 });
+        y += 56;
+        doc.fontSize(8).fillColor(DARK).font('Helvetica').text(budget.technicianName || '—', L, y); y += 12;
+        if (budget.technicianDocument) { doc.text(`Doc: ${budget.technicianDocument}`, L, y); y += 12; }
+        if (budget.finalizedAt) { doc.fillColor(MUTED).text(`Finalizado em: ${formatDate(budget.finalizedAt)}`, L, y); y += 12; }
+      }
+
+      // ── ASSINATURA DO CLIENTE ─────────────────────────────────
+      if (budget.clientSignature) {
+        y += 8;
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Aprovado por', L, y); y += 12;
+        const sigBase64 = budget.clientSignature.replace(/^data:image\/\w+;base64,/, '');
+        const sigBuf = Buffer.from(sigBase64, 'base64');
+        doc.image(sigBuf, L, y, { height: 50 });
+        y += 56;
+        doc.fontSize(8).fillColor(DARK).font('Helvetica').text(budget.clientSignatureName || budget.approvedBy || '—', L, y); y += 12;
+        if (budget.approvedAt) { doc.fillColor(MUTED).text(`Aprovado em: ${formatDate(budget.approvedAt)}`, L, y); y += 12; }
+      }
+
+      // ── AVISO DE VALIDADE (rodapé do documento) ───────────────
+      y += 16;
+      doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+      const validityNotice = `Este orçamento é válido por ${budget.validityDays ?? '—'} dias a partir da data de emissão`
+        + (budget.finalizedAt ? ` (${formatDate(budget.finalizedAt)})` : '')
+        + `. Após este prazo, os preços e condições poderão ser revistos.`;
+      doc.fontSize(8).fillColor(MUTED).font('Helvetica').text(validityNotice, L, y, { width: CW, align: 'center' });
+
+      doc.end();
+    } catch (err) {
+      reject(err);
+    }
+  });
 }

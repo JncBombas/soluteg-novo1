@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { SolutegFooter } from "@/components/SolutegFooter";
 
@@ -102,11 +102,19 @@ export default function AdminDashboard() {
   const actionCards = [
     {
       title: "Ordens de Serviço",
-      desc: "Gerencie atendimentos e orçamentos",
+      desc: "Gerencie atendimentos e serviços",
       action: () => setLocation("/admin/work-orders"),
       label: "Acessar",
       color: "bg-amber-600 hover:bg-amber-700",
       icon: Wrench,
+    },
+    {
+      title: "Orçamentos",
+      desc: "Propostas, aprovações e geração de OS",
+      action: () => setLocation("/admin/orcamentos"),
+      label: "Acessar",
+      color: "bg-indigo-600 hover:bg-indigo-700",
+      icon: ClipboardList,
     },
     {
       title: "Clientes",
@@ -122,14 +130,6 @@ export default function AdminDashboard() {
       action: () => setLocation("/admin/documentos"),
       label: "Acessar",
       color: "bg-green-600 hover:bg-green-700",
-      icon: FileText,
-    },
-    {
-      title: "Relatórios",
-      desc: "Relatórios de inspeção de bombas",
-      action: () => setLocation("/admin/relatorios"),
-      label: "Acessar",
-      color: "bg-purple-600 hover:bg-purple-700",
       icon: FileText,
     },
     {

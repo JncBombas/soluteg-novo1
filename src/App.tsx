@@ -29,6 +29,9 @@ import AdminMassMessage from "./pages/AdminMassMessage";
 import ReportClientRegistration from "./pages/ReportClientRegistration";
 import ReportInspectionVisit from "./pages/ReportInspectionVisit";
 import ReportInspectionVisit2 from "./pages/ReportInspectionVisit2";
+import AdminBudgets from "./pages/AdminBudgets";
+import AdminBudgetDetail from "./pages/AdminBudgetDetail";
+import BudgetApproval from "./pages/BudgetApproval";
 
 
 function Router() {
@@ -51,6 +54,10 @@ function Router() {
       <Route path="/admin/work-orders/new" component={AdminCreateWorkOrderNew} />
       <Route path="/admin/work-orders/:id" component={AdminWorkOrderDetail} />
       <Route path="/admin/work-orders/:id/edit" component={AdminEditWorkOrder} />
+      <Route path="/admin/orcamentos" component={AdminBudgets} />
+      <Route path="/admin/orcamentos/novo" component={AdminBudgetDetail} />
+      <Route path="/admin/orcamentos/:id" component={AdminBudgetDetail} />
+      <Route path="/orcamento/:token" component={BudgetApproval} />
       <Route path="/relatorios/cadastro-cliente" component={ReportClientRegistration} />
       <Route path="/relatorios/visita-inspecao" component={ReportInspectionVisit} />
       <Route path="/relatorios/visita-inspecao-2" component={ReportInspectionVisit2} />

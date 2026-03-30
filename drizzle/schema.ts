@@ -218,7 +218,7 @@ export const workOrders = mysqlTable("workOrders", {
   osNumber: varchar("osNumber", { length: 50 }).notNull().unique(),
   
   // Tipo e categoria
-  type: mysqlEnum("type", ["rotina", "emergencial", "orcamento"]).notNull(),
+  type: mysqlEnum("type", ["rotina", "emergencial", "instalacao", "manutencao", "corretiva", "preventiva"]).notNull(),
   priority: mysqlEnum("priority", ["normal", "alta", "critica"]).default("normal").notNull(),
   
   // Informações básicas
@@ -477,3 +477,114 @@ export const waterTankMonitoring = mysqlTable("waterTankMonitoring", {
 
 export type WaterTankMonitoring = typeof waterTankMonitoring.$inferSelect;
 export type InsertWaterTankMonitoring = typeof waterTankMonitoring.$inferInsert;
+
+/**
+ * Orçamentos - entidade separada das OS
+ * Fluxo: pendente → finalizado → aprovado/reprovado
+ * Se aprovado, gera uma OS de serviço
+ */
+export const budgets = mysqlTable("budgets", {
+  id: int("id").autoincrement().primaryKey(),
+  adminId: int("adminId").notNull(),
+  clientId: int("clientId").notNull(),
+  budgetNumber: varchar("budgetNumber", { length: 50 }).notNull().unique(), // ORC-YYYY-NNNN
+
+  // Tipo de serviço — define o tipo de OS gerada se aprovado
+  serviceType: mysqlEnum("serviceType", [
+    "instalacao", "manutencao", "corretiva", "preventiva", "rotina", "emergencial"
+  ]).notNull(),
+  priority: mysqlEnum("priority", ["normal", "alta", "critica"]).default("normal").notNull(),
+
+  // Informações básicas
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  scope: text("scope"), // Escopo detalhado dos serviços
+
+  // Status com visão dupla (admin/cliente)
+  // pendente = admin elaborando | cliente vê "Solicitado"
+  // finalizado = admin finalizou | cliente vê "Pendente Aprovação"
+  // aprovado = aprovado pelo cliente/admin
+  // reprovado = reprovado
+  status: mysqlEnum("status", ["pendente", "finalizado", "aprovado", "reprovado"]).default("pendente").notNull(),
+
+  // Validade do orçamento
+  validityDays: int("validityDays").default(30).notNull(), // dias de validade a partir da finalização
+  validUntil: timestamp("validUntil"), // calculado ao finalizar
+
+  // Valores
+  laborValue: int("laborValue"), // Mão de obra (em centavos)
+  totalValue: int("totalValue"), // Total calculado (materiais + mão de obra)
+
+  // Assinatura do responsável técnico (ao finalizar)
+  technicianSignature: text("technicianSignature"),
+  technicianName: varchar("technicianName", { length: 255 }),
+  technicianDocument: varchar("technicianDocument", { length: 20 }),
+  finalizedAt: timestamp("finalizedAt"),
+
+  // Assinatura do cliente (ao aprovar)
+  clientSignature: text("clientSignature"),
+  clientSignatureName: varchar("clientSignatureName", { length: 255 }),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: varchar("approvedBy", { length: 100 }), // nome ou "admin"
+
+  // Token para aprovação via link público
+  approvalToken: varchar("approvalToken", { length: 64 }).unique(),
+  approvalTokenExpiresAt: timestamp("approvalTokenExpiresAt"),
+
+  // Se aprovado, referência à OS gerada
+  generatedOsId: int("generatedOsId"),
+
+  // Revisão (histórico de edições pós-finalizado)
+  version: int("version").default(1).notNull(),
+
+  // Portal
+  sharedWithPortal: int("sharedWithPortal").default(0).notNull(),
+
+  // Notas
+  internalNotes: text("internalNotes"),
+  clientNotes: text("clientNotes"),
+  rejectionReason: text("rejectionReason"),
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Budget = typeof budgets.$inferSelect;
+export type InsertBudget = typeof budgets.$inferInsert;
+
+/**
+ * Itens de linha do orçamento (materiais, serviços, etc)
+ */
+export const budgetItems = mysqlTable("budgetItems", {
+  id: int("id").autoincrement().primaryKey(),
+  budgetId: int("budgetId").notNull(),
+  description: varchar("description", { length: 255 }).notNull(),
+  quantity: int("quantity").notNull().default(1), // em centésimos (ex: 150 = 1,50)
+  unit: varchar("unit", { length: 30 }).default("un"), // un, m, m², h, kg, etc
+  unitPrice: int("unitPrice").notNull().default(0), // em centavos
+  totalPrice: int("totalPrice").notNull().default(0), // quantity * unitPrice / 100
+  orderIndex: int("orderIndex").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BudgetItem = typeof budgetItems.$inferSelect;
+export type InsertBudgetItem = typeof budgetItems.$inferInsert;
+
+/**
+ * Histórico de ações e mudanças no orçamento
+ */
+export const budgetHistory = mysqlTable("budgetHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  budgetId: int("budgetId").notNull(),
+  changedBy: varchar("changedBy", { length: 100 }).notNull(),
+  changedByType: mysqlEnum("changedByType", ["admin", "client"]).notNull(),
+  action: varchar("action", { length: 50 }).notNull(), // criado, editado, finalizado, aprovado, reprovado, revisao
+  previousStatus: varchar("previousStatus", { length: 50 }),
+  newStatus: varchar("newStatus", { length: 50 }),
+  snapshotData: text("snapshotData"), // JSON com snapshot dos dados antes da edição
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BudgetHistory = typeof budgetHistory.$inferSelect;
+export type InsertBudgetHistory = typeof budgetHistory.$inferInsert;

@@ -6,12 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Plus, X, RefreshCw, AlertCircle, DollarSign, Calendar } from "lucide-react";
+import { Plus, X, RefreshCw, AlertCircle, Wrench, Calendar } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
-type OSType = "rotina" | "emergencial" | "orcamento";
+type OSType = "rotina" | "emergencial" | "instalacao" | "manutencao" | "corretiva" | "preventiva";
 type OSPriority = "normal" | "alta" | "critica";
 type RecurrenceType = "mensal_fixo" | "mensal_inicio";
 
@@ -129,10 +129,13 @@ export default function AdminCreateWorkOrderNew() {
   };
 
   const getTypeIcon = (type: OSType) => {
-    const icons = {
+    const icons: Record<OSType, React.ElementType> = {
       rotina: RefreshCw,
       emergencial: AlertCircle,
-      orcamento: DollarSign,
+      instalacao: Wrench,
+      manutencao: Wrench,
+      corretiva: Wrench,
+      preventiva: Wrench,
     };
     return icons[type];
   };
@@ -157,23 +160,40 @@ export default function AdminCreateWorkOrderNew() {
           {/* Tipo de OS */}
           <Card className="p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">Tipo de OS</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {(["rotina", "emergencial", "orcamento"] as OSType[]).map((type) => {
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {(["rotina", "emergencial", "instalacao", "manutencao", "corretiva", "preventiva"] as OSType[]).map((type) => {
                 const Icon = getTypeIcon(type);
-                const labels = {
+                const labels: Record<OSType, string> = {
                   rotina: "Rotina",
                   emergencial: "Emergencial",
-                  orcamento: "Orçamento",
+                  instalacao: "Instalação",
+                  manutencao: "Manutenção",
+                  corretiva: "Corretiva",
+                  preventiva: "Preventiva",
                 };
-                const descriptions = {
+                const descriptions: Record<OSType, string> = {
                   rotina: "Manutenção programada",
                   emergencial: "Atendimento urgente",
-                  orcamento: "Solicitação de orçamento",
+                  instalacao: "Instalação de equipamentos",
+                  manutencao: "Manutenção geral",
+                  corretiva: "Correção de falhas",
+                  preventiva: "Prevenção de problemas",
                 };
-                const colors = {
-                  rotina: formData.type === type ? "border-blue-500 bg-blue-50" : "",
-                  emergencial: formData.type === type ? "border-red-500 bg-red-50" : "",
-                  orcamento: formData.type === type ? "border-purple-500 bg-purple-50" : "",
+                const activeColors: Record<OSType, string> = {
+                  rotina: "border-blue-500 bg-blue-50",
+                  emergencial: "border-red-500 bg-red-50",
+                  instalacao: "border-green-500 bg-green-50",
+                  manutencao: "border-amber-500 bg-amber-50",
+                  corretiva: "border-orange-500 bg-orange-50",
+                  preventiva: "border-purple-500 bg-purple-50",
+                };
+                const iconColors: Record<OSType, string> = {
+                  rotina: "text-blue-600",
+                  emergencial: "text-red-600",
+                  instalacao: "text-green-600",
+                  manutencao: "text-amber-600",
+                  corretiva: "text-orange-600",
+                  preventiva: "text-purple-600",
                 };
 
                 return (
@@ -181,14 +201,11 @@ export default function AdminCreateWorkOrderNew() {
                     key={type}
                     type="button"
                     onClick={() => handleSelectChange("type", type)}
-                    className={`p-4 border-2 rounded-lg text-left transition-all ${colors[type]} ${
-                      formData.type !== type ? "border-gray-200 hover:border-gray-300" : ""
+                    className={`p-4 border-2 rounded-lg text-left transition-all ${
+                      formData.type === type ? activeColors[type] : "border-gray-200 hover:border-gray-300"
                     }`}
                   >
-                    <Icon className={`w-6 h-6 mb-2 ${
-                      type === "rotina" ? "text-blue-600" :
-                      type === "emergencial" ? "text-red-600" : "text-purple-600"
-                    }`} />
+                    <Icon className={`w-6 h-6 mb-2 ${iconColors[type]}`} />
                     <p className="font-semibold">{labels[type]}</p>
                     <p className="text-sm text-gray-600">{descriptions[type]}</p>
                   </button>
@@ -372,20 +389,6 @@ export default function AdminCreateWorkOrderNew() {
                 </div>
               </div>
 
-              {formData.type === "orcamento" && (
-                <div>
-                  <Label>Valor Estimado (R$)</Label>
-                  <Input
-                    type="number"
-                    name="estimatedValue"
-                    value={formData.estimatedValue}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              )}
             </div>
           </Card>
 
