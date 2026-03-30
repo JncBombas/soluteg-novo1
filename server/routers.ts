@@ -1843,9 +1843,12 @@ attachments: router({
         const budget = await budgetsDb.getBudgetById(input.id);
         if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
         if (budget.status !== "aprovado") throw new TRPCError({ code: "BAD_REQUEST", message: "Orçamento precisa estar aprovado" });
-        if (budget.generatedOsId) throw new TRPCError({ code: "BAD_REQUEST", message: "OS já foi gerada para este orçamento" });
 
         const workOrdersDb = await import("./workOrdersDb");
+        if (budget.generatedOsId) {
+          const existingOs = await workOrdersDb.getWorkOrderById(budget.generatedOsId);
+          if (existingOs) throw new TRPCError({ code: "BAD_REQUEST", message: "OS já foi gerada para este orçamento" });
+        }
         const osResult = await workOrdersDb.createWorkOrder({
           adminId: budget.adminId,
           clientId: budget.clientId,

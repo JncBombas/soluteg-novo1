@@ -360,11 +360,12 @@ export default function AdminBudgetDetail() {
                 <XCircle className="w-4 h-4" /> Reprovar
               </Button>
             )}
-            {budget.generatedOsId ? (
+            {budget.generatedOsId && (
               <Button size="sm" variant="outline" onClick={() => navigate(`/admin/work-orders/${budget.generatedOsId}`)} className="gap-2">
                 <ExternalLink className="w-4 h-4" /> Ver OS Gerada
               </Button>
-            ) : budget.status === "aprovado" && (
+            )}
+            {budget.status === "aprovado" && (
               <Button size="sm" variant="outline" onClick={() => generateOsMutation.mutate({ id: budgetId! })} disabled={generateOsMutation.isPending} className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
                 {generateOsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Gerar OS
               </Button>
