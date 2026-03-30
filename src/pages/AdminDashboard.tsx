@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { SolutegFooter } from "@/components/SolutegFooter";
 
@@ -131,6 +131,14 @@ export default function AdminDashboard() {
       label: "Acessar",
       color: "bg-purple-600 hover:bg-purple-700",
       icon: FileText,
+    },
+    {
+      title: "Mensagens em Massa",
+      desc: "Envie WhatsApp para grupos de clientes",
+      action: () => setLocation("/admin/mensagens"),
+      label: "Acessar",
+      color: "bg-orange-500 hover:bg-orange-600",
+      icon: MessageSquare,
     },
   ];
 
