@@ -102,7 +102,7 @@ export default function AdminBudgetDetail() {
     { budgetId: budgetId! },
     { enabled: !!budgetId }
   );
-  const { data: clientsData } = trpc.clients.list.useQuery({ adminId, page: 1, limit: 200 });
+  const { data: clientsData } = trpc.clients.list.useQuery({ adminId });
 
   const createMutation = trpc.budgets.create.useMutation({
     onSuccess: (res) => { toast.success("Orçamento criado!"); navigate(`/admin/orcamentos/${res.id}`); },
@@ -382,7 +382,7 @@ export default function AdminBudgetDetail() {
                     <Select value={clientId ? String(clientId) : ""} onValueChange={(v) => setClientId(parseInt(v))}>
                       <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
                       <SelectContent>
-                        {(clientsData?.items ?? []).map((c: any) => (
+                        {(clientsData ?? []).map((c: any) => (
                           <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
