@@ -139,6 +139,14 @@ export default function AdminBudgetDetail() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+  const generateOsMutation = trpc.budgets.generateOs.useMutation({
+    onSuccess: (res) => {
+      toast.success("OS gerada com sucesso!");
+      refetchBudget();
+      if (res.osId) setTimeout(() => navigate(`/admin/work-orders/${res.osId}`), 1500);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
   const rejectMutation = trpc.budgets.reject.useMutation({
     onSuccess: () => { toast.success("Orçamento reprovado."); setRejectModalOpen(false); refetchBudget(); },
     onError: (e: any) => toast.error(e.message),
@@ -352,9 +360,13 @@ export default function AdminBudgetDetail() {
                 <XCircle className="w-4 h-4" /> Reprovar
               </Button>
             )}
-            {budget.generatedOsId && (
+            {budget.generatedOsId ? (
               <Button size="sm" variant="outline" onClick={() => navigate(`/admin/work-orders/${budget.generatedOsId}`)} className="gap-2">
                 <ExternalLink className="w-4 h-4" /> Ver OS Gerada
+              </Button>
+            ) : budget.status === "aprovado" && (
+              <Button size="sm" variant="outline" onClick={() => generateOsMutation.mutate({ id: budgetId! })} disabled={generateOsMutation.isPending} className="gap-2 text-green-700 border-green-300 hover:bg-green-50">
+                {generateOsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Gerar OS
               </Button>
             )}
           </div>

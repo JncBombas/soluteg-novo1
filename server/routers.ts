@@ -1835,6 +1835,33 @@ attachments: router({
         };
       }),
 
+    // Gerar OS manualmente a partir de orçamento aprovado
+    generateOs: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const budgetsDb = await import("./budgetsDb");
+        const budget = await budgetsDb.getBudgetById(input.id);
+        if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+        if (budget.status !== "aprovado") throw new TRPCError({ code: "BAD_REQUEST", message: "Orçamento precisa estar aprovado" });
+        if (budget.generatedOsId) throw new TRPCError({ code: "BAD_REQUEST", message: "OS já foi gerada para este orçamento" });
+
+        const workOrdersDb = await import("./workOrdersDb");
+        const osResult = await workOrdersDb.createWorkOrder({
+          adminId: budget.adminId,
+          clientId: budget.clientId,
+          type: budget.serviceType as any,
+          priority: budget.priority as any,
+          title: budget.title,
+          description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
+          status: "aberta",
+          estimatedValue: budget.totalValue ?? undefined,
+          internalNotes: `Orçamento de origem: ${budget.budgetNumber}`,
+        } as any);
+
+        await budgetsDb.linkGeneratedOs(input.id, osResult.id);
+        return { success: true, osId: osResult.id };
+      }),
+
     // Compartilhar orçamento no portal do cliente
     shareToPortal: publicProcedure
       .input(z.object({ id: z.number() }))
