@@ -160,7 +160,9 @@ export const clientsRouter = router({
           continue;
         }
         try {
-          await sendWhatsappToNumber(client.phone, input.message);
+          const firstName = client.name.split(" ")[0];
+          const fullMessage = `Olá, ${firstName}! 👋\n\n📢 *COMUNICADO IMPORTANTE*\n\n${input.message}\n\nAgradecemos a sua confiança! 🙏\n*JNC Elétrica*`;
+          await sendWhatsappToNumber(client.phone, fullMessage);
           results.push({ id: client.id, name: client.name, phone: client.phone, status: "sent" });
         } catch (err: any) {
           results.push({ id: client.id, name: client.name, phone: client.phone, status: "failed", reason: err?.message ?? "Erro desconhecido" });

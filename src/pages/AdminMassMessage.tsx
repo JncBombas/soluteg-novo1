@@ -391,8 +391,13 @@ export default function AdminMassMessage() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="bg-slate-50 border rounded p-3 text-sm text-slate-700 max-h-24 overflow-y-auto whitespace-pre-wrap break-words">
+          <div className="bg-slate-50 border rounded p-3 text-sm text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">
+            <span className="text-slate-400">Olá, [Nome do cliente]! 👋{"\n\n"}📢 </span>
+            <span className="font-semibold text-slate-500">COMUNICADO IMPORTANTE</span>
+            <span className="text-slate-400">{"\n\n"}</span>
             {message}
+            <span className="text-slate-400">{"\n\n"}Agradecemos a sua confiança! 🙏{"\n"}</span>
+            <span className="font-semibold text-slate-500">JNC Elétrica</span>
           </div>
           <div className="flex gap-3 justify-end">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
