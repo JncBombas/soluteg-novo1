@@ -754,7 +754,7 @@ export async function getDocumentsByClientIdWithFilters(filters: {
   const conditions = [eq(clientDocuments.clientId, filters.clientId)];
 
   if (filters.search) {
-    conditions.push(sql`LOWER(${clientDocuments.title}) LIKE LOWER(${`%${filters.search}%`})`);
+    conditions.push(sql`${clientDocuments.title} COLLATE utf8mb4_general_ci LIKE ${`%${filters.search}%`}`);
   }
 
   if (filters.documentType && filters.documentType !== "all") {
@@ -797,7 +797,7 @@ export async function getAllDocumentsWithFilters(filters: {
   }
 
   if (filters.search) {
-    conditions.push(sql`LOWER(${clientDocuments.title}) LIKE LOWER(${`%${filters.search}%`})`);
+    conditions.push(sql`${clientDocuments.title} COLLATE utf8mb4_general_ci LIKE ${`%${filters.search}%`}`);
   }
 
   if (filters.documentType && filters.documentType !== "all") {

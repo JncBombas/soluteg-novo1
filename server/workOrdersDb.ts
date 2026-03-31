@@ -144,10 +144,11 @@ export async function listWorkOrders(filters: {
   if (filters.status) conditions.push(eq(workOrders.status, filters.status as any));
   if (filters.priority) conditions.push(eq(workOrders.priority, filters.priority as any));
 
-  // Lógica de busca por título ou número da OS
+  // Lógica de busca por título ou número da OS (case e accent insensitive via COLLATE)
   if (filters.search) {
+    const searchPattern = `%${filters.search}%`;
     conditions.push(
-      sql`(${like(workOrders.title, `%${filters.search}%`)} OR ${like(workOrders.osNumber, `%${filters.search}%`)})`
+      sql`(${workOrders.title} COLLATE utf8mb4_general_ci LIKE ${searchPattern} OR ${workOrders.osNumber} COLLATE utf8mb4_general_ci LIKE ${searchPattern})`
     );
   }
 

@@ -8,7 +8,7 @@ export const workOrdersRouter = router({
     .input(z.object({
       clientId: z.number().optional(),
       adminId: z.number().optional(),
-      type: z.enum(["rotina", "emergencial", "orcamento"]).optional(),
+      type: z.enum(["rotina", "emergencial", "instalacao", "manutencao", "corretiva", "preventiva"]).optional(),
       status: z.string().optional(),
       priority: z.string().optional(),
       search: z.string().optional(),
@@ -33,16 +33,23 @@ export const workOrdersRouter = router({
     .input(z.object({
       adminId: z.number(),
       clientId: z.number(),
-      type: z.enum(["rotina", "emergencial", "orcamento"]),
+      type: z.enum(["rotina", "emergencial", "instalacao", "manutencao", "corretiva", "preventiva"]),
       priority: z.enum(["normal", "alta", "critica"]).default("normal"),
       title: z.string().min(1),
       description: z.string().optional(),
+      serviceType: z.string().optional(),
+      scheduledDate: z.string().optional(),
+      estimatedHours: z.number().optional(),
+      estimatedValue: z.number().optional(),
+      isRecurring: z.number().optional().default(0),
+      recurrenceType: z.enum(["mensal_fixo", "mensal_inicio"]).optional(),
+      recurrenceDay: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
       const convertedInput = {
         ...input,
-        scheduledDate: (input as any).scheduledDate ? new Date((input as any).scheduledDate) : undefined,
+        scheduledDate: input.scheduledDate ? new Date(input.scheduledDate) : undefined,
       };
 
       const result = await workOrdersDb.createWorkOrder(convertedInput as any) as any;
