@@ -69,6 +69,7 @@ export default function AdminDashboard() {
       color: "text-blue-600",
       bg: "bg-blue-50",
       border: "border-blue-200",
+      href: "/admin/clientes",
     },
     {
       label: "Ordens Abertas",
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
       color: "text-amber-600",
       bg: "bg-amber-50",
       border: "border-amber-200",
+      href: "/admin/work-orders",
     },
     {
       label: "Total de Documentos",
@@ -87,6 +89,7 @@ export default function AdminDashboard() {
       color: "text-green-600",
       bg: "bg-green-50",
       border: "border-green-200",
+      href: "/admin/documentos",
     },
     {
       label: "Taxa de Atividade",
@@ -200,7 +203,11 @@ export default function AdminDashboard() {
           {metricCards.map((m) => {
             const Icon = m.icon;
             return (
-              <Card key={m.label} className={`border ${m.border}`}>
+              <Card
+                key={m.label}
+                className={`border ${m.border} transition-shadow ${m.href ? "cursor-pointer hover:shadow-md" : ""}`}
+                onClick={() => m.href && setLocation(m.href)}
+              >
                 <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-sm font-medium text-slate-600">
                     {m.label}
