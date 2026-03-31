@@ -1,8 +1,0 @@
-{
-  "query": "ALTER TABLE admins ADD COLUMN username VARCHAR(100) UNIQUE AFTER id",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user dpww5ojRjr6Y1mQ.root --database E9d4S3iuourgT5XZT9a7F3 --execute ALTER TABLE admins ADD COLUMN username VARCHAR(100) UNIQUE AFTER id",
-  "returncode": 1,
-  "logs": [
-    "ERROR 8200 (HY000) at line 1: unsupported add column 'username' constraint UNIQUE KEY when altering 'E9d4S3iuourgT5XZT9a7F3.admins'"
-  ]
-}

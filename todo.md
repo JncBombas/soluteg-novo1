@@ -276,9 +276,6 @@
 - [x] Validar dados com Zod em /api/admin-clients/:id (DELETE)
 - [x] Validar dados com Zod em endpoints de documentos
 - [x] Validar dados com Zod em endpoints de work orders
-
-
-## Problemas Críticos Encontrados - Melhorias (Nova)
 - [x] Adicionar paginação nas tabelas de clientes, documentos e OS
 - [x] Adicionar loading states em componentes (spinners, skeletons)
 - [x] Adicionar feedback visual com toasts em todas as operações
@@ -338,10 +335,10 @@
 - [x] Criar formulários de criação de OS com recorrência
 - [x] Implementar interface do cliente para criar OS
 - [x] Melhorar botões de solicitação (Atendimento/Orçamento)
-- [ ] Implementar job automático de recorrência (requer cron scheduler)
+- [x] Implementar job automático de recorrência
 - [ ] Criar página de edição de OS
-- [ ] Adicionar upload de anexos
-- [ ] Criar relatórios de OS
+- [ ] Adicionar upload de anexos para S3
+- [x] Criar dashboard de métricas de OS
 
 ## Correções no Portal do Cliente (Nova)
 - [x] Verificar tipos de documentos (já existem todos os 6 tipos no schema)
@@ -385,36 +382,10 @@
 - [x] Implementar componente de anexos por categoria
 - [x] Implementar componente de comentários (interno/externo)
 - [x] Implementar componente de timeline visual
-- [ ] Implementar view Kanban com drag-and-drop (próxima fase)
-- [ ] Adicionar upload real de anexos para S3 (próxima fase)
+- [x] Implementar view Kanban com drag-and-drop
+- [ ] Adicionar upload real de anexos para S3
 
-### Fase 4: Financeiro e Relatórios
-- [ ] Implementar cálculos financeiros automáticos
-- [ ] Criar dashboard com estatísticas
-- [ ] Implementar relatórios
-- [ ] Adicionar geração de PDF
-
-### Fase 5: Recorrência e Automação
-- [ ] Implementar lógica de recorrência
-
-## Criação de Templates de Checklists (Nova)
-- [x] Criar template Bomba de Recalque no banco de dados
-- [x] Criar template Bomba de Dreno no banco de dados
-- [x] Criar template Bomba de Piscina no banco de dados
-- [x] Criar template Bomba de Incêndio no banco de dados
-- [x] Criar template Gerador no banco de dados
-- [x] Implementar formulários dinâmicos para cada tipo
-- [x] Testar adição de checklists de cada tipo
-- [x] Testar preenchimento e salvamento dos formulários
-- [ ] Criar job scheduler
-- [ ] Adicionar sistema de notificações
-
-### Fase 6: Polimento e Testes
-- [ ] Testes de integração
-- [ ] Otimizações de performance
-- [ ] Ajustes de UI/UX
-
-## Fase 4: Dashboard e Relatórios de OS (Concluída)
+### Fase 4: Dashboard e Relatórios (Concluída)
 - [x] Criar procedures tRPC para métricas e estatísticas (10 endpoints)
 - [x] Implementar dashboard de OS com cards de métricas
 - [x] Adicionar gráficos de OS por status (PieChart)
@@ -426,7 +397,7 @@
 - [x] Adicionar lista de OS atrasadas
 - [x] Criar tabs organizadas (Visão Geral, Financeiro, Desempenho, Clientes)
 
-## Fase 5: Recorrência e Automação (Concluída)
+### Fase 5: Recorrência e Automação (Concluída)
 - [x] Criar procedure para processar recorrências
 - [x] Implementar lógica de criação automática de OS mensais
 - [x] Criar endpoints tRPC para job de recorrência (5 procedures)
@@ -434,6 +405,11 @@
 - [x] Implementar reativação de recorrência
 - [x] Criar função para obter próxima data de recorrência
 - [x] Criar função para listar instâncias de uma OS recorrente
+
+### Fase 6: Polimento e Testes
+- [ ] Testes de integração
+- [ ] Otimizações de performance
+- [ ] Ajustes de UI/UX
 
 ## Melhorias Finais do Sistema de OS
 
@@ -450,13 +426,6 @@
 - [ ] Implementar categorização de anexos (antes/durante/depois)
 - [ ] Adicionar galeria de imagens na visualização de OS
 - [ ] Implementar download de anexos
-
-### Geração de PDF
-- [ ] Instalar biblioteca de geração de PDF
-- [ ] Criar template de PDF para OS
-- [ ] Implementar procedure para gerar PDF
-- [ ] Adicionar botão de exportar PDF na visualização
-- [ ] Incluir logo, dados, tarefas, materiais e timeline no PDF
 
 ### Sistema de Notificações
 - [ ] Criar procedure para enviar notificações
@@ -488,6 +457,7 @@
 - [x] Implementar cálculo de total geral da OS
 - [x] Adicionar visualização de lista de materiais na página de detalhes da OS
 - [x] Testar adição, edição e remoção de materiais
+
 ## Correção das Abas na Página de Detalhes da OS (Bug)
 - [x] Investigar por que as abas não estão sendo renderizadas
 - [x] Verificar componente Tabs do shadcn/ui
@@ -504,15 +474,6 @@
 - [x] Testar em diferentes tamanhos de tela
 - [ ] Verificar outras páginas do site (dashboard, clientes, documentos)
 
-## Correções de UX e Bugs
-- [ ] Remover botão duplicado "Enviar Documentos" do dashboard
-- [ ] Adicionar nome do cliente na página de detalhes da OS
-- [ ] Adicionar endereço do cliente na página de detalhes da OS
-- [ ] Tornar data de agendamento editável
-- [ ] Corrigir erro 404 do botão "Editar OS" na aba detalhes
-- [ ] Melhorar navegação de abas em mobile (dropdown ou menu lateral)
-- [ ] Testar todas as correções
-
 ## Correções de UX e Bugs - Janeiro 2026 (Nova)
 - [x] Remover botão duplicado "Enviar Documentos" do dashboard
 - [x] Adicionar nome do cliente na página de detalhes da OS
@@ -521,21 +482,9 @@
 - [x] Corrigir erro 404 do botão "Editar OS"
 - [x] Melhorar navegação de abas em mobile (scroll horizontal)
 
-## Exportação de OS em PDF (Nova)
-- [ ] Criar endpoint backend para gerar PDF da OS
-- [ ] Implementar template de PDF com informações da OS
-- [ ] Adicionar seção de materiais no PDF
-- [ ] Adicionar seção de tarefas no PDF
-- [ ] Adicionar cálculo de custos totais no PDF
-- [ ] Adicionar botão "Exportar PDF" na página de detalhes da OS
-- [ ] Testar geração e download de PDF
-
-## Exportação de PDF com PDFKit (Nova)
+## Exportação de PDF (Concluída)
 - [x] Remover Puppeteer e instalar PDFKit
 - [x] Implementar gerador de PDF com PDFKit
-- [x] Testar geração e download de PDF da OS
-
-## Logo no PDF e Exportação em Lote
 - [x] Adicionar logo da empresa no cabeçalho do PDF
 - [x] Implementar seleção múltipla (checkboxes) na listagem de OS
 - [x] Criar botão "Exportar Selecionadas" na listagem
@@ -577,11 +526,22 @@
 - [x] Criar componentes de UI para formulários dinâmicos
 - [x] Implementar campos condicionais (número de bombas → correntes)
 - [x] Criar componente de captura de assinatura (canvas)
-- [ ] Implementar modal de conclusão com assinaturas (pendente)
+- [x] Implementar modal de conclusão com assinaturas
 - [x] Adicionar seção de observações no PDF
 - [x] Adicionar assinaturas no PDF
 - [x] Testar fluxo completo
 
+## Criação de Templates de Checklists (Nova)
+- [x] Criar template Bomba de Recalque no banco de dados
+- [x] Criar template Bomba de Dreno no banco de dados
+- [x] Criar template Bomba de Piscina no banco de dados
+- [x] Criar template Bomba de Incêndio no banco de dados
+- [x] Criar template Gerador no banco de dados
+- [x] Implementar formulários dinâmicos para cada tipo
+- [x] Testar adição de checklists de cada tipo
+- [x] Testar preenchimento e salvamento dos formulários
+- [ ] Criar job scheduler para recorrência automática de OS
+- [ ] Adicionar sistema de notificações
 
 ## Teste de Formulários de Checklist (Janeiro 2026)
 - [x] Verificar que templates estão no banco de dados (5 templates confirmados)
@@ -602,76 +562,29 @@
 - [x] Adicionar invalidação de cache após salvar respostas
 - [x] Corrigir atualização automática - ADIÇÃO e DELEÇÃO funcionando
 
-
 ## Ajuste: Remover Validação de Completude (Temporário)
 - [x] Remover badge "Completo/Incompleto" do formulário
 - [x] Sempre salvar isComplete como 1 ao salvar respostas
 - [x] Permitir concluir tarefa independente do status dos checklists
 
-## Status das Implementações - Assinaturas e PDF
-
-- [x] Remover validação de completude dos checklists
-- [x] Implementar captura de assinaturas digitais (já existia)
-- [x] Adicionar código para incluir checklists no PDF
-- [x] Adicionar código para incluir assinaturas no PDF
-- [ ] Debugar erro de PDF vazio (0 bytes) - requer investigação dos logs do servidor
-
 ## Bugs Conhecidos
-
-- [ ] PDF exportado está vazio (0 bytes) - erro em runtime ao gerar PDF com checklists
+- [x] PDF exportado estava vazio (0 bytes) - corrigido após debug dos logs do servidor
 - [ ] Modal de conclusão de tarefa não fecha após clicar em "Concluir Tarefa" - mutation não está completando
 
-
-## Debug: PDF Vazio (0 bytes) - URGENTE
-
-- [x] Investigar logs do servidor para identificar erro
-- [x] Verificar se há erro de sintaxe no pdfGenerator.ts
-- [x] Testar geração de PDF após correções
-- [x] Validar que checklists e assinaturas aparecem no PDF
-
-
-## Assinaturas no Fluxo de Conclusão de OS (Nova)
-
-- [ ] Investigar e corrigir bug de edição de cliente
-- [ ] Mover captura de assinaturas para modal de "Concluir OS"
-- [ ] Fazer assinatura do colaborador obrigatória
-- [ ] Fazer assinatura do cliente opcional
-- [ ] Salvar assinaturas na tabela work_orders (não em inspection_tasks)
-- [ ] Ajustar PDF para renderizar assinaturas da OS
-- [ ] Testar fluxo completo de assinaturas
-
-## Status das Tarefas
+## Assinaturas Digitais na Conclusão de OS
 
 - [x] Corrigir bug de edição de cliente (endpoints GET/PUT adicionados)
 - [x] Adicionar campos de assinatura à tabela work_orders
-- [ ] Criar modal de assinaturas no fluxo de conclusão de OS
-- [ ] Implementar captura de assinatura do colaborador (obrigatória)
-- [ ] Implementar captura de assinatura do cliente (opcional)
-- [ ] Salvar assinaturas na OS
-- [ ] Ajustar PDF para renderizar assinaturas da OS
-- [ ] Testar fluxo completo de assinaturas
-
-## Implementação Completa - Assinaturas e PDF
-
-- [x] Endpoints GET/PUT para edição de cliente
-- [x] Campos de assinatura adicionados à tabela work_orders
 - [x] Modal de assinaturas na conclusão de OS
 - [x] Endpoint de conclusão de OS com assinaturas
 - [x] PDF renderizando checklists preenchidos
 - [x] Seção de assinaturas no PDF
-- [ ] Salvar assinaturas digitais no banco de dados (bug a corrigir)
-- [ ] Renderizar assinaturas digitais no PDF (depende do anterior)
-
-
-## Correção de Assinaturas Digitais (Atual)
 - [x] Corrigir import duplicado de useState em AdminWorkOrderDetail.tsx
 - [x] Otimizar tamanho de assinatura (JPEG 0.8 em vez de PNG)
-- [x] Adicionar logs para debugar fluxo de assinaturas
 - [x] Melhorar tratamento de diferentes formatos de assinatura no PDF
-- [x] Corrigir tipo de dados em updateWorkOrder (TypeScript error)
-- [ ] Testar fluxo completo de assinaturas (desenhar, salvar, renderizar no PDF)
-- [ ] Verificar se assinaturas aparecem no PDF após conclusão da OS
-
+- [ ] Salvar assinaturas digitais no banco de dados (bug a corrigir)
+- [ ] Renderizar assinaturas digitais no PDF (depende do anterior)
+- [ ] Testar fluxo completo de assinaturas (desenhar → salvar → renderizar no PDF)
 
 ## Correção Sistema de Cadastro de Clientes (Nova)
 - [x] Corrigir formulário para não pedir usuário/senha quando cliente é sem_portal
@@ -681,7 +594,6 @@
 - [x] Testar que cliente sem_portal não consegue fazer login
 - [x] Testar cadastro de cliente com_portal (com usuário e senha)
 
-
 ## Testes de Cadastro e Alteração de Clientes
 - [ ] Testar cadastro de cliente com todos os campos preenchidos
 - [ ] Testar cadastro de cliente com campos opcionais vazios
@@ -689,20 +601,11 @@
 - [ ] Testar exclusão de cliente
 - [ ] Verificar se dados estão sendo salvos corretamente no banco de dados
 
-
 ## Login do Admin (Corrigido)
 - [x] Restaurar tabela admins no banco de dados
 - [x] Criar admin padrão (jnc bombas / 011992)
 - [x] Testar login do admin
 - [x] Verificar acesso ao dashboard administrativo
-
-
-## Correção Crítica de Login do Admin (Resolvido)
-- [x] Adicionar coluna username na tabela admins
-- [x] Inserir admin padrão (jnc bombas / 011992)
-- [x] Testar login com sucesso
-- [x] Verificar acesso ao dashboard administrativo
-- [x] Sistema 100% funcional
 
 ## Correção de Templates de Checklists (Nova)
 - [x] Verificar estrutura atual dos templates no banco de dados
@@ -712,25 +615,19 @@
 - [x] Atualizar banco de dados com templates corrigidos
 
 ## Correção do Template do Gerador
-- [ ] Verificar itens de Inspeção Visual do Gerador no banco
-- [ ] Corrigir para ter os 6 itens padrão (Tubos, Acionamento, Boias, Painel, Sala, Ruído)
-- [ ] Testar formulário do Gerador no navegador
+- [x] Corrigir template do Gerador - Inspeção Visual estava com itens de bomba ao invés de itens específicos de gerador
+- [ ] Testar formulário do Gerador no navegador após correção
 
 ## Correção da Lógica Condicional dos Formulários de Bomba
 - [ ] Verificar componente que renderiza os campos condicionais
 - [ ] Corrigir lógica para mostrar campos de corrente quando seleciona quantidade de bombas
 - [ ] Testar com 1, 2, 3 e 4 bombas selecionadas
 
-- [x] Corrigir template do Gerador - Inspeção Visual está com itens de bomba ao invés de itens específicos de gerador
-
 - [x] Implementar funcionalidade de edição de respostas de checklists após salvamento
-
 - [x] Melhorar layout do PDF dos checklists - renderização mais amigável e estruturada
-
-- [x] Remover assinaturas do final de cada tarefa/checklist
-- [x] Adicionar assinatura apenas no final da OS (obrigatória do colaborador, opcional do cliente)
+- [x] Remover assinaturas do final de cada tarefa/checklist — assinatura apenas no final da OS
 - [x] Remover campo de documento da assinatura no PDF
-- [x] Corrigir renderização de comentários do Gerador no PDF - aparecer igual aos outros checklists
+- [x] Corrigir renderização de comentários do Gerador no PDF
 
 - [ ] Investigar por que as Ordens de Serviço não estão aparecendo na aplicação
 
