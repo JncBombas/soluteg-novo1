@@ -30,18 +30,17 @@ client.on('qr', (qr) => {
 client.on('ready', async () => {
     isReady = true;
     console.log('✅ WHATSAPP DA JNC ELÉTRICA e BOMBAS ON!');
-    
-    // Teste de envio com log detalhado
+
+    // Aguarda 8s para garantir que o client está estável antes de enviar
     setTimeout(async () => {
         try {
             console.log('--- Tentando enviar mensagem inicial para:', meuNumero);
-            const chat = await client.getChatById(meuNumero);
-            await chat.sendMessage("🚀 *SISTEMA JNC ONLINE*\nNotificações de OS ativadas.");
+            await client.sendMessage(meuNumero, "🚀 *SISTEMA JNC ONLINE*\nNotificações de OS ativadas.");
             console.log('🚀 Mensagem de inicialização ENVIADA!');
         } catch (err) {
             console.error('❌ Erro no envio inicial:', err.message);
         }
-    }, 5000);
+    }, 8000);
 });
 
 // Evento: Comandos de Teste (Responde se você escrever 'status' ou '!teste')
@@ -64,9 +63,21 @@ client.on('auth_failure', () => {
     console.error('❌ Falha na autenticação do Zap!');
 });
 
-client.on('disconnected', () => {
+client.on('disconnected', async (reason) => {
     isReady = false;
-    console.log('⚠️ Zap desconectado!');
+    console.log('⚠️ Zap desconectado! Motivo:', reason);
+    console.log('🔄 Reconectando em 15 segundos...');
+    setTimeout(async () => {
+        try {
+            await client.destroy();
+        } catch (_) { /* ignora erro no destroy */ }
+        setTimeout(() => {
+            console.log('🔄 Reinicializando cliente WhatsApp...');
+            client.initialize().catch((err) => {
+                console.error('❌ Erro ao reinicializar WhatsApp:', err.message);
+            });
+        }, 3000);
+    }, 15000);
 });
 
 // Inicia o serviço
