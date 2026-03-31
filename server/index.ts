@@ -309,6 +309,62 @@ async function startServer() {
  
  
   // ============================================================
+  // 📊 ROTA: Métricas do Dashboard Admin
+  // Endereço: GET /api/admin-metrics?adminId=X
+  // ============================================================
+  app.get("/api/admin-metrics", async (req, res) => {
+    try {
+      const adminId = parseInt(req.query.adminId as string);
+      if (!adminId) {
+        return res.status(400).json({ message: "adminId é obrigatório" });
+      }
+
+      const { getDb } = await import("./db");
+      const { clients, clientDocuments, workOrders } = await import("../drizzle/schema");
+      const { eq, and, count, sql } = await import("drizzle-orm");
+
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ message: "Banco de dados indisponível" });
+      }
+
+      const [totalClientsResult] = await db
+        .select({ total: count() })
+        .from(clients)
+        .where(eq(clients.adminId, adminId));
+
+      const [activeClientsResult] = await db
+        .select({ total: count() })
+        .from(clients)
+        .where(and(eq(clients.adminId, adminId), eq(clients.active, 1)));
+
+      const [openWorkOrdersResult] = await db
+        .select({ total: count() })
+        .from(workOrders)
+        .where(and(
+          eq(workOrders.adminId, adminId),
+          sql`${workOrders.status} NOT IN ('concluida', 'cancelada')`
+        ));
+
+      const [totalDocumentsResult] = await db
+        .select({ total: count() })
+        .from(clientDocuments)
+        .where(eq(clientDocuments.adminId, adminId));
+
+      res.json({
+        totalClients: totalClientsResult?.total ?? 0,
+        activeClients: activeClientsResult?.total ?? 0,
+        openWorkOrders: openWorkOrdersResult?.total ?? 0,
+        totalDocuments: totalDocumentsResult?.total ?? 0,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar métricas:", error);
+      res.status(500).json({ message: "Erro ao carregar métricas" });
+    }
+  });
+
+
+  // ============================================================
   // 📡 INTEGRAÇÃO tRPC (Lógica Principal do Sistema)
   // Endereço: /api/trpc/*
   //
