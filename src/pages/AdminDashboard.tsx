@@ -169,10 +169,10 @@ export default function AdminDashboard() {
               variant="ghost"
               size="sm"
               onClick={() => setLocation("/")}
-              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden sm:flex"
+              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
             >
               <Home className="w-4 h-4" />
-              Início
+              <span className="hidden sm:inline">Início</span>
             </Button>
             <Button
               size="sm"
