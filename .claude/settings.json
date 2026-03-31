@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Read(//c/Users/thiag/AppData/Local/Temp/claude/c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1/fb25b35d-6a0a-4031-ad60-a6deb9e73d11/tasks/**)"
     ]
   }
 }
