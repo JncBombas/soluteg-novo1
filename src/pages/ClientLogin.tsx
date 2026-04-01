@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LogIn, AlertCircle } from "lucide-react";
+import { LogIn, AlertCircle, ArrowLeft } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { toast } from "sonner";
 
@@ -88,12 +88,20 @@ export default function ClientLogin() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
       <header className="bg-black text-white py-4 border-b border-gray-700">
-        <div className="container mx-auto px-4 flex items-center gap-3">
-          <img src={APP_LOGO} alt="JNC Logo" className="h-10" />
-          <div className="text-sm">
-            <div className="font-semibold">JNC Comércio</div>
-            <div className="text-xs text-gray-400">(Soluteg)</div>
+        <div className="container mx-auto px-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <img src={APP_LOGO} alt="JNC Logo" className="h-10" />
+            <div className="text-sm">
+              <div className="font-semibold">JNC Comércio</div>
+              <div className="text-xs text-gray-400">(Soluteg)</div>
+            </div>
           </div>
+          <a href="/">
+            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-1.5">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao site
+            </Button>
+          </a>
         </div>
       </header>
 

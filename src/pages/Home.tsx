@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { APP_LOGO } from "@/const";
 import { Link, useLocation } from "wouter";
 import { SolutegFooter } from "@/components/SolutegFooter";
@@ -17,6 +23,7 @@ import {
   Menu,
   X,
   HardHat,
+  Users,
 } from "lucide-react";
 
 export default function Home() {
@@ -158,25 +165,29 @@ export default function Home() {
 
           {/* Desktop actions */}
           <div className="hidden lg:flex items-center gap-2">
-            <Link href="/technician/login">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-blue-500/60 text-blue-400 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all gap-1.5"
-              >
-                <HardHat className="w-3.5 h-3.5" />
-                Portal do Técnico
-              </Button>
-            </Link>
-            <Link href="/client/login">
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-amber-500/60 text-amber-400 hover:bg-amber-500 hover:text-slate-900 hover:border-amber-500 transition-all"
-              >
-                Portal do Cliente
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-amber-500/60 text-amber-400 hover:bg-amber-500 hover:text-slate-900 hover:border-amber-500 transition-all gap-1.5"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Portais
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => window.location.href = "/client/login"} className="gap-2 cursor-pointer">
+                  <User className="w-4 h-4" />
+                  Portal do Cliente
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.location.href = "/technician/login"} className="gap-2 cursor-pointer">
+                  <HardHat className="w-4 h-4" />
+                  Portal do Técnico
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {isAdminLoggedIn ? (
               <div className="flex items-center gap-2">
                 <button
@@ -236,23 +247,16 @@ export default function Home() {
               </a>
             ))}
             <div className="flex gap-2 pt-2 border-t border-slate-800">
-              <Link href="/technician/login">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-blue-500/60 text-blue-400 hover:bg-blue-500 hover:text-white gap-1"
-                >
-                  <HardHat className="w-3.5 h-3.5" />
-                  Técnico
+              <Link href="/client/login" className="flex-1">
+                <Button size="sm" variant="outline" className="w-full border-slate-600 text-slate-300 gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  Portal do Cliente
                 </Button>
               </Link>
-              <Link href="/client/login" className="flex-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full border-amber-500/60 text-amber-400 hover:bg-amber-500 hover:text-slate-900"
-                >
-                  Portal do Cliente
+              <Link href="/technician/login">
+                <Button size="sm" variant="outline" className="border-slate-600 text-slate-300 gap-1.5">
+                  <HardHat className="w-3.5 h-3.5" />
+                  Técnico
                 </Button>
               </Link>
               {isAdminLoggedIn ? (

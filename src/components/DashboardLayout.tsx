@@ -108,6 +108,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const hasLocalAdmin = !!localStorage.getItem("adminId");
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
@@ -117,7 +118,7 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />;
   }
 
-  if (!user) {
+  if (!user && !hasLocalAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-8 p-8 max-w-sm w-full text-center">
@@ -178,6 +179,10 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
+  // Fallback para admin logado via username/password (sem sessão OAuth)
+  const displayName = user?.name || localStorage.getItem("adminName") || localStorage.getItem("adminEmail") || "Admin";
+  const displayEmail = user?.email || localStorage.getItem("adminEmail") || "";
+
   const activeItem = navMain
     .flatMap((g) => g.items)
     .find((item) => item.path === location);
@@ -211,14 +216,12 @@ function DashboardLayoutContent({
     };
   }, [isResizing, setSidebarWidth]);
 
-  const userInitials = user?.name
-    ? user.name
-        .split(" ")
-        .slice(0, 2)
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-    : "U";
+  const userInitials = displayName
+    .split(" ")
+    .slice(0, 2)
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase() || "A";
 
   return (
     <>
@@ -321,10 +324,10 @@ function DashboardLayoutContent({
                   </Avatar>
                   <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                     <p className="text-sm font-medium text-sidebar-foreground truncate leading-none">
-                      {user?.name || "Usuário"}
+                      {displayName}
                     </p>
                     <p className="text-xs text-sidebar-foreground/50 truncate mt-1">
-                      {user?.email || "-"}
+                      {displayEmail || "-"}
                     </p>
                   </div>
                   <ChevronDown className="h-3.5 w-3.5 text-sidebar-foreground/40 shrink-0 group-data-[collapsible=icon]:hidden" />
@@ -332,8 +335,8 @@ function DashboardLayoutContent({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-medium truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  <p className="text-sm font-medium truncate">{displayName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{displayEmail}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -401,7 +404,7 @@ function DashboardLayoutContent({
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:block text-sm font-medium max-w-[140px] truncate">
-                  {user?.name || "Usuário"}
+                  {displayName}
                 </span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
               </button>
