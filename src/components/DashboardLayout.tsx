@@ -62,10 +62,11 @@ const navMain = [
     items: [
       { icon: Wrench, label: "Painel de Ordens", path: "/admin/work-orders" },
       { icon: KanbanSquare, label: "Kanban", path: "/admin/work-orders/kanban" },
+      { icon: ClipboardList, label: "Orçamentos", path: "/admin/orcamentos" },
     ],
   },
   {
-    label: "Clientes & Documentos",
+    label: "Clientes",
     items: [
       { icon: Users, label: "Clientes", path: "/admin/clientes" },
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
@@ -77,12 +78,6 @@ const navMain = [
     label: "Equipe",
     items: [
       { icon: HardHat, label: "Técnicos", path: "/admin/tecnicos" },
-    ],
-  },
-  {
-    label: "Relatórios",
-    items: [
-      { icon: ClipboardList, label: "Relatórios de Inspeção", path: "/admin/relatorios" },
     ],
   },
   {
@@ -288,21 +283,23 @@ function DashboardLayoutContent({
                     return (
                       <SidebarMenuItem key={item.path}>
                         <SidebarMenuButton
+                          asChild
                           isActive={isActive}
-                          onClick={() => setLocation(item.path)}
                           tooltip={item.label}
                           className="h-9 gap-2.5 text-sm font-normal rounded-lg transition-all"
                         >
-                          <item.icon
-                            className={`h-4 w-4 shrink-0 ${
-                              isActive
-                                ? "text-primary"
-                                : "text-sidebar-foreground/60"
-                            }`}
-                          />
-                          <span className={isActive ? "font-medium" : ""}>
-                            {item.label}
-                          </span>
+                          <Link href={item.path}>
+                            <item.icon
+                              className={`h-4 w-4 shrink-0 ${
+                                isActive
+                                  ? "text-primary"
+                                  : "text-sidebar-foreground/60"
+                              }`}
+                            />
+                            <span className={isActive ? "font-medium" : ""}>
+                              {item.label}
+                            </span>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
