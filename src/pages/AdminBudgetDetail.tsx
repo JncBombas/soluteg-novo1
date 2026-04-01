@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import SignaturePad from "@/components/SignaturePad";
@@ -16,7 +17,7 @@ import {
   ArrowLeft, Save, FileText, Plus, Trash2, Loader2,
   CheckCircle, XCircle, History,
   Download, Share2, Send, ExternalLink, Package,
-  User, DollarSign, ClipboardList,
+  User, DollarSign, ClipboardList, MessageCircle, Copy, ChevronDown,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -162,6 +163,14 @@ export default function AdminBudgetDetail() {
   });
   const sharePortalMutation = trpc.budgets.shareToPortal.useMutation({
     onSuccess: () => toast.success("Compartilhado no portal do cliente."),
+    onError: (e: any) => toast.error(e.message),
+  });
+  const whatsappAdminMutation = trpc.budgets.sendWhatsappBudget.useMutation({
+    onSuccess: () => toast.success("Orçamento enviado via WhatsApp para o admin."),
+    onError: (e: any) => toast.error(e.message),
+  });
+  const whatsappClientMutation = trpc.budgets.sendWhatsappBudget.useMutation({
+    onSuccess: () => toast.success("Orçamento enviado via WhatsApp para o cliente."),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -334,17 +343,46 @@ export default function AdminBudgetDetail() {
         {/* Ações rápidas */}
         {budget && (
           <div className="flex items-center gap-2 flex-wrap">
-            {budget.approvalToken && (
-              <Button variant="outline" size="sm" onClick={copyApprovalLink} className="gap-2">
-                <ExternalLink className="w-4 h-4" /> Copiar Link de Aprovação
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={() => sharePortalMutation.mutate({ id: budgetId! })} className="gap-2">
-              <Share2 className="w-4 h-4" /> Portal
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => exportPdfMutation.mutate({ id: budgetId! })} className="gap-2" disabled={exportPdfMutation.isPending}>
-              {exportPdfMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Download className="w-4 h-4" />} PDF
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Share2 className="w-4 h-4" /> Compartilhar <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {budget.approvalToken && (
+                  <DropdownMenuItem onClick={copyApprovalLink} className="gap-2 cursor-pointer">
+                    <Copy className="w-4 h-4" /> Copiar link de aprovação
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => sharePortalMutation.mutate({ id: budgetId! })} className="gap-2 cursor-pointer">
+                  <Share2 className="w-4 h-4" /> Enviar para portal do cliente
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => whatsappAdminMutation.mutate({ id: budgetId!, target: "admin" })}
+                  disabled={whatsappAdminMutation.isPending}
+                  className="gap-2 cursor-pointer text-green-700 focus:text-green-700"
+                >
+                  {whatsappAdminMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />} WhatsApp Admin
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => whatsappClientMutation.mutate({ id: budgetId!, target: "client" })}
+                  disabled={whatsappClientMutation.isPending}
+                  className="gap-2 cursor-pointer text-green-700 focus:text-green-700"
+                >
+                  {whatsappClientMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />} WhatsApp Cliente
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => exportPdfMutation.mutate({ id: budgetId! })}
+                  disabled={exportPdfMutation.isPending}
+                  className="gap-2 cursor-pointer"
+                >
+                  {exportPdfMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Download PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {canFinalize && (
               <Button size="sm" onClick={() => setFinalizeModalOpen(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
                 <Send className="w-4 h-4" /> {budget.status === "finalizado" ? "Re-Finalizar (Revisão)" : "Finalizar"}

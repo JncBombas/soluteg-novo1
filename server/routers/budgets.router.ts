@@ -1,5 +1,5 @@
 import * as db from "../db";
-import { sendWhatsappAlert } from "../whatsapp";
+import { sendWhatsappAlert, sendWhatsappAlertWithPDF, sendWhatsappToNumberWithPDF } from "../whatsapp";
 import { publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
@@ -299,5 +299,49 @@ export const budgetsRouter = router({
         sortOrder: "desc",
         limit: 50,
       });
+    }),
+
+  sendWhatsappBudget: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      target: z.enum(["admin", "client"]),
+    }))
+    .mutation(async ({ input }) => {
+      const budgetsDb = await import("../budgetsDb");
+      const budget = await budgetsDb.getBudgetById(input.id);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateBudgetPDF(input.id);
+      const clientSlug = budget.clientName
+        ? budget.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+      const filename = `${budget.budgetNumber}_${clientSlug}.pdf`;
+      const valorFmt = ((budget.totalValue ?? 0) / 100).toFixed(2).replace('.', ',');
+
+      if (input.target === "client") {
+        if (!budget.clientPhone) throw new TRPCError({ code: "BAD_REQUEST", message: "Cliente sem telefone cadastrado" });
+        const approvalUrl = budget.approvalToken
+          ? `https://jnc.soluteg.com.br/orcamento/${budget.approvalToken}`
+          : null;
+        const msg =
+          `📄 *Orçamento ${budget.budgetNumber}*\n\n` +
+          `Olá, ${budget.clientName ?? 'cliente'}! Segue em anexo o orçamento referente ao serviço:\n` +
+          `🔧 *${budget.title}*\n\n` +
+          `💰 *Valor Total:* R$ ${valorFmt}\n` +
+          (budget.validUntil ? `📅 *Válido até:* ${new Date(budget.validUntil).toLocaleDateString('pt-BR')}\n` : '') +
+          (approvalUrl ? `\n👉 *Aprovar/Reprovar:* ${approvalUrl}` : '');
+        await sendWhatsappToNumberWithPDF(budget.clientPhone, msg, pdfBuffer, filename);
+      } else {
+        const msg =
+          `📄 *ORÇAMENTO ${budget.budgetNumber}*\n\n` +
+          `🏢 *Cliente:* ${budget.clientName ?? ''}\n` +
+          `🔧 *Serviço:* ${budget.title}\n` +
+          `💰 *Valor Total:* R$ ${valorFmt}\n` +
+          `📋 *Status:* ${budget.status}`;
+        await sendWhatsappAlertWithPDF(msg, pdfBuffer, filename);
+      }
+
+      return { success: true };
     }),
 });
