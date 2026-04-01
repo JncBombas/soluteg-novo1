@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList } from "lucide-react";
+import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { SolutegFooter } from "@/components/SolutegFooter";
 
@@ -142,6 +142,14 @@ export default function AdminDashboard() {
       label: "Acessar",
       color: "bg-orange-500 hover:bg-orange-600",
       icon: MessageSquare,
+    },
+    {
+      title: "Técnicos",
+      desc: "Gerencie técnicos e seus acessos",
+      action: () => setLocation("/admin/tecnicos"),
+      label: "Acessar",
+      color: "bg-cyan-600 hover:bg-cyan-700",
+      icon: HardHat,
     },
   ];
 
