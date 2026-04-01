@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, FileUp, Loader2, AlertCircle, CheckCircle, ChevronDown, ChevronRight, FileText, Download, Eye } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
+import DashboardLayout from "@/components/DashboardLayout";
 
 interface Client {
   id: number;
@@ -236,6 +237,7 @@ export default function AdminDocuments() {
   }
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -559,16 +561,7 @@ export default function AdminDocuments() {
         </CardContent>
       </Card>
 
-      {/* Back Button */}
-      <div className="mt-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate("/admin/dashboard")}
-          className="flex items-center gap-2"
-        >
-          ← Voltar ao Dashboard
-        </Button>
-      </div>
     </div>
+    </DashboardLayout>
   );
 }

@@ -1,5 +1,6 @@
 import { StatusBadge, PriorityBadge } from "../components/StatusBadge";
 import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +76,8 @@ export default function AdminWorkOrderKanban() {
   if (isLoading) return <div className="flex justify-center p-20"><Loader2 className="animate-spin" /></div>;
 
   return (
-    <div className="p-6 space-y-6">
+    <DashboardLayout>
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Kanban Soluteg</h1>
         <Button onClick={() => navigate("/admin/work-orders/new")}>Nova OS</Button>
@@ -115,6 +117,7 @@ export default function AdminWorkOrderKanban() {
         </DragOverlay>
       </DndContext>
     </div>
+    </DashboardLayout>
   );
 }
 

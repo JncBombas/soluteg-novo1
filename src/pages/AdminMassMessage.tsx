@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,16 +134,9 @@ export default function AdminMassMessage() {
   };
 
   return (
+    <DashboardLayout>
     <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <Button
-          variant="ghost"
-          onClick={() => setLocation("/admin/dashboard")}
-          className="gap-2 text-slate-600 hover:text-slate-900 mb-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar ao Dashboard
-        </Button>
         <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
           <MessageSquare className="w-8 h-8 text-orange-500" />
           Mensagens em Massa
@@ -419,5 +413,6 @@ export default function AdminMassMessage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }

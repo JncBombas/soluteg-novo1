@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // ICONS: Ícones para identificar visualmente os tipos de documentos e ações
-import { 
-  ArrowLeft, Search, Filter, Download, Trash2, FileText, 
-  Loader2, CheckCircle, Eye, Receipt, Wrench, BarChart3, ClipboardList 
+import {
+  Search, Filter, Download, Trash2, FileText,
+  Loader2, CheckCircle, Eye, Receipt, Wrench, BarChart3, ClipboardList
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
 
 // DEFINIÇÃO DO OBJETO DOCUMENTO: O que compõe um documento no sistema
 interface Document {
@@ -189,29 +190,18 @@ export default function AdminManageDocuments() {
   // TELA DE CARREGAMENTO
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   // --- ESTRUTURA VISUAL PRINCIPAL ---
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* CABEÇALHO SUPERIOR */}
-      <div className="bg-white border-b">
-        <div className="container max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Gerenciar Documentos</h1>
-            <p className="text-slate-600">Visualize e gerencie documentos enviados</p>
-          </div>
-          <Button variant="ghost" onClick={() => navigate("/admin/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> Voltar ao Dashboard
-          </Button>
-        </div>
-      </div>
-
-      <div className="container max-w-7xl mx-auto px-4 py-8">
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* SEÇÃO DE FILTROS */}
         <Card className="mb-6">
           <CardHeader>
@@ -301,6 +291,6 @@ export default function AdminManageDocuments() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

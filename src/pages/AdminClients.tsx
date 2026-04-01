@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,17 +196,8 @@ export default function AdminClients() {
   }
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
-      <div className="mb-4">
-        <Button
-          variant="ghost"
-          onClick={() => setLocation("/admin/dashboard")}
-          className="gap-2 text-slate-600 hover:text-slate-900"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Voltar ao Dashboard
-        </Button>
-      </div>
 
       <div className="flex items-center justify-between">
         <div>
@@ -577,5 +569,6 @@ export default function AdminClients() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }

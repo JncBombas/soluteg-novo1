@@ -1,4 +1,5 @@
 import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -86,7 +87,8 @@ export default function AdminBudgets() {
     );
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24">
+    <DashboardLayout>
+    <div className="max-w-7xl mx-auto pb-12">
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Header */}
@@ -303,5 +305,6 @@ export default function AdminBudgets() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }

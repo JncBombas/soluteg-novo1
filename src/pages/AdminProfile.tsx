@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, Lock, Upload } from "lucide-react";
-import { APP_LOGO, APP_TITLE } from "@/const";
+import { User, Lock, Upload } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 const ADMIN_ID = 1; // ID do admin logado
 
@@ -56,15 +56,6 @@ export default function AdminProfile() {
     },
   });
 
-  const logoutMutation = trpc.adminAuth.logout.useMutation({
-    onSuccess: () => {
-      toast.success("Logout realizado!");
-      setLocation("/");
-    },
-    onError: (error) => {
-      toast.error("Erro ao fazer logout: " + error.message);
-    },
-  });
 
   // Carregar dados do perfil
   useEffect(() => {
@@ -122,52 +113,13 @@ export default function AdminProfile() {
     }
   };
 
-  const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-  };
-
   if (profileLoading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Carregando...</div>;
+    return <DashboardLayout><div className="flex items-center justify-center py-20">Carregando...</div></DashboardLayout>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={APP_LOGO} alt={APP_TITLE} className="h-10" />
-            <div>
-              <h1 className="font-bold text-gray-900">Meu Perfil</h1>
-              <p className="text-sm text-gray-500">Gerenciar dados pessoais</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/admin/dashboard")}
-              className="gap-2"
-            >
-              <Home className="w-4 h-4" />
-              Dashboard
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <DashboardLayout>
+      <div className="max-w-4xl mx-auto space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Custom Label Section */}
           <Card>
@@ -410,7 +362,7 @@ export default function AdminProfile() {
             )}
           </CardContent>
         </Card>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

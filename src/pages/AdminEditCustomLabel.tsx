@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function AdminEditCustomLabel() {
   const [, setLocation] = useLocation();
@@ -55,19 +56,11 @@ export default function AdminEditCustomLabel() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20 p-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => setLocation("/admin/dashboard")}
-            className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar ao Dashboard
-          </button>
-          <h1 className="text-3xl font-bold text-foreground">Editar Label Customizado</h1>
-          <p className="text-muted-foreground mt-2">
+    <DashboardLayout>
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Editar Label Customizado</h1>
+          <p className="text-muted-foreground mt-1">
             Defina como você quer ser identificado na página inicial
           </p>
         </div>
@@ -137,6 +130,6 @@ export default function AdminEditCustomLabel() {
           </p>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

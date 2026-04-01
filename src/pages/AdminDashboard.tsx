@@ -4,9 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { LogOut, Home, User, FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat } from "lucide-react";
-import { APP_LOGO } from "@/const";
-import { SolutegFooter } from "@/components/SolutegFooter";
+import { FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
@@ -36,28 +35,6 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erro ao carregar métricas:", error);
     }
-  };
-
-  const logoutMutation = trpc.adminAuth.logout.useMutation({
-    onSuccess: () => {
-      localStorage.removeItem("adminId");
-      localStorage.removeItem("adminToken");
-      localStorage.removeItem("adminEmail");
-      localStorage.removeItem("adminName");
-      toast.success("Logout realizado com sucesso!");
-      setLocation("/");
-    },
-    onError: (error: any) => {
-      toast.error("Erro ao fazer logout: " + error.message);
-    },
-  });
-
-  const handleLogout = async () => {
-    localStorage.removeItem("adminId");
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminEmail");
-    localStorage.removeItem("adminName");
-    await logoutMutation.mutateAsync();
   };
 
   const metricCards = [
@@ -154,52 +131,8 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src={APP_LOGO} alt="Soluteg" className="h-8 object-contain" />
-            <div className="leading-tight hidden sm:block">
-              <p className="font-bold text-sm text-white">Soluteg</p>
-              <p className="text-[10px] text-slate-400">Painel Administrativo</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/admin/profile")}
-              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5 hidden sm:flex"
-            >
-              <User className="w-4 h-4" />
-              Perfil
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/")}
-              className="text-slate-300 hover:text-white hover:bg-slate-800 gap-1.5"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden sm:inline">Início</span>
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleLogout}
-              disabled={logoutMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 text-white gap-1.5"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Sair</span>
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Conteúdo */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6 space-y-6">
+    <DashboardLayout>
+      <div className="max-w-7xl mx-auto w-full space-y-6">
         {/* Título */}
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
@@ -278,9 +211,7 @@ export default function AdminDashboard() {
             })}
           </div>
         </div>
-      </main>
-
-      <SolutegFooter full={false} />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

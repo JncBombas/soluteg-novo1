@@ -1,5 +1,6 @@
 import { StatusBadge } from "../components/StatusBadge";
 import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
 // UI COMPONENTS: Componentes de interface (botões, cards, inputs, seletores)
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -82,7 +83,8 @@ export default function AdminWorkOrders() {
   });
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-24">
+    <DashboardLayout>
+    <div className="max-w-7xl mx-auto pb-12">
       <div className="max-w-6xl mx-auto space-y-6">
         
         {/* --- CABEÇALHO (HEADER) --- */}
@@ -287,5 +289,6 @@ export default function AdminWorkOrders() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </DashboardLayout>
   );
 }
