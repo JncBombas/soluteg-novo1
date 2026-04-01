@@ -32,6 +32,10 @@ import ReportInspectionVisit2 from "./pages/ReportInspectionVisit2";
 import AdminBudgets from "./pages/AdminBudgets";
 import AdminBudgetDetail from "./pages/AdminBudgetDetail";
 import BudgetApproval from "./pages/BudgetApproval";
+import AdminTechnicians from "./pages/AdminTechnicians";
+import TechnicianLogin from "./pages/TechnicianLogin";
+import TechnicianPortal from "./pages/TechnicianPortal";
+import TechnicianWorkOrderDetail from "./pages/TechnicianWorkOrderDetail";
 
 
 function Router() {
@@ -66,6 +70,10 @@ function Router() {
       <Route path="/client/portal" component={ClientPortal} />
       <Route path="/client/water-tank" component={WaterTankMonitoring} />
       <Route path="/client/profile" component={ClientProfile} />
+      <Route path="/admin/tecnicos" component={AdminTechnicians} />
+      <Route path="/technician/login" component={TechnicianLogin} />
+      <Route path="/technician/portal" component={TechnicianPortal} />
+      <Route path="/technician/work-orders/:id" component={TechnicianWorkOrderDetail} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

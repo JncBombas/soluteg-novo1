@@ -13,6 +13,8 @@ import { adminDocumentsRouter } from "./routers/adminDocuments.router";
 import { workOrdersRouter } from "./routers/workOrders.router";
 import { checklistsRouter } from "./routers/checklists.router";
 import { budgetsRouter } from "./routers/budgets.router";
+import { techniciansRouter } from "./routers/technicians.router";
+import { technicianPortalRouter } from "./routers/technicianPortal.router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -28,6 +30,8 @@ export const appRouter = router({
   workOrders: workOrdersRouter,
   checklists: checklistsRouter,
   budgets: budgetsRouter,
+  technicians: techniciansRouter,
+  technicianPortal: technicianPortalRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -178,6 +178,50 @@ async function startServer() {
  
  
   // ============================================================
+  // 🔑 ROTA: Login do Técnico (Portal do Técnico)
+  // Endereço: POST /api/technician-login
+  // ============================================================
+  app.post("/api/technician-login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ message: "Usuário e senha são obrigatórios" });
+      }
+
+      const technicianDb = await import("./technicianDb");
+      const { comparePassword } = await import("./adminAuth");
+
+      const technician = await technicianDb.getTechnicianByUsername(username);
+      if (!technician) {
+        return res.status(401).json({ message: "Usuário ou senha inválidos" });
+      }
+
+      const isValid = await comparePassword(password, technician.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Usuário ou senha inválidos" });
+      }
+
+      if (!technician.active) {
+        return res.status(403).json({ message: "Técnico inativo" });
+      }
+
+      await technicianDb.updateTechnicianLastLogin(technician.id);
+
+      res.json({
+        success:      true,
+        token:        `technician-${technician.id}`,
+        technicianId: technician.id,
+        name:         technician.name,
+      });
+    } catch (error) {
+      console.error("Technician login error:", error);
+      res.status(500).json({ message: "Erro ao fazer login" });
+    }
+  });
+
+
+  // ============================================================
   // 📄 ROTA: Listar Documentos de um Cliente
   // Endereço: GET /api/client-documents?clientId=123
   //

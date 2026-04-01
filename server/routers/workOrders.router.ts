@@ -44,6 +44,7 @@ export const workOrdersRouter = router({
       isRecurring: z.number().optional().default(0),
       recurrenceType: z.enum(["mensal_fixo", "mensal_inicio"]).optional(),
       recurrenceDay: z.number().optional(),
+      technicianId: z.number().nullable().optional(),
     }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -101,6 +102,7 @@ export const workOrdersRouter = router({
       internalNotes: z.string().optional(),
       clientNotes: z.string().optional(),
       cancellationReason: z.string().optional(),
+      technicianId: z.number().nullable().optional(),
     }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");

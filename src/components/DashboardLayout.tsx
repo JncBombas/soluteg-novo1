@@ -41,6 +41,7 @@ import {
   Home,
   User,
   MessageSquare,
+  HardHat,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
@@ -70,6 +71,12 @@ const navMain = [
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
       { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },
       { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
+    ],
+  },
+  {
+    label: "Equipe",
+    items: [
+      { icon: HardHat, label: "Técnicos", path: "/admin/tecnicos" },
     ],
   },
   {

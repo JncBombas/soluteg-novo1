@@ -1,0 +1,173 @@
+import { eq, desc } from "drizzle-orm";
+import { getDb } from "./db";
+import { technicians, InsertTechnician, Technician, workOrders, clients } from "../drizzle/schema";
+
+export async function createTechnician(
+  data: Omit<InsertTechnician, "id" | "createdAt" | "updatedAt">
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(technicians).values(data as InsertTechnician);
+}
+
+export async function getTechniciansByAdminId(adminId: number): Promise<Omit<Technician, "password">[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db
+    .select()
+    .from(technicians)
+    .where(eq(technicians.adminId, adminId))
+    .orderBy(desc(technicians.createdAt));
+  return rows.map(({ password: _pw, ...rest }) => rest);
+}
+
+export async function getTechnicianById(id: number): Promise<Technician | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(technicians).where(eq(technicians.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function getTechnicianByUsername(username: string): Promise<Technician | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db.select().from(technicians).where(eq(technicians.username, username)).limit(1);
+  return rows[0];
+}
+
+export async function updateTechnician(
+  id: number,
+  data: Partial<Pick<InsertTechnician, "name" | "email" | "cpf" | "phone" | "specialization" | "active">>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(technicians).set(data).where(eq(technicians.id, id));
+}
+
+export async function updateTechnicianPassword(id: number, hashedPassword: string): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(technicians).set({ password: hashedPassword }).where(eq(technicians.id, id));
+}
+
+export async function updateTechnicianLastLogin(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(technicians).set({ lastLogin: new Date() }).where(eq(technicians.id, id));
+}
+
+export async function deleteTechnician(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // NULL out any assigned OS before deleting
+  await db.update(workOrders).set({ technicianId: null }).where(eq(workOrders.technicianId, id));
+  await db.delete(technicians).where(eq(technicians.id, id));
+}
+
+export type WorkOrderSummary = {
+  id: number;
+  osNumber: string;
+  title: string;
+  status: string;
+  priority: string;
+  scheduledDate: Date | null;
+  createdAt: Date;
+  clientName: string | null;
+  description: string | null;
+  serviceType: string | null;
+  type: string;
+};
+
+export async function getWorkOrdersByTechnicianId(technicianId: number): Promise<WorkOrderSummary[]> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      scheduledDate: workOrders.scheduledDate,
+      createdAt: workOrders.createdAt,
+      clientName: clients.name,
+      description: workOrders.description,
+      serviceType: workOrders.serviceType,
+      type: workOrders.type,
+    })
+    .from(workOrders)
+    .leftJoin(clients, eq(workOrders.clientId, clients.id))
+    .where(eq(workOrders.technicianId, technicianId))
+    .orderBy(desc(workOrders.createdAt));
+
+  return rows as WorkOrderSummary[];
+}
+
+export type WorkOrderDetail = {
+  id: number;
+  osNumber: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  type: string;
+  serviceType: string | null;
+  scheduledDate: Date | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  internalNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  clientId: number;
+  clientName: string | null;
+  clientAddress: string | null;
+  clientPhone: string | null;
+};
+
+export async function getWorkOrderByIdForTechnician(
+  workOrderId: number,
+  technicianId: number
+): Promise<WorkOrderDetail | null> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const rows = await db
+    .select({
+      id: workOrders.id,
+      osNumber: workOrders.osNumber,
+      title: workOrders.title,
+      description: workOrders.description,
+      status: workOrders.status,
+      priority: workOrders.priority,
+      type: workOrders.type,
+      serviceType: workOrders.serviceType,
+      scheduledDate: workOrders.scheduledDate,
+      startedAt: workOrders.startedAt,
+      completedAt: workOrders.completedAt,
+      internalNotes: workOrders.internalNotes,
+      createdAt: workOrders.createdAt,
+      updatedAt: workOrders.updatedAt,
+      clientId: workOrders.clientId,
+      clientName: clients.name,
+      clientAddress: clients.address,
+      clientPhone: clients.phone,
+    })
+    .from(workOrders)
+    .leftJoin(clients, eq(workOrders.clientId, clients.id))
+    .where(eq(workOrders.id, workOrderId))
+    .limit(1);
+
+  if (!rows[0]) return null;
+
+  // Access control: ensure this OS belongs to the requesting technician
+  const fullRow = await db
+    .select({ technicianId: workOrders.technicianId })
+    .from(workOrders)
+    .where(eq(workOrders.id, workOrderId))
+    .limit(1);
+
+  if (!fullRow[0] || fullRow[0].technicianId !== technicianId) return null;
+
+  return rows[0] as WorkOrderDetail;
+}

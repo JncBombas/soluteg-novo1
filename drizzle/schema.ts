@@ -186,6 +186,28 @@ export type Client = typeof clients.$inferSelect;
 export type InsertClient = typeof clients.$inferInsert;
 
 /**
+ * Técnicos do sistema - cada técnico tem login/senha próprio para o portal
+ */
+export const technicians = mysqlTable("technicians", {
+  id:             int("id").autoincrement().primaryKey(),
+  adminId:        int("adminId").notNull(),
+  name:           varchar("name", { length: 255 }).notNull(),
+  email:          varchar("email", { length: 320 }),
+  username:       varchar("username", { length: 100 }).notNull().unique(),
+  password:       varchar("password", { length: 255 }).notNull(),
+  cpf:            varchar("cpf", { length: 20 }),
+  phone:          varchar("phone", { length: 20 }),
+  specialization: varchar("specialization", { length: 150 }),
+  active:         int("active").default(1).notNull(),
+  createdAt:      timestamp("createdAt").defaultNow().notNull(),
+  updatedAt:      timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastLogin:      timestamp("lastLogin"),
+});
+
+export type Technician = typeof technicians.$inferSelect;
+export type InsertTechnician = typeof technicians.$inferInsert;
+
+/**
  * Documentos dos clientes (relatórios, notas fiscais, etc)
  */
 export const clientDocuments = mysqlTable("clientDocuments", {
@@ -272,6 +294,9 @@ export const workOrders = mysqlTable("workOrders", {
   clientName: varchar("clientName", { length: 255 }),
   signedAt: timestamp("signedAt"),
   
+  // Técnico responsável
+  technicianId: int("technicianId"),
+
   // Portal do Cliente
   sharedWithPortal: int("sharedWithPortal").default(0).notNull(),
   portalTab: varchar("portalTab", { length: 50 }),
@@ -290,7 +315,7 @@ export const workOrderHistory = mysqlTable("workOrderHistory", {
   id: int("id").autoincrement().primaryKey(),
   workOrderId: int("workOrderId").notNull(),
   changedBy: varchar("changedBy", { length: 100 }).notNull(),
-  changedByType: mysqlEnum("changedByType", ["admin", "client"]).notNull(),
+  changedByType: mysqlEnum("changedByType", ["admin", "client", "technician"]).notNull(),
   previousStatus: varchar("previousStatus", { length: 50 }),
   newStatus: varchar("newStatus", { length: 50 }).notNull(),
   notes: text("notes"),
