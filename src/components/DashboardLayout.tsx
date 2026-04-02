@@ -422,11 +422,12 @@ function DashboardLayoutContent({
           <SidebarContent className="py-2">
             {/* Percorre cada grupo do menu (ex: "Visão Geral", "Clientes"...) */}
             {navMain.map((group) => (
-              <SidebarGroup key={group.label} className="px-2 py-1 relative isolate">
+              <SidebarGroup key={group.label} className="px-2 py-2 mt-4 first:mt-0 relative isolate"> // Adiciona margem se não for o primeiro grupo
 
                 {/* Título do grupo em letras maiúsculas pequenas */}
                 {/* relative z-10 garante que a label fique na frente dos itens do grupo anterior */}
-                <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-widest mb-1 mt-2 relative z-10">
+                <SidebarGroupLabel 
+                  className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-widest mb-1 mt-2">
                   {group.label}
                 </SidebarGroupLabel>
 
