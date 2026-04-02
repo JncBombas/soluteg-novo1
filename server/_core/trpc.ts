@@ -43,3 +43,23 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+// Middleware para autenticação do admin local (email/senha + JWT cookie)
+export const adminLocalProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.adminId) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin não autenticado" });
+    }
+
+    const adminId = ctx.adminId as number;
+
+    return next({
+      ctx: {
+        ...ctx,
+        adminId,
+      },
+    });
+  }),
+);

@@ -1,11 +1,11 @@
 import * as db from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { hashPassword } from "../adminAuth";
 
 export const clientsRouter = router({
-  list: publicProcedure
+  list: adminLocalProcedure
     .input(z.object({
       adminId: z.number(),
       search: z.string().optional(),
@@ -14,7 +14,7 @@ export const clientsRouter = router({
       return await db.getClientsByAdminId(input.adminId);
     }),
 
-  create: publicProcedure
+  create: adminLocalProcedure
     .input(z.object({
       adminId: z.number(),
       name: z.string().min(1),
@@ -60,7 +60,7 @@ export const clientsRouter = router({
       return { success: true, message: "Cliente criado com sucesso" };
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       name: z.string().optional(),
@@ -85,7 +85,7 @@ export const clientsRouter = router({
       }
     }),
 
-  updatePassword: publicProcedure
+  updatePassword: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       newPassword: z.string().min(6),
@@ -103,7 +103,7 @@ export const clientsRouter = router({
       }
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({
       id: z.number().optional(),
       clientId: z.number().optional(),
@@ -118,19 +118,19 @@ export const clientsRouter = router({
       return { success: true, message: "Cliente deletado com sucesso" };
     }),
 
-  getById: publicProcedure
+  getById: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getClientById(input.id);
     }),
 
-  getByUsername: publicProcedure
+  getByUsername: adminLocalProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ input }) => {
       return await db.getClientByUsername(input.username);
     }),
 
-  broadcastMessage: publicProcedure
+  broadcastMessage: adminLocalProcedure
     .input(z.object({
       adminId: z.number(),
       message: z.string().min(1),

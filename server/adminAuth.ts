@@ -130,8 +130,11 @@ export async function authenticateAdmin(username: string, password: string) {
     throw new Error('Admin não encontrado ou inativo');
   }
 
-  // Compara a senha digitada com o hash salvo no banco
-  const isPasswordValid = await verifyPassword(password, admin.password);
+  // Suporta senhas em texto puro (legado) e hasheadas com bcrypt
+  const isBcryptHash = admin.password.startsWith("$2b$") || admin.password.startsWith("$2a$");
+  const isPasswordValid = isBcryptHash
+    ? await verifyPassword(password, admin.password)
+    : password === admin.password;
 
   if (!isPasswordValid) {
     throw new Error('Senha incorreta');

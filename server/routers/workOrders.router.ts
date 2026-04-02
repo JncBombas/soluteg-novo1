@@ -1,10 +1,10 @@
 import * as db from "../db";
 import { sendWhatsappAlert } from "../whatsapp";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const workOrdersRouter = router({
-  list: publicProcedure
+  list: adminLocalProcedure
     .input(z.object({
       clientId: z.number().optional(),
       adminId: z.number().optional(),
@@ -29,7 +29,7 @@ export const workOrdersRouter = router({
       return await workOrdersDb.getWorkOrderById(input.id);
     }),
 
-  create: publicProcedure
+  create: adminLocalProcedure
     .input(z.object({
       adminId: z.number(),
       clientId: z.number(),
@@ -75,7 +75,7 @@ export const workOrdersRouter = router({
       return { success: true, message: "OS criada com sucesso", id: osId };
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().optional(),
@@ -142,7 +142,7 @@ export const workOrdersRouter = router({
       return await workOrdersDb.getWorkOrderHistory(input.workOrderId);
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -150,7 +150,7 @@ export const workOrdersRouter = router({
       return { success: true, message: "OS deletada com sucesso" };
     }),
 
-  deleteBatch: publicProcedure
+  deleteBatch: adminLocalProcedure
     .input(z.object({ ids: z.array(z.number()).min(1) }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -193,7 +193,7 @@ export const workOrdersRouter = router({
       return { success: true, message: "OS concluida com sucesso" };
     }),
 
-  cancelRecurrence: publicProcedure
+  cancelRecurrence: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       cancelFuture: z.boolean(),
@@ -462,52 +462,52 @@ export const workOrdersRouter = router({
 
   // ==================== METRICS ====================
   metrics: router({
-    getStats: publicProcedure.query(async () => {
+    getStats: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getWorkOrderStats();
     }),
 
-    getByStatus: publicProcedure.query(async () => {
+    getByStatus: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getWorkOrdersByStatus();
     }),
 
-    getByType: publicProcedure.query(async () => {
+    getByType: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getWorkOrdersByType();
     }),
 
-    getAverageCompletionTime: publicProcedure.query(async () => {
+    getAverageCompletionTime: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getAverageCompletionTime();
     }),
 
-    getFinancialStats: publicProcedure.query(async () => {
+    getFinancialStats: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getFinancialStats();
     }),
 
-    getByMonth: publicProcedure.query(async () => {
+    getByMonth: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getWorkOrdersByMonth();
     }),
 
-    getCompletionRate: publicProcedure.query(async () => {
+    getCompletionRate: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getCompletionRate();
     }),
 
-    getDelayed: publicProcedure.query(async () => {
+    getDelayed: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getDelayedWorkOrders();
     }),
 
-    getTopClients: publicProcedure.query(async () => {
+    getTopClients: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getTopClientsByWorkOrders();
     }),
 
-    getMaterialsCostByWorkOrder: publicProcedure.query(async () => {
+    getMaterialsCostByWorkOrder: adminLocalProcedure.query(async () => {
       const metrics = await import("../workOrdersMetrics");
       return await metrics.getMaterialsCostByWorkOrder();
     }),
@@ -532,7 +532,7 @@ export const workOrdersRouter = router({
       };
     }),
 
-  exportBatch: publicProcedure
+  exportBatch: adminLocalProcedure
     .input(z.object({ ids: z.array(z.number()) }))
     .mutation(async ({ input }) => {
       const JSZip = (await import('jszip')).default;

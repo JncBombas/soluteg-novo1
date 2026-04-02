@@ -78,6 +78,9 @@ import { useLocation, Link } from "wouter";
 // Tela de carregamento que aparece enquanto verifica o login
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 
+// Cliente tRPC para chamar endpoints do servidor
+import { trpc } from "@/lib/trpc";
+
 // Componente de botão pronto
 import { Button } from "./ui/button";
 
@@ -256,12 +259,43 @@ function DashboardLayoutContent({
   children,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
-  // Pega o usuário logado e a função de logout
-  const { user, logout } = useAuth();
+  // Pega o usuário logado
+  const { user } = useAuth();
 
   // location = URL atual (ex: "/admin/clientes")
   // setLocation = função para navegar para outra URL
   const [location, setLocation] = useLocation();
+
+  // Verifica se o admin está autenticado via cookie (server-side)
+  const adminMeQuery = trpc.adminAuth.me.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Guard: se a query falhou com UNAUTHORIZED, limpa localStorage e redireciona
+  useEffect(() => {
+    if (adminMeQuery.error) {
+      localStorage.removeItem("adminId");
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminName");
+      localStorage.removeItem("adminCustomLabel");
+      setLocation("/admin/login");
+    }
+  }, [adminMeQuery.error]);
+
+  const logoutMutation = trpc.adminAuth.logout.useMutation({
+    onSettled: () => {
+      localStorage.removeItem("adminId");
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminName");
+      localStorage.removeItem("adminCustomLabel");
+      setLocation("/admin/login");
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   // state = "expanded" ou "collapsed" (sidebar aberta ou fechada)
   // toggleSidebar = função que alterna entre os dois estados
@@ -526,7 +560,7 @@ function DashboardLayoutContent({
                 <DropdownMenuSeparator />
                 {/* Item "Sair" — chama a função de logout (vermelho para indicar perigo) */}
                 <DropdownMenuItem
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="cursor-pointer text-destructive focus:text-destructive gap-2"
                 >
                   <LogOut className="h-4 w-4" />
@@ -622,7 +656,7 @@ function DashboardLayoutContent({
               <DropdownMenuSeparator />
               {/* Item "Sair" em vermelho */}
               <DropdownMenuItem
-                onClick={logout}
+                onClick={handleLogout}
                 className="cursor-pointer text-destructive focus:text-destructive gap-2"
               >
                 <LogOut className="h-4 w-4" />

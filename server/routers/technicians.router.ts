@@ -1,17 +1,17 @@
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { hashPassword } from "../adminAuth";
 import * as technicianDb from "../technicianDb";
 
 export const techniciansRouter = router({
-  list: publicProcedure
+  list: adminLocalProcedure
     .input(z.object({ adminId: z.number() }))
     .query(async ({ input }) => {
       return await technicianDb.getTechniciansByAdminId(input.adminId);
     }),
 
-  getById: publicProcedure
+  getById: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const t = await technicianDb.getTechnicianById(input.id);
@@ -20,7 +20,7 @@ export const techniciansRouter = router({
       return rest;
     }),
 
-  create: publicProcedure
+  create: adminLocalProcedure
     .input(z.object({
       adminId:        z.number(),
       name:           z.string().min(1),
@@ -51,7 +51,7 @@ export const techniciansRouter = router({
       return { success: true, message: "Técnico criado com sucesso" };
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id:             z.number(),
       name:           z.string().optional(),
@@ -67,7 +67,7 @@ export const techniciansRouter = router({
       return { success: true, message: "Técnico atualizado com sucesso" };
     }),
 
-  updatePassword: publicProcedure
+  updatePassword: adminLocalProcedure
     .input(z.object({ id: z.number(), newPassword: z.string().min(6) }))
     .mutation(async ({ input }) => {
       const hashedPw = await hashPassword(input.newPassword);
@@ -75,7 +75,7 @@ export const techniciansRouter = router({
       return { success: true, message: "Senha atualizada com sucesso" };
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await technicianDb.deleteTechnician(input.id);

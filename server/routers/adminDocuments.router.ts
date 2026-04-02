@@ -1,15 +1,15 @@
 import * as db from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const adminDocumentsRouter = router({
-  list: publicProcedure
+  list: adminLocalProcedure
     .input(z.object({ adminId: z.number() }))
     .query(async ({ input }) => {
       return await db.getDocumentsByAdminId(input.adminId);
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().min(1),
@@ -22,7 +22,7 @@ export const adminDocumentsRouter = router({
       return { success: true, message: "Documento atualizado com sucesso" };
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteDocument(input.id);

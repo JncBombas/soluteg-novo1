@@ -14,7 +14,7 @@ import * as db from "../db";
 import { getSessionCookieOptions } from "../_core/cookies";
 
 // "publicProcedure" = endpoint acessível sem autenticação | "router" = agrupa os endpoints
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 
 // Zod é uma biblioteca de validação de dados — garante que os dados recebidos são do tipo certo
 import { z } from "zod";
@@ -29,6 +29,16 @@ import crypto from "crypto";
 import { authenticateAdmin, hashPassword, verifyPassword } from "../adminAuth";
 
 export const adminAuthRouter = router({
+
+  // ──────────────────────────────────────────────
+  // ME — retorna dados do admin autenticado via cookie
+  // ──────────────────────────────────────────────
+  me: adminLocalProcedure.query(async ({ ctx }) => {
+    const admin = await db.getAdminById(ctx.adminId);
+    if (!admin) throw new TRPCError({ code: "UNAUTHORIZED", message: "Admin não encontrado" });
+    const { password: _pw, ...rest } = admin;
+    return rest;
+  }),
 
   // ──────────────────────────────────────────────
   // LOGIN
@@ -140,8 +150,11 @@ export const adminAuthRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
       }
 
-      // Compara a senha digitada com o hash salvo no banco (verifyPassword usa bcrypt internamente)
-      const isValid = await verifyPassword(input.currentPassword, admin.password);
+      // Suporta senhas em texto puro (legado) e hasheadas com bcrypt
+      const isBcryptHash = admin.password.startsWith("$2b$") || admin.password.startsWith("$2a$");
+      const isValid = isBcryptHash
+        ? await verifyPassword(input.currentPassword, admin.password)
+        : input.currentPassword === admin.password;
 
       if (!isValid) {
         // Se a senha atual estiver errada, rejeita a operação

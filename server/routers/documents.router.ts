@@ -1,5 +1,5 @@
 import * as db from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const documentsRouter = router({
@@ -15,7 +15,7 @@ export const documentsRouter = router({
       return await db.getDocumentsByClientIdWithFilters(input);
     }),
 
-  listAll: publicProcedure
+  listAll: adminLocalProcedure
     .input(z.object({
       adminId: z.number(),
       search: z.string().optional(),
@@ -28,7 +28,7 @@ export const documentsRouter = router({
       return await db.getAllDocumentsWithFilters(input);
     }),
 
-  create: publicProcedure
+  create: adminLocalProcedure
     .input(z.object({
       clientId: z.number(),
       adminId: z.number(),
@@ -45,7 +45,7 @@ export const documentsRouter = router({
       return { success: true, message: "Documento enviado com sucesso" };
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteClientDocument(input.id);

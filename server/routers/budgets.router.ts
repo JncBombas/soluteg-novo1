@@ -1,11 +1,11 @@
 import * as db from "../db";
 import { sendWhatsappAlert, sendWhatsappAlertWithPDF, sendWhatsappToNumberWithPDF } from "../whatsapp";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 export const budgetsRouter = router({
-  list: publicProcedure
+  list: adminLocalProcedure
     .input(z.object({
       adminId: z.number().optional(),
       clientId: z.number().optional(),
@@ -21,7 +21,7 @@ export const budgetsRouter = router({
       return await budgetsDb.listBudgets(input);
     }),
 
-  getById: publicProcedure
+  getById: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
@@ -67,7 +67,7 @@ export const budgetsRouter = router({
       return { success: true, ...result };
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       serviceType: z.enum(["instalacao", "manutencao", "corretiva", "preventiva", "rotina", "emergencial"]).optional(),
@@ -90,7 +90,7 @@ export const budgetsRouter = router({
       return { success: true, message: "Orçamento atualizado com sucesso" };
     }),
 
-  saveItems: publicProcedure
+  saveItems: adminLocalProcedure
     .input(z.object({
       budgetId: z.number(),
       items: z.array(z.object({
@@ -119,7 +119,7 @@ export const budgetsRouter = router({
       return await budgetsDb.getBudgetItems(input.budgetId);
     }),
 
-  finalize: publicProcedure
+  finalize: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       technicianName: z.string().min(1),
@@ -212,21 +212,21 @@ export const budgetsRouter = router({
       return { success: true, message: "Orçamento reprovado" };
     }),
 
-  getHistory: publicProcedure
+  getHistory: adminLocalProcedure
     .input(z.object({ budgetId: z.number() }))
     .query(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
       return await budgetsDb.getBudgetHistory(input.budgetId);
     }),
 
-  getMetrics: publicProcedure
+  getMetrics: adminLocalProcedure
     .input(z.object({ adminId: z.number() }))
     .query(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
       return await budgetsDb.getBudgetMetrics(input.adminId);
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
@@ -252,7 +252,7 @@ export const budgetsRouter = router({
       };
     }),
 
-  generateOs: publicProcedure
+  generateOs: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
