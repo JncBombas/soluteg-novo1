@@ -112,8 +112,8 @@ const navMain = [
     items: [
       { icon: Users, label: "Clientes", path: "/admin/clientes" },
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
-      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },
       { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
+      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },      
     ],
   },
   {
