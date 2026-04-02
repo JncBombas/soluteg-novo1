@@ -418,57 +418,65 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          {/* ── NAVEGAÇÃO (LISTA DE LINKS) ── */}
-          <SidebarContent className="flex-1 py-2 overflow-y-auto custom-scrollbar">
-            {/* Percorre cada grupo do menu (ex: "Visão Geral", "Clientes"...) */}
-            {navMain.map((group) => (
-              <SidebarGroup key={group.label} className="px-2 py-2 mt-2 first:mt-0 relative"> {/* Adiciona margem se não for o primeiro grupo*/}
+          {/* ── NAVEGAÇÃO (LISTA DE LINKS) ── 
+          // ============================================================
+          // NAVEGAÇÃO (LISTA DE LINKS)
+          // ============================================================ */}
+<SidebarContent className="py-2 flex-1 overflow-y-auto custom-scrollbar">
+  {navMain.map((group, index) => (
+    // O div abaixo com 'mt-6' garante que um grupo empurre o outro para baixo,
+    // evitando que a label "EQUIPE" suba para cima do grupo "CLIENTES".
+    <div key={group.label} className={`${index !== 0 ? "mt-6" : "mt-2"}`}>
+      
+      <SidebarGroup className="px-2 py-0 relative">
+        {/* A Label agora tem 'pointer-events-none' para garantir que, 
+          mesmo que ela encoste no item de cima, o clique "atravesse" ela.
+          Removido 'relative' e 'z-10' para não flutuar sobre os itens.
+        */}
+        <SidebarGroupLabel 
+          className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-widest mb-2 px-2 select-none pointer-events-none"
+        >
+          {group.label}
+        </SidebarGroupLabel>
 
-                {/* Título do grupo em letras maiúsculas pequenas */}
-                {/* relative z-10 garante que a label fique na frente dos itens do grupo anterior */}
-                <SidebarGroupLabel 
-                  className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-widest mb-1 mt-2">
-                  {group.label}
-                </SidebarGroupLabel>
+        <SidebarMenu>
+          {group.items.map((item) => {
+            // Verifica se este item corresponde à página atual ou sub-rotas
+            const isActive = location === item.path || location.startsWith(item.path + "/");
 
-                <SidebarMenu>
-                  {/* Percorre cada item dentro do grupo */}
-                  {group.items.map((item) => {
-                    // Verifica se este item corresponde à página atual
-                    // startsWith cobre sub-rotas (ex: /admin/clientes/123)
-                    const isActive = location === item.path || location.startsWith(item.path + "/");
-
-                    return (
-                      <SidebarMenuItem key={item.path}>
-                        <SidebarMenuButton
-                          asChild        // repassa os estilos para o filho (Link)
-                          isActive={isActive} // destaca visualmente se for a página ativa
-                          tooltip={item.label} // texto que aparece ao passar o mouse (quando recolhida)
-                          className="h-8 gap-2 text-sm font-normal rounded-lg transition-all"
-                        >
-                          {/* Link de navegação — não recarrega a página */}
-                          <Link href={item.path}>
-                            {/* Ícone: azul se ativo, cinza se não */}
-                            <item.icon
-                              className={`h-4 w-4 shrink-0 ${
-                                isActive
-                                  ? "text-primary"
-                                  : "text-sidebar-foreground/60"
-                              }`}
-                            />
-                            {/* Texto: negrito se ativo, normal se não */}
-                            <span className={`truncate ${isActive ? "font-medium" : ""}`}>
-                              {item.label}
-                            </span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroup>
-            ))}
-          </SidebarContent>
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.label}
+                  // 'h-9' mantém uma boa área de clique. 
+                  // Se o menu ficar muito longo para sua tela, mude para 'h-8'.
+                  className="h-9 gap-2.5 text-sm font-normal rounded-lg transition-all"
+                >
+                  <Link href={item.path}>
+                    {/* Ícone com cor dinâmica (azul se ativo) */}
+                    <item.icon
+                      className={`h-4 w-4 shrink-0 ${
+                        isActive
+                          ? "text-primary"
+                          : "text-sidebar-foreground/60"
+                      }`}
+                    />
+                    {/* Texto com peso dinâmico (médio se ativo) */}
+                    <span className={`truncate ${isActive ? "font-medium" : ""}`}>
+                      {item.label}
+                    </span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroup>
+    </div>
+  ))}
+</SidebarContent>
 
           {/* ── RODAPÉ DA SIDEBAR — PERFIL DO USUÁRIO ── */}
           <SidebarFooter className="border-t border-sidebar-border p-3">
