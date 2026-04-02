@@ -4,7 +4,7 @@ import { publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import crypto from "crypto";
-import { authenticateAdmin, hashPassword } from "../adminAuth";
+import { authenticateAdmin, hashPassword, verifyPassword } from "../adminAuth";
 
 export const adminAuthRouter = router({
   login: publicProcedure
@@ -67,9 +67,8 @@ export const adminAuthRouter = router({
       if (!admin) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
       }
-      try {
-        await authenticateAdmin(admin.email, input.currentPassword);
-      } catch (error) {
+      const isValid = await verifyPassword(input.currentPassword, admin.password);
+      if (!isValid) {
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual incorreta" });
       }
       const hashedPassword = await hashPassword(input.newPassword);
