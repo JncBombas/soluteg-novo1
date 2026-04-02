@@ -111,9 +111,9 @@ const navMain = [
     label: "Clientes",
     items: [
       { icon: Users, label: "Clientes", path: "/admin/clientes" },
+      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" }, 
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
-      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
-      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },      
+      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },           
     ],
   },
   {
@@ -419,10 +419,10 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           {/* ── NAVEGAÇÃO (LISTA DE LINKS) ── */}
-          <SidebarContent className="py-2">
+          <SidebarContent className="flex-1 py-2 overflow-y-auto custom-scrollbar">
             {/* Percorre cada grupo do menu (ex: "Visão Geral", "Clientes"...) */}
             {navMain.map((group) => (
-              <SidebarGroup key={group.label} className="px-2 py-2 mt-4 first:mt-0 relative"> {/* Adiciona margem se não for o primeiro grupo*/}
+              <SidebarGroup key={group.label} className="px-2 py-2 mt-2 first:mt-0 relative"> {/* Adiciona margem se não for o primeiro grupo*/}
 
                 {/* Título do grupo em letras maiúsculas pequenas */}
                 {/* relative z-10 garante que a label fique na frente dos itens do grupo anterior */}
@@ -444,7 +444,7 @@ function DashboardLayoutContent({
                           asChild        // repassa os estilos para o filho (Link)
                           isActive={isActive} // destaca visualmente se for a página ativa
                           tooltip={item.label} // texto que aparece ao passar o mouse (quando recolhida)
-                          className="h-9 gap-2.5 text-sm font-normal rounded-lg transition-all"
+                          className="h-8 gap-2 text-sm font-normal rounded-lg transition-all"
                         >
                           {/* Link de navegação — não recarrega a página */}
                           <Link href={item.path}>
