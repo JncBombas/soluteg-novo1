@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // ICONS: Biblioteca Lucide para os símbolos visuais
 import { 
-  Plus, Eye, Edit2, Trash2, Search, Filter, Download, 
+  Plus, Eye, Edit2, Trash2, Search, Filter, Download,
   Loader2, ArrowUpDown, ChevronLeft, ChevronRight, User, Calendar, AlertCircle,
-  ArrowLeft 
 } from "lucide-react";
 import { toast } from "sonner"; // Notificações flutuantes
 // ALERT DIALOG: Janelas de confirmação (ex: "Tem certeza que deseja excluir?")
@@ -102,16 +101,6 @@ export default function AdminWorkOrders() {
               </Button>
             )}
             
-            {/* Botão de retorno ao Dashboard principal */}
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/admin/dashboard")}
-              className="gap-2 text-slate-600 hover:text-slate-900"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Voltar ao Dashboard
-            </Button>
-
             {/* Botão para criar nova OS */}
             <Button onClick={() => navigate("/admin/work-orders/new")} >
                Nova OS

@@ -272,11 +272,9 @@ function DashboardLayoutContent({
           <SidebarContent className="py-2">
             {navMain.map((group) => (
               <SidebarGroup key={group.label} className="px-2 py-1">
-                {!isCollapsed && (
-                  <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-foreground/40 uppercase tracking-widest px-2 mb-1">
-                    {group.label}
-                  </SidebarGroupLabel>
-                )}
+                <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-foreground/50 uppercase tracking-widest mb-1">
+                  {group.label}
+                </SidebarGroupLabel>
                 <SidebarMenu>
                   {group.items.map((item) => {
                     const isActive = location === item.path || location.startsWith(item.path + "/");
@@ -296,7 +294,7 @@ function DashboardLayoutContent({
                                   : "text-sidebar-foreground/60"
                               }`}
                             />
-                            <span className={isActive ? "font-medium" : ""}>
+                            <span className={`truncate ${isActive ? "font-medium" : ""}`}>
                               {item.label}
                             </span>
                           </Link>
