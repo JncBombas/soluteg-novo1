@@ -582,12 +582,17 @@ export const workOrdersRouter = router({
       const cliente = await db.getClientById(wo.clientId);
       if (!cliente?.phone) throw new Error("Cliente sem telefone cadastrado");
 
-      const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
+      const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
+      const portalLinha = cliente.type === "com_portal"
+        ? `\n🔗 *Acesse seu portal:*\nhttps://jnc.soluteg.com.br/client/portal`
+        : "";
+
       const msg =
+        `${saudacao}\n\n` +
         `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
         `🏢 Condomínio: ${wo.clientName || cliente.name}\n` +
-        `📌 Status: ${wo.status}\n\n` +
-        `🔗 *Acesse seu portal:*\n${portalUrl}`;
+        `📌 Status: ${wo.status}` +
+        portalLinha;
 
       const pdfGen = await import("../pdfGenerator");
       const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
@@ -639,9 +644,14 @@ export const workOrdersRouter = router({
         portalTab = "visita";
       }
 
+      const clientePortal = await db.getClientById(wo.clientId);
+      if (clientePortal?.type === "sem_portal") {
+        throw new Error("Este cliente não possui portal. Use a opção de envio por WhatsApp.");
+      }
+
       await workOrdersDb.shareWorkOrderToPortal(input.id, portalTab);
 
-      const cliente = await db.getClientById(wo.clientId);
+      const cliente = clientePortal;
       if (cliente?.phone) {
         const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
         const tabLabel: Record<string, string> = {
@@ -650,9 +660,10 @@ export const workOrdersRouter = router({
           servico: "Serviços",
           orcamentos: "Orçamentos",
         };
+        const saudacaoPortal = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
         const msg =
           `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
-          `Olá, ${cliente.name}!\n\n` +
+          `${saudacaoPortal}\n\n` +
           `A OS *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
           `🔗 Acesse: ${portalUrl}\n` +
           `👤 Login: ${cliente.username}\n` +
