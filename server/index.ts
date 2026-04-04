@@ -14,6 +14,7 @@ import { registerOAuthRoutes } from "./_core/oauth";   // Rotas de autenticaçã
 import { appRouter } from "./routers";                 // Todas as rotas tRPC do sistema
 import { createContext } from "./_core/context";       // Contexto compartilhado entre as requisições
 import { setupVite, serveStatic } from "./vite";       // Configuração do frontend (React)
+import { initMqtt, addSseClient, removeSseClient } from "./mqttService"; // MQTT + SSE
  
 // ============================================================
 // 📦 CONFIGURAÇÃO DO MULTER (Gerenciador de Upload de Arquivos)
@@ -409,6 +410,102 @@ async function startServer() {
 
 
   // ============================================================
+  // 📡 SSE: Atualizações em Tempo Real — Nível de Caixa d'Água
+  // Endereço: GET /api/water-tank-sse?clientId=123
+  //
+  // O frontend abre esta rota e mantém a conexão aberta.
+  // Sempre que um sensor publicar via MQTT, o servidor empurra
+  // um evento JSON para todos os clientes conectados com aquele clientId.
+  // ============================================================
+  app.get("/api/water-tank-sse", (req, res) => {
+    const clientId = parseInt(req.query.clientId as string);
+    if (!clientId) {
+      return res.status(400).json({ message: "clientId é obrigatório" });
+    }
+
+    res.set({
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // Evita buffering em proxies (nginx)
+    });
+    res.flushHeaders();
+
+    // Evento inicial para confirmar conexão
+    res.write(`data: ${JSON.stringify({ type: "connected", clientId })}\n\n`);
+
+    addSseClient(clientId, res);
+
+    // Heartbeat a cada 25s para manter a conexão viva
+    const heartbeat = setInterval(() => {
+      try { res.write(": ping\n\n"); } catch { /* conexão fechada */ }
+    }, 25_000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      removeSseClient(clientId, res);
+    });
+  });
+
+
+  // ============================================================
+  // 📝 ROTA: Registro Manual de Nível de Caixa d'Água
+  // Endereço: POST /api/water-tank-monitoring
+  //
+  // Usado enquanto o sensor físico ainda não está instalado,
+  // ou para sobrescrever um valor manualmente.
+  // ============================================================
+  app.post("/api/water-tank-monitoring", async (req, res) => {
+    try {
+      const { clientId, adminId, tankName, levelPercentage, capacity, notes } = req.body;
+
+      if (!clientId || !tankName || levelPercentage == null) {
+        return res.status(400).json({ message: "clientId, tankName e levelPercentage são obrigatórios" });
+      }
+
+      const level = Math.max(0, Math.min(100, parseInt(levelPercentage)));
+      if (isNaN(level)) {
+        return res.status(400).json({ message: "levelPercentage deve ser um número entre 0 e 100" });
+      }
+
+      // Resolver adminId se não fornecido
+      let resolvedAdminId = adminId;
+      if (!resolvedAdminId) {
+        const { getClientById } = await import("./db");
+        const clientRecord = await getClientById(parseInt(clientId));
+        if (!clientRecord) return res.status(404).json({ message: "Cliente não encontrado" });
+        resolvedAdminId = clientRecord.adminId;
+      }
+
+      const { saveWaterTankReading } = await import("./waterTankDb");
+      await saveWaterTankReading({
+        clientId: parseInt(clientId),
+        adminId: resolvedAdminId,
+        tankName,
+        currentLevel: level,
+        capacity: capacity ? parseInt(capacity) : null,
+        notes: notes || null,
+      });
+
+      // Broadcast via SSE para atualizar o portal em tempo real
+      const { broadcastTankUpdate } = await import("./mqttService");
+      broadcastTankUpdate(parseInt(clientId), {
+        type: "level_update",
+        tankName,
+        currentLevel: level,
+        capacity: capacity ? parseInt(capacity) : null,
+        measuredAt: new Date().toISOString(),
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Erro ao registrar nível:", error);
+      res.status(500).json({ message: "Erro ao registrar monitoramento" });
+    }
+  });
+
+
+  // ============================================================
   // 📡 INTEGRAÇÃO tRPC (Lógica Principal do Sistema)
   // Endereço: /api/trpc/*
   //
@@ -449,6 +546,7 @@ async function startServer() {
     console.log(`🚀 SERVIDOR JNC ELÉTRICA RODANDO`);
     console.log(`- Acesse: http://jnc.soluteg.com.br`);
     console.log("=========================================");
+    initMqtt(); // Inicia o subscriber MQTT (desabilita sozinho se MQTT_BROKER_URL não estiver no .env)
   });
 }
  
