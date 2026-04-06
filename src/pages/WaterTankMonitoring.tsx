@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { LogOut, Droplet, AlertTriangle, Plus, Loader2, ArrowLeft, Wifi, WifiOff } from "lucide-react";
-import { toast } from "sonner";
+import { LogOut, Droplet, AlertTriangle, Loader2, ArrowLeft, Wifi, WifiOff } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 interface WaterTank {
@@ -35,11 +30,8 @@ function getLevelStatus(pct: number) {
 export default function WaterTankMonitoring() {
   const [clientId, setClientId] = useState<number | null>(null);
   const [clientName, setClientName] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [sseConnected, setSseConnected] = useState(false);
   const [tanks, setTanks] = useState<WaterTank[]>([]);
-  const [formData, setFormData] = useState({ tankName: "", levelPercentage: 50, capacity: "", notes: "" });
   const sseRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -115,34 +107,6 @@ export default function WaterTankMonitoring() {
     window.location.href = "/";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.tankName.trim()) { toast.error("Nome da caixa é obrigatório"); return; }
-
-    setIsSubmitting(true);
-    try {
-      const res = await fetch("/api/water-tank-monitoring", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId,
-          tankName: formData.tankName,
-          levelPercentage: formData.levelPercentage,
-          capacity: formData.capacity || undefined,
-          notes: formData.notes || undefined,
-        }),
-      });
-      if (!res.ok) throw new Error();
-      toast.success("Registro salvo!");
-      setFormData({ tankName: "", levelPercentage: 50, capacity: "", notes: "" });
-      setIsDialogOpen(false);
-    } catch {
-      toast.error("Erro ao salvar registro");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -170,63 +134,12 @@ export default function WaterTankMonitoring() {
             <Button onClick={() => window.location.href = "/client/portal"} variant="outline" size="sm">
               <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
             </Button>
-            <Button onClick={() => setIsDialogOpen(true)} className="bg-orange-500 hover:bg-orange-600" size="sm">
-              <Plus className="w-4 h-4 mr-1" /> Novo Registro
-            </Button>
             <Button variant="outline" onClick={handleLogout} size="sm">
               <LogOut className="w-4 h-4 mr-1" /> Sair
             </Button>
           </div>
         </div>
       </div>
-
-      {/* Dialog de registro manual */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Registrar Nível de Água</DialogTitle>
-            <DialogDescription>Adicione um registro manual enquanto o sensor não está instalado.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="tankName">Nome da Caixa d'Água</Label>
-              <Input
-                id="tankName"
-                placeholder="Ex: Caixa Principal, Bloco A"
-                value={formData.tankName}
-                onChange={(e) => setFormData({ ...formData, tankName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Nível de Água (%)</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  type="number" min="0" max="100"
-                  value={formData.levelPercentage}
-                  onChange={(e) => setFormData({ ...formData, levelPercentage: parseInt(e.target.value) })}
-                  className="flex-1"
-                />
-                <span className="text-lg font-bold text-slate-900 min-w-12">{formData.levelPercentage}%</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                <div className={`h-full ${getLevelColor(formData.levelPercentage)} transition-all`} style={{ width: `${formData.levelPercentage}%` }} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Capacidade (litros) — Opcional</Label>
-              <Input type="number" placeholder="Ex: 1000" value={formData.capacity} onChange={(e) => setFormData({ ...formData, capacity: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações — Opcional</Label>
-              <Textarea rows={3} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} />
-            </div>
-            <Button type="submit" className="w-full bg-orange-500" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar Registro"}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
 
       {/* Cards */}
       <div className="container max-w-6xl mx-auto px-4 py-8">
@@ -286,11 +199,8 @@ export default function WaterTankMonitoring() {
           <Card>
             <CardContent className="p-12 text-center">
               <Droplet className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhuma caixa monitorada</h3>
-              <p className="text-slate-600 mb-6">Adicione um registro manual ou aguarde o primeiro envio do sensor.</p>
-              <Button onClick={() => setIsDialogOpen(true)} className="bg-orange-500 hover:bg-orange-600">
-                <Plus className="w-4 h-4 mr-1" /> Criar Primeiro Registro
-              </Button>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Aguardando sensores</h3>
+              <p className="text-slate-600">Os níveis aparecerão aqui automaticamente quando os sensores enviarem dados.</p>
             </CardContent>
           </Card>
         )}
