@@ -3,6 +3,80 @@ import { getDb } from "./db";
 import { waterTankSensors } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
+export async function getSensorById(sensorId: number, adminId: number): Promise<{
+  id: number;
+  clientId: number;
+  clientName: string;
+  clientPhone: string | null;
+  tankName: string;
+  capacity: number | null;
+  notes: string | null;
+  deadVolumePct: number;
+  alarm1Pct: number;
+  alarm2Pct: number;
+  alertPhone: string | null;
+  active: number;
+  createdAt: Date;
+} | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [rows] = await db.execute(sql`
+    SELECT s.id, s.clientId, c.name AS clientName, c.phone AS clientPhone,
+           s.tankName, s.capacity, s.notes,
+           s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alertPhone,
+           s.active, s.createdAt
+    FROM waterTankSensors s
+    LEFT JOIN clients c ON c.id = s.clientId
+    WHERE s.id = ${sensorId} AND s.adminId = ${adminId}
+    LIMIT 1
+  `);
+  const r = (rows as any[])[0];
+  return r ?? null;
+}
+
+export async function getSensorReadingHistory(
+  clientId: number,
+  tankName: string,
+  limit = 200,
+): Promise<Array<{ id: number; currentLevel: number; measuredAt: Date }>> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const [rows] = await db.execute(sql`
+    SELECT id, currentLevel, measuredAt
+    FROM waterTankMonitoring
+    WHERE clientId = ${clientId} AND tankName = ${tankName}
+    ORDER BY measuredAt DESC
+    LIMIT ${limit}
+  `);
+  return (rows as any[]).reverse();
+}
+
+export async function getSensorAlertLog(
+  sensorId: number,
+  limit = 50,
+): Promise<Array<{
+  id: number;
+  alertType: string;
+  triggerPct: number;
+  currentLevel: number;
+  sentTo: string | null;
+  sentAt: Date;
+}>> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const [rows] = await db.execute(sql`
+    SELECT id, alertType, triggerPct, currentLevel, sentTo, sentAt
+    FROM waterTankAlertLog
+    WHERE sensorId = ${sensorId}
+    ORDER BY sentAt DESC
+    LIMIT ${limit}
+  `);
+  return rows as any;
+}
+
 export type SensorData = {
   clientId: number;
   adminId: number;

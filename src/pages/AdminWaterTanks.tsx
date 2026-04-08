@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Droplet, Loader2, Copy, Check, Pencil, Trash2, AlertTriangle, Wifi, Flame } from "lucide-react";
+import { Plus, Droplet, Loader2, Copy, Check, Pencil, Trash2, AlertTriangle, Wifi, Flame, BarChart2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 interface SensorRow {
@@ -367,6 +367,10 @@ export default function AdminWaterTanks() {
                             <MqttTopicCell clientId={s.clientId} tankName={s.tankName} />
                           </TableCell>
                           <TableCell className="text-right space-x-1">
+                            <Button size="sm" variant="ghost" onClick={() => window.location.href = `/admin/sensores-agua/${s.id}`}
+                              className="text-orange-500 hover:text-orange-700" title="Dashboard">
+                              <BarChart2 className="w-4 h-4" />
+                            </Button>
                             <Button size="sm" variant="ghost" onClick={() => openEdit(s)} className="text-blue-500 hover:text-blue-700">
                               <Pencil className="w-4 h-4" />
                             </Button>

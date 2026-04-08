@@ -5,6 +5,9 @@ import {
   updateSensor,
   deleteSensor,
   listSensorsWithStatus,
+  getSensorById,
+  getSensorReadingHistory,
+  getSensorAlertLog,
 } from "../waterTankSensorDb";
 
 const sensorFields = {
@@ -61,5 +64,17 @@ export const waterTankAdminRouter = router({
     .mutation(async ({ input }) => {
       await deleteSensor(input.sensorId, input.adminId);
       return { ok: true };
+    }),
+
+  getSensorDashboard: adminLocalProcedure
+    .input(z.object({ adminId: z.number(), sensorId: z.number() }))
+    .query(async ({ input }) => {
+      const sensor = await getSensorById(input.sensorId, input.adminId);
+      if (!sensor) throw new Error("Sensor não encontrado");
+      const [history, alerts] = await Promise.all([
+        getSensorReadingHistory(sensor.clientId, sensor.tankName),
+        getSensorAlertLog(input.sensorId),
+      ]);
+      return { sensor, history, alerts };
     }),
 });
