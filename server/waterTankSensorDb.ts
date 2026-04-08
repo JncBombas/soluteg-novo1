@@ -21,7 +21,7 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
   const db = await getDb();
   if (!db) return null;
 
-  const [rows] = await db.execute(sql`
+  const result = await db.execute(sql`
     SELECT s.id, s.clientId, c.name AS clientName, c.phone AS clientPhone,
            s.tankName, s.capacity, s.notes,
            s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alertPhone,
@@ -31,7 +31,8 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
     WHERE s.id = ${sensorId} AND s.adminId = ${adminId}
     LIMIT 1
   `);
-  const r = (rows as any[])[0];
+  const rows = (result as unknown as [any[], any])[0] as any[];
+  const r = rows[0];
   return r ?? null;
 }
 
@@ -43,14 +44,15 @@ export async function getSensorReadingHistory(
   const db = await getDb();
   if (!db) return [];
 
-  const [rows] = await db.execute(sql`
+  const result = await db.execute(sql`
     SELECT id, currentLevel, measuredAt
     FROM waterTankMonitoring
     WHERE clientId = ${clientId} AND tankName = ${tankName}
     ORDER BY measuredAt DESC
     LIMIT ${limit}
   `);
-  return (rows as any[]).reverse();
+  const rows = (result as unknown as [any[], any])[0] as any[];
+  return rows.reverse();
 }
 
 export async function getSensorAlertLog(

@@ -181,17 +181,17 @@ export default function AdminWaterTanks() {
 
   const createMutation = trpc.waterTankAdmin.createSensor.useMutation({
     onSuccess: () => { setSuccess("Sensor cadastrado!"); setForm(defaultForm); setCreateOpen(false); refetch(); },
-    onError: (e) => setError(e.message),
+    onError: (e: { message: string }) => setError(e.message),
   });
 
   const updateMutation = trpc.waterTankAdmin.updateSensor.useMutation({
     onSuccess: () => { setSuccess("Sensor atualizado!"); setEditOpen(false); setEditTarget(null); refetch(); },
-    onError: (e) => setError(e.message),
+    onError: (e: { message: string }) => setError(e.message),
   });
 
   const deleteMutation = trpc.waterTankAdmin.deleteSensor.useMutation({
     onSuccess: () => { setSuccess("Sensor removido."); setDeleteTarget(null); refetch(); },
-    onError: (e) => setError(e.message),
+    onError: (e: { message: string }) => setError(e.message),
   });
 
   const parseForm = (f: SensorForm) => ({

@@ -27,6 +27,35 @@ export async function saveWaterTankReading(data: {
   });
 }
 
+export async function getAllTankHistories(
+  clientId: number,
+): Promise<Record<string, Array<{ level: number; time: Date }>>> {
+  const db = await getDb();
+  if (!db) return {};
+
+  // Fetch last 500 readings (covers ~50 per tank for up to 10 tanks), then group in JS
+  const result = await db.execute(sql`
+    SELECT tankName, currentLevel AS level, measuredAt AS time
+    FROM waterTankMonitoring
+    WHERE clientId = ${clientId}
+    ORDER BY measuredAt DESC
+    LIMIT 500
+  `);
+  const rows = (result as unknown as [any[], any])[0] as any[];
+
+  const byTank: Record<string, Array<{ level: number; time: Date }>> = {};
+  for (const row of rows) {
+    const name = row.tankName as string;
+    if (!byTank[name]) byTank[name] = [];
+    if (byTank[name].length < 60) {
+      byTank[name].push({ level: Number(row.level), time: row.time });
+    }
+  }
+  // Reverse to chronological order per tank
+  for (const k of Object.keys(byTank)) byTank[k].reverse();
+  return byTank;
+}
+
 export async function getLatestTankReadings(clientId: number): Promise<Array<{
   id: number | null;
   tankName: string;

@@ -119,7 +119,7 @@ export default function AdminWaterTankDashboard() {
   const mqttTopic = `soluteg/clients/${sensor.clientId}/tanks/${sensor.tankName}/level`;
 
   // chart data — limit to last 100 points
-  const chartData = history.slice(-100).map((r) => ({
+  const chartData = history.slice(-100).map((r: { id: number; currentLevel: number; measuredAt: Date | string }) => ({
     time: new Date(r.measuredAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
     nivel: r.currentLevel,
   }));
@@ -334,7 +334,7 @@ export default function AdminWaterTankDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {alerts.map((a) => {
+                    {alerts.map((a: { id: number; alertType: string; triggerPct: number; currentLevel: number; sentTo: string | null; sentAt: Date | string }) => {
                       const { label, color } = alertTypeLabel(a.alertType);
                       return (
                         <TableRow key={a.id}>
