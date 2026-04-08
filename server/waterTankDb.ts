@@ -14,8 +14,6 @@ export async function saveWaterTankReading(data: {
   adminId: number;
   tankName: string;
   currentLevel: number;
-  capacity?: number | null;
-  notes?: string | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB indisponível");
@@ -25,39 +23,51 @@ export async function saveWaterTankReading(data: {
     adminId: data.adminId,
     tankName: data.tankName,
     currentLevel: data.currentLevel,
-    capacity: data.capacity ?? null,
-    notes: data.notes ?? null,
     status: computeStatus(data.currentLevel),
   });
 }
 
 export async function getLatestTankReadings(clientId: number): Promise<Array<{
-  id: number;
-  clientId: number;
-  adminId: number;
+  id: number | null;
   tankName: string;
-  currentLevel: number;
+  currentLevel: number | null;
   capacity: number | null;
-  status: string;
+  status: string | null;
   notes: string | null;
-  measuredAt: Date;
-  createdAt: Date;
+  measuredAt: Date | null;
+  deadVolumePct: number;
+  alarm1Pct: number;
+  alarm2Pct: number;
 }>> {
   const db = await getDb();
   if (!db) return [];
 
-  // Latest reading per tank name using a subquery join (MySQL pattern)
   const [rows] = await db.execute(sql`
-    SELECT w.*
-    FROM waterTankMonitoring w
-    INNER JOIN (
-      SELECT tankName, MAX(measuredAt) AS latest
-      FROM waterTankMonitoring
-      WHERE clientId = ${clientId}
-      GROUP BY tankName
-    ) sub ON w.tankName = sub.tankName AND w.measuredAt = sub.latest
-    WHERE w.clientId = ${clientId}
-    ORDER BY w.tankName
+    SELECT
+      latest.id,
+      s.tankName,
+      latest.currentLevel,
+      COALESCE(s.capacity, latest.capacity) AS capacity,
+      latest.status,
+      COALESCE(s.notes, latest.notes) AS notes,
+      latest.measuredAt,
+      s.deadVolumePct,
+      s.alarm1Pct,
+      s.alarm2Pct
+    FROM waterTankSensors s
+    LEFT JOIN (
+      SELECT w1.*
+      FROM waterTankMonitoring w1
+      INNER JOIN (
+        SELECT tankName, MAX(measuredAt) AS maxAt
+        FROM waterTankMonitoring
+        WHERE clientId = ${clientId}
+        GROUP BY tankName
+      ) w2 ON w1.tankName = w2.tankName AND w1.measuredAt = w2.maxAt
+      WHERE w1.clientId = ${clientId}
+    ) latest ON latest.tankName = s.tankName
+    WHERE s.clientId = ${clientId} AND s.active = 1
+    ORDER BY s.tankName
   `);
 
   return rows as any;

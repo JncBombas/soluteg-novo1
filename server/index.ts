@@ -483,8 +483,6 @@ async function startServer() {
         adminId: resolvedAdminId,
         tankName,
         currentLevel: level,
-        capacity: capacity ? parseInt(capacity) : null,
-        notes: notes || null,
       });
 
       // Broadcast via SSE para atualizar o portal em tempo real

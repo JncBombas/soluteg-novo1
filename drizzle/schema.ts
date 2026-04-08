@@ -504,6 +504,46 @@ export type WaterTankMonitoring = typeof waterTankMonitoring.$inferSelect;
 export type InsertWaterTankMonitoring = typeof waterTankMonitoring.$inferInsert;
 
 /**
+ * Configuração de sensores de caixa d'água por cliente
+ * O admin pré-cadastra cada caixa e obtém o tópico MQTT para programar no ESP32
+ */
+export const waterTankSensors = mysqlTable("waterTankSensors", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: int("clientId").notNull(),
+  adminId: int("adminId").notNull(),
+  tankName: varchar("tankName", { length: 100 }).notNull(),
+  capacity: int("capacity"),                         // Capacidade total em litros
+  notes: text("notes"),
+  // Volume morto — reserva do Sistema de Combate a Incêndio (SCI), em %
+  deadVolumePct: int("deadVolumePct").default(0).notNull(),
+  // Limiares de alarme (em %). 0 = desabilitado
+  alarm1Pct: int("alarm1Pct").default(30).notNull(), // Primeiro alerta (nível baixo)
+  alarm2Pct: int("alarm2Pct").default(15).notNull(), // Segundo alerta (nível crítico)
+  // Telefone adicional para receber alertas (além do telefone do cliente)
+  alertPhone: varchar("alertPhone", { length: 30 }),
+  active: tinyint("active").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WaterTankSensor = typeof waterTankSensors.$inferSelect;
+export type InsertWaterTankSensor = typeof waterTankSensors.$inferInsert;
+
+/**
+ * Log de alertas enviados — evita spam e permite auditoria
+ */
+export const waterTankAlertLog = mysqlTable("waterTankAlertLog", {
+  id: int("id").autoincrement().primaryKey(),
+  sensorId: int("sensorId").notNull(),
+  clientId: int("clientId").notNull(),
+  tankName: varchar("tankName", { length: 100 }).notNull(),
+  alertType: mysqlEnum("alertType", ["alarm1", "alarm2", "sci_reserve"]).notNull(),
+  triggerPct: int("triggerPct").notNull(),   // Limiar configurado que disparou o alerta
+  currentLevel: int("currentLevel").notNull(), // Nível no momento do disparo
+  sentTo: varchar("sentTo", { length: 100 }), // Telefone(s) notificados
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+
+/**
  * Orçamentos - entidade separada das OS
  * Fluxo: pendente → finalizado → aprovado/reprovado
  * Se aprovado, gera uma OS de serviço

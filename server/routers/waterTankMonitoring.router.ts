@@ -9,12 +9,15 @@ export const waterTankMonitoringRouter = router({
       if (!input.clientId) return [];
       const rows = await getLatestTankReadings(input.clientId);
       return rows.map((r) => ({
-        id: r.id,
+        id: r.id ?? 0,
         tankName: r.tankName,
-        levelPercentage: r.currentLevel,
+        levelPercentage: r.currentLevel ?? null,
         capacity: r.capacity,
         notes: r.notes,
-        recordedAt: r.measuredAt,
+        recordedAt: r.measuredAt ?? null,
+        deadVolumePct: r.deadVolumePct ?? 0,
+        alarm1Pct: r.alarm1Pct ?? 30,
+        alarm2Pct: r.alarm2Pct ?? 15,
       }));
     }),
 });

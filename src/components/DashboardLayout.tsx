@@ -62,6 +62,7 @@ import {
   User,            // ícone de pessoa
   MessageSquare,   // ícone de balão de mensagem
   HardHat,         // ícone de capacete de obra
+  Droplet,         // ícone de gota d'água
 } from "lucide-react";
 
 // Ferramentas do React:
@@ -114,9 +115,10 @@ const navMain = [
     label: "Clientes",
     items: [
       { icon: Users, label: "Clientes", path: "/admin/clientes" },
-      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" }, 
+      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },
       { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
-      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },           
+      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
+      { icon: Droplet, label: "Sensores de Água", path: "/admin/sensores-agua" },
     ],
   },
   {

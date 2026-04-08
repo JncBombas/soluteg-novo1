@@ -90,29 +90,44 @@ export function initMqtt(): void {
             return;
           }
 
-          const { getClientById } = await import("./db");
-          const clientRecord = await getClientById(clientId);
-          if (!clientRecord) {
-            console.warn(`[MQTT] Cliente ${clientId} não encontrado`);
+          // Validate that this sensor is registered in the admin panel
+          const { getDb } = await import("./db");
+          const { sql } = await import("drizzle-orm");
+          const db = await getDb();
+          if (!db) return;
+
+          const result = await db.execute(sql`
+            SELECT s.id, s.adminId, c.adminId AS clientAdminId
+            FROM waterTankSensors s
+            JOIN clients c ON c.id = s.clientId
+            WHERE s.clientId = ${clientId} AND s.tankName = ${tankName} AND s.active = 1
+            LIMIT 1
+          `);
+          const sensorRows = (result as unknown as [any[], any])[0] as any[];
+          if (!sensorRows.length) {
+            console.warn(`[MQTT] Sensor não registrado — ignorando: cliente ${clientId}, caixa "${tankName}"`);
             return;
           }
+          const adminId = sensorRows[0].adminId ?? sensorRows[0].clientAdminId;
 
           const { saveWaterTankReading } = await import("./waterTankDb");
-          await saveWaterTankReading({
-            clientId,
-            adminId: clientRecord.adminId,
-            tankName,
-            currentLevel,
-            capacity,
-          });
+          await saveWaterTankReading({ clientId, adminId, tankName, currentLevel });
 
           broadcastTankUpdate(clientId, {
             type: "level_update",
             tankName,
             currentLevel,
-            capacity,
             measuredAt: new Date().toISOString(),
           });
+
+          // Verificar e disparar alertas WhatsApp se necessário
+          const sensorId = sensorRows[0].id ?? sensorRows[0].sensorId;
+          if (sensorId) {
+            const { checkAndSendAlerts } = await import("./waterTankAlertService");
+            checkAndSendAlerts(sensorId, clientId, tankName, currentLevel).catch(
+              (e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message)
+            );
+          }
 
           console.log(`[MQTT] ${tankName} (cliente ${clientId}): ${currentLevel}%`);
         } catch (err) {

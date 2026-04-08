@@ -176,6 +176,20 @@
       "when": 1774714989384,
       "tag": "0024_thin_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1775605649950,
+      "tag": "0025_broken_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1775609692408,
+      "tag": "0026_small_zarda",
+      "breakpoints": true
     }
   ]
 }
