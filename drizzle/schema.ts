@@ -524,8 +524,11 @@ export const waterTankSensors = mysqlTable("waterTankSensors", {
   alarm1Pct: int("alarm1Pct").default(30).notNull(),
   alarm2Pct: int("alarm2Pct").default(15).notNull(),
   alertPhone: varchar("alertPhone", { length: 30 }),
+  // Calibração: distâncias medidas fisicamente (cm)
+  distVazia: int("distVazia"),   // distância sensor→água com caixa VAZIA
+  distCheia: int("distCheia"),   // distância sensor→água com caixa CHEIA
   active: tinyint("active").default(1).notNull(),
-  lastSeenAt: timestamp("lastSeenAt"),  // Última vez que o sensor enviou dados
+  lastSeenAt: timestamp("lastSeenAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

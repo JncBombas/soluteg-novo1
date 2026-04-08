@@ -32,12 +32,15 @@ export async function getAssignedSensorByDeviceId(deviceId: string): Promise<{
   deadVolumePct: number;
   alarm1Pct: number;
   alarm2Pct: number;
+  distVazia: number | null;
+  distCheia: number | null;
 } | null> {
   const db = await getDb();
   if (!db) return null;
 
   const result = await db.execute(sql`
-    SELECT id, clientId, adminId, tankName, deadVolumePct, alarm1Pct, alarm2Pct
+    SELECT id, clientId, adminId, tankName, deadVolumePct, alarm1Pct, alarm2Pct,
+           distVazia, distCheia
     FROM waterTankSensors
     WHERE deviceId = ${deviceId}
       AND clientId IS NOT NULL
@@ -130,6 +133,8 @@ export type AssignData = {
   alarm1Pct?: number;
   alarm2Pct?: number;
   alertPhone?: string | null;
+  distVazia?: number | null;
+  distCheia?: number | null;
 };
 
 export async function assignSensor(sensorId: number, data: AssignData) {
@@ -148,6 +153,8 @@ export async function assignSensor(sensorId: number, data: AssignData) {
       alarm1Pct: data.alarm1Pct ?? 30,
       alarm2Pct: data.alarm2Pct ?? 15,
       alertPhone: data.alertPhone ?? null,
+      distVazia: data.distVazia ?? null,
+      distCheia: data.distCheia ?? null,
       active: 1,
     })
     .where(eq(waterTankSensors.id, sensorId));

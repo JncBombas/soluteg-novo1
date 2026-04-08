@@ -11,6 +11,11 @@ import {
   getSensorAlertLog,
 } from "../waterTankSensorDb";
 
+const calibrationFields = {
+  distVazia: z.number().int().positive().nullable().optional(),
+  distCheia: z.number().int().positive().nullable().optional(),
+};
+
 const assignFields = {
   clientId: z.number().int().positive(),
   tankName: z.string().min(1).max(100),
@@ -20,6 +25,7 @@ const assignFields = {
   alarm1Pct: z.number().int().min(0).max(100).optional(),
   alarm2Pct: z.number().int().min(0).max(100).optional(),
   alertPhone: z.string().max(30).nullable().optional(),
+  ...calibrationFields,
 };
 
 const updateFields = {
@@ -30,6 +36,7 @@ const updateFields = {
   alarm1Pct: z.number().int().min(0).max(100).optional(),
   alarm2Pct: z.number().int().min(0).max(100).optional(),
   alertPhone: z.string().max(30).nullable().optional(),
+  ...calibrationFields,
 };
 
 export const waterTankAdminRouter = router({
@@ -61,6 +68,8 @@ export const waterTankAdminRouter = router({
         alarm1Pct: input.alarm1Pct ?? 30,
         alarm2Pct: input.alarm2Pct ?? 15,
         alertPhone: input.alertPhone ?? null,
+        distVazia: input.distVazia ?? null,
+        distCheia: input.distCheia ?? null,
       });
       return { ok: true };
     }),
@@ -77,6 +86,8 @@ export const waterTankAdminRouter = router({
         alarm1Pct: input.alarm1Pct ?? 30,
         alarm2Pct: input.alarm2Pct ?? 15,
         alertPhone: input.alertPhone ?? null,
+        distVazia: input.distVazia ?? null,
+        distCheia: input.distCheia ?? null,
       });
       return { ok: true };
     }),

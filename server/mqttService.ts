@@ -84,12 +84,6 @@ export function initMqtt(): void {
           if (!deviceId) return;
 
           const payload = JSON.parse(message.toString());
-          const currentLevel = Math.max(0, Math.min(100, Math.round(Number(payload.level_pct))));
-
-          if (isNaN(currentLevel)) {
-            console.warn(`[MQTT] Payload inválido do sensor ${deviceId}:`, payload);
-            return;
-          }
 
           const { upsertSensorDevice, getAssignedSensorByDeviceId } = await import("./waterTankSensorDb");
 
@@ -102,6 +96,27 @@ export function initMqtt(): void {
             console.log(`[MQTT] Sensor ${deviceId} aguardando atribuição — leitura ignorada`);
             return;
           }
+
+          // Support both payload formats:
+          //   { "distance_cm": 67 }  → server converts using sensor calibration
+          //   { "level_pct": 73 }    → used directly (legacy / pre-calibrated)
+          let currentLevel: number;
+          if (payload.distance_cm != null && sensor.distVazia != null && sensor.distCheia != null) {
+            const dist = Number(payload.distance_cm);
+            const raw = (sensor.distVazia - dist) / (sensor.distVazia - sensor.distCheia) * 100;
+            currentLevel = Math.max(0, Math.min(100, Math.round(raw)));
+            console.log(`[MQTT] ${deviceId} dist=${dist}cm → ${currentLevel}% (cal: vazia=${sensor.distVazia} cheia=${sensor.distCheia})`);
+          } else if (payload.level_pct != null) {
+            currentLevel = Math.max(0, Math.min(100, Math.round(Number(payload.level_pct))));
+          } else if (payload.distance_cm != null) {
+            console.warn(`[MQTT] Sensor ${deviceId} enviou distance_cm mas calibração não configurada — configure dist. vazia/cheia no portal`);
+            return;
+          } else {
+            console.warn(`[MQTT] Payload inválido do sensor ${deviceId}:`, payload);
+            return;
+          }
+
+          if (isNaN(currentLevel)) return;
 
           const { saveWaterTankReading } = await import("./waterTankDb");
           await saveWaterTankReading({

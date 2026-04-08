@@ -30,6 +30,8 @@ interface SensorRow {
   alarm1Pct: number;
   alarm2Pct: number;
   alertPhone: string | null;
+  distVazia: number | null;
+  distCheia: number | null;
   active: number;
   lastSeenAt: Date | null;
   createdAt: Date;
@@ -54,11 +56,14 @@ type AssignForm = {
   alarm1Pct: string;
   alarm2Pct: string;
   alertPhone: string;
+  distVazia: string;
+  distCheia: string;
 };
 
 const defaultAssign: AssignForm = {
   clientId: "", tankName: "", capacity: "", notes: "",
   deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15", alertPhone: "",
+  distVazia: "", distCheia: "",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -207,6 +212,36 @@ function AssignFormFields({
         <p className="text-xs text-slate-500">Use 0 para desabilitar. Cooldown de 4h entre mensagens.</p>
       </div>
 
+      {/* Calibração */}
+      <div className="border rounded-lg p-3 space-y-2 bg-blue-50 border-blue-200">
+        <p className="text-sm font-semibold text-blue-900">Calibração do Sensor (JSN-SR04T)</p>
+        <p className="text-xs text-blue-700">
+          Distâncias medidas fisicamente do sensor até a superfície da água. O ESP32 envia{" "}
+          <code className="bg-blue-100 px-1 rounded">distance_cm</code> e o servidor converte para %.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-blue-900">Dist. quando VAZIA (cm)</label>
+            <Input
+              type="number" min={1} placeholder="ex: 120"
+              value={form.distVazia}
+              onChange={(e) => setForm({ ...form, distVazia: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-blue-900">Dist. quando CHEIA (cm)</label>
+            <Input
+              type="number" min={1} placeholder="ex: 35"
+              value={form.distCheia}
+              onChange={(e) => setForm({ ...form, distCheia: e.target.value })}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-slate-500">
+          Deixe em branco se o ESP32 enviar <code className="bg-slate-100 px-1 rounded">level_pct</code> diretamente.
+        </p>
+      </div>
+
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Observações</label>
         <Textarea
@@ -286,6 +321,8 @@ export default function AdminWaterTanks() {
     alarm1Pct: parseInt(f.alarm1Pct) || 30,
     alarm2Pct: parseInt(f.alarm2Pct) || 15,
     alertPhone: f.alertPhone || null,
+    distVazia: f.distVazia ? parseInt(f.distVazia) : null,
+    distCheia: f.distCheia ? parseInt(f.distCheia) : null,
   });
 
   const handleAssign: React.FormEventHandler<HTMLFormElement> = (e) => {
@@ -311,6 +348,8 @@ export default function AdminWaterTanks() {
       alarm1Pct: String(s.alarm1Pct ?? 30),
       alarm2Pct: String(s.alarm2Pct ?? 15),
       alertPhone: s.alertPhone ?? "",
+      distVazia: s.distVazia?.toString() ?? "",
+      distCheia: s.distCheia?.toString() ?? "",
     });
   };
 
