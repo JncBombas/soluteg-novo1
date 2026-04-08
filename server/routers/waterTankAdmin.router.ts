@@ -1,16 +1,28 @@
 import { router, adminLocalProcedure } from "../_core/trpc";
 import { z } from "zod";
 import {
-  createSensor,
+  listSensorsWithStatus,
+  listPendingSensors,
+  assignSensor,
   updateSensor,
   deleteSensor,
-  listSensorsWithStatus,
   getSensorById,
   getSensorReadingHistory,
   getSensorAlertLog,
 } from "../waterTankSensorDb";
 
-const sensorFields = {
+const assignFields = {
+  clientId: z.number().int().positive(),
+  tankName: z.string().min(1).max(100),
+  capacity: z.number().int().positive().nullable().optional(),
+  notes: z.string().max(500).nullable().optional(),
+  deadVolumePct: z.number().int().min(0).max(99).optional(),
+  alarm1Pct: z.number().int().min(0).max(100).optional(),
+  alarm2Pct: z.number().int().min(0).max(100).optional(),
+  alertPhone: z.string().max(30).nullable().optional(),
+};
+
+const updateFields = {
   tankName: z.string().min(1).max(100),
   capacity: z.number().int().positive().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
@@ -21,16 +33,25 @@ const sensorFields = {
 };
 
 export const waterTankAdminRouter = router({
+  /** Sensors waiting for assignment (clientId is null) */
+  listPending: adminLocalProcedure
+    .input(z.object({ adminId: z.number() }))
+    .query(async () => {
+      return listPendingSensors();
+    }),
+
+  /** Sensors already assigned to a client under this admin */
   listSensors: adminLocalProcedure
     .input(z.object({ adminId: z.number() }))
     .query(async ({ input }) => {
       return listSensorsWithStatus(input.adminId);
     }),
 
-  createSensor: adminLocalProcedure
-    .input(z.object({ adminId: z.number(), clientId: z.number(), ...sensorFields }))
+  /** Assign a pending sensor to a client and name the tank */
+  assignSensor: adminLocalProcedure
+    .input(z.object({ adminId: z.number(), sensorId: z.number(), ...assignFields }))
     .mutation(async ({ input }) => {
-      await createSensor({
+      await assignSensor(input.sensorId, {
         clientId: input.clientId,
         adminId: input.adminId,
         tankName: input.tankName,
@@ -44,8 +65,9 @@ export const waterTankAdminRouter = router({
       return { ok: true };
     }),
 
+  /** Update config of an already-assigned sensor */
   updateSensor: adminLocalProcedure
-    .input(z.object({ adminId: z.number(), sensorId: z.number(), ...sensorFields }))
+    .input(z.object({ adminId: z.number(), sensorId: z.number(), ...updateFields }))
     .mutation(async ({ input }) => {
       await updateSensor(input.sensorId, input.adminId, {
         tankName: input.tankName,

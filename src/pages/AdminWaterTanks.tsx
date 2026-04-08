@@ -4,16 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Droplet, Loader2, Copy, Check, Pencil, Trash2, AlertTriangle, Wifi, Flame, BarChart2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Droplet, Loader2, Copy, Check, Pencil, Trash2, AlertTriangle,
+  Wifi, Flame, BarChart2, Radio, ClipboardCheck,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface SensorRow {
   id: number;
+  deviceId: string | null;
   clientId: number;
   clientName: string;
   tankName: string;
@@ -24,13 +31,21 @@ interface SensorRow {
   alarm2Pct: number;
   alertPhone: string | null;
   active: number;
+  lastSeenAt: Date | null;
   createdAt: Date;
   currentLevel: number | null;
   lastUpdate: Date | null;
   status: string | null;
 }
 
-type SensorForm = {
+interface PendingRow {
+  id: number;
+  deviceId: string;
+  lastSeenAt: Date | null;
+  createdAt: Date;
+}
+
+type AssignForm = {
   clientId: string;
   tankName: string;
   capacity: string;
@@ -41,10 +56,12 @@ type SensorForm = {
   alertPhone: string;
 };
 
-const defaultForm: SensorForm = {
+const defaultAssign: AssignForm = {
   clientId: "", tankName: "", capacity: "", notes: "",
   deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15", alertPhone: "",
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getLevelBg(pct: number, a2: number, a1: number, dead: number) {
   if (dead > 0 && pct < dead) return "bg-red-600";
@@ -64,15 +81,29 @@ function getLevelText(pct: number, a2: number, a1: number, dead: number) {
   return "text-blue-500";
 }
 
-function MqttTopicCell({ clientId, tankName }: { clientId: number; tankName: string }) {
+function timeAgo(date: Date | null) {
+  if (!date) return "—";
+  const d = new Date(date);
+  const diff = Date.now() - d.getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins} min atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  return d.toLocaleDateString("pt-BR");
+}
+
+function MqttDeviceCell({ deviceId }: { deviceId: string | null }) {
   const [copied, setCopied] = useState(false);
-  const topic = `soluteg/clients/${clientId}/tanks/${tankName}/level`;
+  const topic = deviceId ? `soluteg/sensor/${deviceId}/level` : null;
   const copy = () => {
+    if (!topic) return;
     navigator.clipboard.writeText(topic).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
   };
+  if (!topic) return <span className="text-slate-400 text-xs">—</span>;
   return (
     <div className="flex items-center gap-1.5 min-w-0">
-      <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded font-mono truncate max-w-[240px]" title={topic}>{topic}</code>
+      <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded font-mono truncate max-w-[220px]" title={topic}>{topic}</code>
       <button onClick={copy} className="shrink-0 text-slate-400 hover:text-slate-700" title="Copiar">
         {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
       </button>
@@ -80,112 +111,164 @@ function MqttTopicCell({ clientId, tankName }: { clientId: number; tankName: str
   );
 }
 
-function SensorFormFields({ form, setForm }: { form: SensorForm; setForm: (f: SensorForm) => void }) {
+// ── Sub-form for assigning / editing ─────────────────────────────────────────
+
+function AssignFormFields({
+  form, setForm, clients,
+}: {
+  form: AssignForm;
+  setForm: (f: AssignForm) => void;
+  clients: Array<{ id: number; name: string }>;
+}) {
   return (
     <>
       <div className="space-y-1.5">
+        <label className="text-sm font-medium">Cliente *</label>
+        <Select value={form.clientId} onValueChange={(v) => setForm({ ...form, clientId: v })}>
+          <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
+          <SelectContent>
+            {clients.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1.5">
         <label className="text-sm font-medium">Nome da caixa *</label>
-        <Input placeholder="ex: Torre A, Reservatório Superior" value={form.tankName}
-          onChange={(e) => setForm({ ...form, tankName: e.target.value })} required />
-        <p className="text-xs text-slate-500">Usado no tópico MQTT — não altere depois de instalar o sensor.</p>
+        <Input
+          placeholder="ex: Torre A, Reservatório Superior"
+          value={form.tankName}
+          onChange={(e) => setForm({ ...form, tankName: e.target.value })}
+          required
+        />
+        <p className="text-xs text-slate-500">Nome exibido no portal do cliente.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="text-sm font-medium">Capacidade (L)</label>
-          <Input type="number" min={1} placeholder="ex: 1000" value={form.capacity}
-            onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
+          <Input
+            type="number" min={1} placeholder="ex: 5000"
+            value={form.capacity}
+            onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+          />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">Tel. de alerta</label>
-          <Input type="tel" placeholder="(13) 99999-9999" value={form.alertPhone}
-            onChange={(e) => setForm({ ...form, alertPhone: e.target.value })} />
-          <p className="text-xs text-slate-500">WhatsApp adicional para alertas.</p>
+          <label className="text-sm font-medium">Tel. de alerta adicional</label>
+          <Input
+            type="tel" placeholder="(13) 99999-9999"
+            value={form.alertPhone}
+            onChange={(e) => setForm({ ...form, alertPhone: e.target.value })}
+          />
         </div>
       </div>
 
       {/* SCI */}
-      <div className="border rounded-lg p-3 space-y-3 bg-red-50 border-red-200">
+      <div className="border rounded-lg p-3 space-y-2 bg-red-50 border-red-200">
         <div className="flex items-center gap-1.5">
           <Flame className="w-4 h-4 text-red-600" />
           <p className="text-sm font-semibold text-red-900">Sistema de Combate a Incêndio (SCI)</p>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label className="text-sm font-medium text-red-900">Volume morto SCI (%)</label>
-          <Input type="number" min={0} max={99} placeholder="0" value={form.deadVolumePct}
-            onChange={(e) => setForm({ ...form, deadVolumePct: e.target.value })} />
+          <Input
+            type="number" min={0} max={99} placeholder="0"
+            value={form.deadVolumePct}
+            onChange={(e) => setForm({ ...form, deadVolumePct: e.target.value })}
+          />
           <p className="text-xs text-red-700">
-            Reserva mínima que não pode ser consumida. Ex: 20 = os últimos 20% ficam reservados para combate a incêndio.
-            Ao atingir esse nível, dispara alerta de emergência SCI.
+            Reserva mínima para combate a incêndio. 0 = desabilitado.
           </p>
         </div>
       </div>
 
       {/* Alarmes */}
-      <div className="border rounded-lg p-3 space-y-3">
+      <div className="border rounded-lg p-3 space-y-2">
         <p className="text-sm font-semibold text-slate-700">Limiares de Alarme</p>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-yellow-700">⚠️ Alerta 1 (%)</label>
-            <Input type="number" min={0} max={100} placeholder="30" value={form.alarm1Pct}
-              onChange={(e) => setForm({ ...form, alarm1Pct: e.target.value })} />
-            <p className="text-xs text-slate-500">1° aviso — nível baixo.</p>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-yellow-700">⚠ Alerta 1 (%)</label>
+            <Input
+              type="number" min={0} max={100} placeholder="30"
+              value={form.alarm1Pct}
+              onChange={(e) => setForm({ ...form, alarm1Pct: e.target.value })}
+            />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <label className="text-sm font-medium text-red-700">🚨 Alerta 2 (%)</label>
-            <Input type="number" min={0} max={100} placeholder="15" value={form.alarm2Pct}
-              onChange={(e) => setForm({ ...form, alarm2Pct: e.target.value })} />
-            <p className="text-xs text-slate-500">2° aviso — nível crítico.</p>
+            <Input
+              type="number" min={0} max={100} placeholder="15"
+              value={form.alarm2Pct}
+              onChange={(e) => setForm({ ...form, alarm2Pct: e.target.value })}
+            />
           </div>
         </div>
-        <p className="text-xs text-slate-500">Use 0 para desabilitar. Cooldown de 4h entre mensagens por limiar.</p>
+        <p className="text-xs text-slate-500">Use 0 para desabilitar. Cooldown de 4h entre mensagens.</p>
       </div>
 
       <div className="space-y-1.5">
         <label className="text-sm font-medium">Observações</label>
-        <Textarea placeholder="Localização, instruções, etc." value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+        <Textarea
+          placeholder="Localização, instruções, etc."
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          rows={2}
+        />
       </div>
     </>
   );
 }
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function AdminWaterTanks() {
   const [adminId, setAdminId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState<SensorForm>(defaultForm);
+  // Assign dialog (for pending sensors)
+  const [assignTarget, setAssignTarget] = useState<PendingRow | null>(null);
+  const [assignForm, setAssignForm] = useState<AssignForm>(defaultAssign);
 
-  const [editOpen, setEditOpen] = useState(false);
+  // Edit dialog (for assigned sensors)
   const [editTarget, setEditTarget] = useState<SensorRow | null>(null);
-  const [editForm, setEditForm] = useState<SensorForm>(defaultForm);
+  const [editForm, setEditForm] = useState<AssignForm>(defaultAssign);
 
-  const [deleteTarget, setDeleteTarget] = useState<SensorRow | null>(null);
+  // Delete confirm
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; label: string } | null>(null);
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
     if (id) setAdminId(parseInt(id));
   }, []);
 
-  const { data: sensors = [], isLoading, refetch } = trpc.waterTankAdmin.listSensors.useQuery(
-    { adminId: adminId ?? 0 },
-    { enabled: !!adminId }
-  );
+  const { data: pending = [], isLoading: pendingLoading, refetch: refetchPending } =
+    trpc.waterTankAdmin.listPending.useQuery(
+      { adminId: adminId ?? 0 },
+      { enabled: !!adminId, refetchInterval: 15_000 },
+    );
+
+  const { data: sensors = [], isLoading: sensorsLoading, refetch: refetchSensors } =
+    trpc.waterTankAdmin.listSensors.useQuery(
+      { adminId: adminId ?? 0 },
+      { enabled: !!adminId },
+    );
 
   const { data: clients = [] } = trpc.clients.list.useQuery(
     { adminId: adminId ?? 0 },
-    { enabled: !!adminId }
+    { enabled: !!adminId },
   );
 
-  const createMutation = trpc.waterTankAdmin.createSensor.useMutation({
-    onSuccess: () => { setSuccess("Sensor cadastrado!"); setForm(defaultForm); setCreateOpen(false); refetch(); },
+  const refetch = () => { refetchPending(); refetchSensors(); };
+
+  const assignMutation = trpc.waterTankAdmin.assignSensor.useMutation({
+    onSuccess: () => { setSuccess("Sensor atribuído!"); setAssignTarget(null); setAssignForm(defaultAssign); refetch(); },
     onError: (e: { message: string }) => setError(e.message),
   });
 
   const updateMutation = trpc.waterTankAdmin.updateSensor.useMutation({
-    onSuccess: () => { setSuccess("Sensor atualizado!"); setEditOpen(false); setEditTarget(null); refetch(); },
+    onSuccess: () => { setSuccess("Sensor atualizado!"); setEditTarget(null); refetch(); },
     onError: (e: { message: string }) => setError(e.message),
   });
 
@@ -194,7 +277,8 @@ export default function AdminWaterTanks() {
     onError: (e: { message: string }) => setError(e.message),
   });
 
-  const parseForm = (f: SensorForm) => ({
+  const parseForm = (f: AssignForm) => ({
+    clientId: parseInt(f.clientId),
     tankName: f.tankName.trim(),
     capacity: f.capacity ? parseInt(f.capacity) : null,
     notes: f.notes || null,
@@ -204,23 +288,10 @@ export default function AdminWaterTanks() {
     alertPhone: f.alertPhone || null,
   });
 
-  const handleCreate: React.FormEventHandler<HTMLFormElement> = (e) => {
+  const handleAssign: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault(); setError("");
-    if (!adminId || !form.clientId || !form.tankName.trim()) return;
-    createMutation.mutate({ adminId, clientId: parseInt(form.clientId), ...parseForm(form) });
-  };
-
-  const openEdit = (s: SensorRow) => {
-    setEditTarget(s);
-    setEditForm({
-      clientId: String(s.clientId), tankName: s.tankName,
-      capacity: s.capacity?.toString() ?? "", notes: s.notes ?? "",
-      deadVolumePct: String(s.deadVolumePct ?? 0),
-      alarm1Pct: String(s.alarm1Pct ?? 30),
-      alarm2Pct: String(s.alarm2Pct ?? 15),
-      alertPhone: s.alertPhone ?? "",
-    });
-    setEditOpen(true);
+    if (!adminId || !assignTarget || !assignForm.clientId || !assignForm.tankName.trim()) return;
+    assignMutation.mutate({ adminId, sensorId: assignTarget.id, ...parseForm(assignForm) });
   };
 
   const handleEdit: React.FormEventHandler<HTMLFormElement> = (e) => {
@@ -229,10 +300,28 @@ export default function AdminWaterTanks() {
     updateMutation.mutate({ adminId, sensorId: editTarget.id, ...parseForm(editForm) });
   };
 
+  const openEdit = (s: SensorRow) => {
+    setEditTarget(s);
+    setEditForm({
+      clientId: String(s.clientId),
+      tankName: s.tankName,
+      capacity: s.capacity?.toString() ?? "",
+      notes: s.notes ?? "",
+      deadVolumePct: String(s.deadVolumePct ?? 0),
+      alarm1Pct: String(s.alarm1Pct ?? 30),
+      alarm2Pct: String(s.alarm2Pct ?? 15),
+      alertPhone: s.alertPhone ?? "",
+    });
+  };
+
+  const isLoading = pendingLoading || sensorsLoading;
+
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        </div>
       </DashboardLayout>
     );
   }
@@ -240,55 +329,15 @@ export default function AdminWaterTanks() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-              <Droplet className="w-8 h-8 text-blue-500" /> Sensores de Caixa d'Água
-            </h1>
-            <p className="text-slate-600 mt-1">Gerencie sensores, volumes mortos SCI e alertas automáticos</p>
-          </div>
 
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2 bg-orange-500 hover:bg-orange-600"><Plus className="w-4 h-4" /> Novo Sensor</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Cadastrar Sensor</DialogTitle></DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4 mt-2">
-                {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium">Cliente *</label>
-                  <Select value={form.clientId} onValueChange={(v) => setForm({ ...form, clientId: v })}>
-                    <SelectTrigger><SelectValue placeholder="Selecione o cliente" /></SelectTrigger>
-                    <SelectContent>
-                      {(clients as Array<{id: number; name: string}>).map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <SensorFormFields form={form} setForm={setForm} />
-
-                {form.clientId && form.tankName && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
-                    <p className="text-xs font-semibold text-blue-900">Tópico MQTT para o ESP32:</p>
-                    <code className="text-xs text-blue-800 break-all font-mono">
-                      soluteg/clients/{form.clientId}/tanks/{form.tankName.trim()}/level
-                    </code>
-                    <p className="text-xs text-blue-700 mt-1">Payload: {`{"level_pct": 73}`}</p>
-                  </div>
-                )}
-
-                <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600"
-                  disabled={!form.clientId || !form.tankName.trim() || createMutation.isLoading}>
-                  {createMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Cadastrar
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+            <Droplet className="w-8 h-8 text-blue-500" /> Sensores de Caixa d'Água
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Sensores se auto-registram ao conectar. Atribua cada um a um cliente pelo portal.
+          </p>
         </div>
 
         {success && (
@@ -297,16 +346,87 @@ export default function AdminWaterTanks() {
           </Alert>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sensores Cadastrados</CardTitle>
-            <CardDescription>{sensors.length} sensor{sensors.length !== 1 ? "es" : ""}</CardDescription>
+        {/* ── Pending sensors ──────────────────────────────────────────── */}
+        <Card className={pending.length > 0 ? "border-orange-300 shadow-orange-100 shadow-md" : ""}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Radio className="w-4 h-4 text-orange-500" />
+              Sensores Detectados
+              {pending.length > 0 && (
+                <Badge className="bg-orange-500 hover:bg-orange-600 text-white ml-1">
+                  {pending.length} aguardando
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>
+              Sensores que enviaram sinal mas ainda não foram atribuídos a nenhum cliente.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {sensors.length === 0 ? (
-              <div className="text-center py-12">
-                <Droplet className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600">Nenhum sensor cadastrado ainda.</p>
+            {(pending as PendingRow[]).length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <Radio className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum sensor pendente.</p>
+                <p className="text-xs mt-1">Configure o ESP32 com o tópico <code className="bg-slate-100 px-1 rounded">soluteg/sensor/SEU_ID/level</code> e ele aparecerá aqui.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID do Dispositivo</TableHead>
+                      <TableHead>Primeiro sinal</TableHead>
+                      <TableHead>Último sinal</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(pending as PendingRow[]).map((p) => (
+                      <TableRow key={p.id} className="bg-orange-50/40">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                            <code className="font-mono text-sm font-semibold text-slate-800">{p.deviceId}</code>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          {new Date(p.createdAt).toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-500">
+                          {timeAgo(p.lastSeenAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            className="gap-1.5 bg-orange-500 hover:bg-orange-600"
+                            onClick={() => { setAssignTarget(p); setAssignForm(defaultAssign); setError(""); }}
+                          >
+                            <ClipboardCheck className="w-4 h-4" /> Atribuir
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Assigned sensors ─────────────────────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sensores Atribuídos</CardTitle>
+            <CardDescription>
+              {(sensors as SensorRow[]).length} sensor{(sensors as SensorRow[]).length !== 1 ? "es" : ""} configurado{(sensors as SensorRow[]).length !== 1 ? "s" : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(sensors as SensorRow[]).length === 0 ? (
+              <div className="text-center py-10">
+                <Droplet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 text-sm">Nenhum sensor atribuído ainda.</p>
+                <p className="text-slate-400 text-xs mt-1">Atribua os sensores detectados acima.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -315,9 +435,10 @@ export default function AdminWaterTanks() {
                     <TableRow>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Caixa</TableHead>
+                      <TableHead>Device ID</TableHead>
                       <TableHead>Nível atual</TableHead>
                       <TableHead>SCI / Alarmes</TableHead>
-                      <TableHead>Última leitura</TableHead>
+                      <TableHead>Último sinal</TableHead>
                       <TableHead>Tópico MQTT</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -332,11 +453,18 @@ export default function AdminWaterTanks() {
                           <TableCell className="font-medium">{s.clientName}</TableCell>
                           <TableCell>{s.tankName}</TableCell>
                           <TableCell>
+                            <code className="text-xs font-mono text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                              {s.deviceId ?? "—"}
+                            </code>
+                          </TableCell>
+                          <TableCell>
                             {s.currentLevel != null ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-16 bg-slate-200 rounded-full h-2 overflow-hidden">
-                                  <div className={`h-full ${getLevelBg(s.currentLevel, a2, a1, dead)}`}
-                                    style={{ width: `${s.currentLevel}%` }} />
+                                  <div
+                                    className={`h-full ${getLevelBg(s.currentLevel, a2, a1, dead)}`}
+                                    style={{ width: `${s.currentLevel}%` }}
+                                  />
                                 </div>
                                 <span className={`text-sm font-semibold ${getLevelText(s.currentLevel, a2, a1, dead)}`}>
                                   {s.currentLevel}%
@@ -361,20 +489,27 @@ export default function AdminWaterTanks() {
                             </div>
                           </TableCell>
                           <TableCell className="text-sm text-slate-500">
-                            {s.lastUpdate ? new Date(s.lastUpdate).toLocaleString("pt-BR") : "—"}
+                            {timeAgo(s.lastSeenAt)}
                           </TableCell>
                           <TableCell>
-                            <MqttTopicCell clientId={s.clientId} tankName={s.tankName} />
+                            <MqttDeviceCell deviceId={s.deviceId} />
                           </TableCell>
                           <TableCell className="text-right space-x-1">
-                            <Button size="sm" variant="ghost" onClick={() => window.location.href = `/admin/sensores-agua/${s.id}`}
-                              className="text-orange-500 hover:text-orange-700" title="Dashboard">
+                            <Button
+                              size="sm" variant="ghost"
+                              onClick={() => window.location.href = `/admin/sensores-agua/${s.id}`}
+                              className="text-orange-500 hover:text-orange-700" title="Dashboard"
+                            >
                               <BarChart2 className="w-4 h-4" />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={() => openEdit(s)} className="text-blue-500 hover:text-blue-700">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => setDeleteTarget(s)} className="text-red-500 hover:text-red-700">
+                            <Button
+                              size="sm" variant="ghost"
+                              onClick={() => setDeleteTarget({ id: s.id, label: `${s.tankName} (${s.clientName})` })}
+                              className="text-red-500 hover:text-red-700"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </TableCell>
@@ -389,14 +524,60 @@ export default function AdminWaterTanks() {
         </Card>
       </div>
 
-      {/* Edit dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      {/* ── Assign dialog ─────────────────────────────────────────────────── */}
+      <Dialog open={!!assignTarget} onOpenChange={(o) => { if (!o) setAssignTarget(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-orange-500" />
+              Atribuir Sensor
+            </DialogTitle>
+          </DialogHeader>
+
+          {assignTarget && (
+            <div className="bg-slate-50 border rounded-lg px-3 py-2 mb-4">
+              <p className="text-xs text-slate-500">Device ID do sensor</p>
+              <code className="font-mono text-sm font-semibold text-slate-800">{assignTarget.deviceId}</code>
+              <p className="text-xs text-slate-400 mt-0.5">Último sinal: {timeAgo(assignTarget.lastSeenAt)}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleAssign} className="space-y-4">
+            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+
+            <AssignFormFields
+              form={assignForm}
+              setForm={setAssignForm}
+              clients={clients as Array<{ id: number; name: string }>}
+            />
+
+            <Button
+              type="submit"
+              className="w-full bg-orange-500 hover:bg-orange-600"
+              disabled={!assignForm.clientId || !assignForm.tankName.trim() || assignMutation.isLoading}
+            >
+              {assignMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Atribuir e ativar sensor
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit dialog ───────────────────────────────────────────────────── */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar Sensor</DialogTitle></DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4 mt-2">
             {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-            <SensorFormFields form={editForm} setForm={setEditForm} />
-            <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={updateMutation.isLoading}>
+            <AssignFormFields
+              form={editForm}
+              setForm={setEditForm}
+              clients={clients as Array<{ id: number; name: string }>}
+            />
+            <Button
+              type="submit" className="w-full bg-orange-500 hover:bg-orange-600"
+              disabled={updateMutation.isLoading}
+            >
               {updateMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Salvar alterações
             </Button>
@@ -404,23 +585,24 @@ export default function AdminWaterTanks() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      {/* ── Delete confirm ────────────────────────────────────────────────── */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" /> Remover sensor
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Remover <strong>{deleteTarget?.tankName}</strong> ({deleteTarget?.clientName})?
-              O histórico de leituras é mantido.
+              Remover <strong>{deleteTarget?.label}</strong>? O histórico de leituras é mantido.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-3 justify-end">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700"
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
               onClick={() => deleteTarget && adminId && deleteMutation.mutate({ adminId, sensorId: deleteTarget.id })}
-              disabled={deleteMutation.isLoading}>
+              disabled={deleteMutation.isLoading}
+            >
               {deleteMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Remover
             </AlertDialogAction>
