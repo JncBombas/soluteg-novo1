@@ -24,6 +24,54 @@ import type { Response } from "express";
 // Map de conexões SSE abertas: clientId → conjunto de Response objects
 const sseClients = new Map<number, Set<Response>>();
 
+// ── Buffer de leituras (30 s) ─────────────────────────────────────────────────
+// Acumula leituras brutas por deviceId e persiste apenas o maior valor no intervalo.
+const BUFFER_MS = 30_000;
+
+type BufferEntry = {
+  maxLevel: number;
+  timer: ReturnType<typeof setTimeout>;
+  sensor: {
+    id: number;
+    clientId: number;
+    adminId: number;
+    tankName: string;
+    deadVolumePct: number;
+    alarm1Pct: number;
+    alarm2Pct: number;
+  };
+};
+
+const readingBuffer = new Map<string, BufferEntry>();
+
+async function flushBuffer(deviceId: string) {
+  const entry = readingBuffer.get(deviceId);
+  if (!entry) return;
+  readingBuffer.delete(deviceId);
+
+  const { saveWaterTankReading } = await import("./waterTankDb");
+  await saveWaterTankReading({
+    clientId: entry.sensor.clientId,
+    adminId: entry.sensor.adminId,
+    tankName: entry.sensor.tankName,
+    currentLevel: entry.maxLevel,
+  });
+
+  broadcastTankUpdate(entry.sensor.clientId, {
+    type: "level_update",
+    tankName: entry.sensor.tankName,
+    currentLevel: entry.maxLevel,
+    measuredAt: new Date().toISOString(),
+  });
+
+  const { checkAndSendAlerts } = await import("./waterTankAlertService");
+  checkAndSendAlerts(entry.sensor.id, entry.sensor.clientId, entry.sensor.tankName, entry.maxLevel).catch(
+    (e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message),
+  );
+
+  console.log(`[MQTT] flush ${deviceId} → ${entry.sensor.tankName}: ${entry.maxLevel}% (max de 30 s)`);
+}
+
 export function addSseClient(clientId: number, res: Response): void {
   if (!sseClients.has(clientId)) sseClients.set(clientId, new Set());
   sseClients.get(clientId)!.add(res);
@@ -118,28 +166,16 @@ export function initMqtt(): void {
 
           if (isNaN(currentLevel)) return;
 
-          const { saveWaterTankReading } = await import("./waterTankDb");
-          await saveWaterTankReading({
-            clientId: sensor.clientId,
-            adminId: sensor.adminId,
-            tankName: sensor.tankName,
-            currentLevel,
-          });
-
-          broadcastTankUpdate(sensor.clientId, {
-            type: "level_update",
-            tankName: sensor.tankName,
-            currentLevel,
-            measuredAt: new Date().toISOString(),
-          });
-
-          // Verificar e disparar alertas WhatsApp se necessário
-          const { checkAndSendAlerts } = await import("./waterTankAlertService");
-          checkAndSendAlerts(sensor.id, sensor.clientId, sensor.tankName, currentLevel).catch(
-            (e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message),
-          );
-
-          console.log(`[MQTT] ${deviceId} → ${sensor.tankName} (cliente ${sensor.clientId}): ${currentLevel}%`);
+          // Buffer: acumula pelo BUFFER_MS e persiste o maior valor
+          const existing = readingBuffer.get(deviceId);
+          if (existing) {
+            if (currentLevel > existing.maxLevel) existing.maxLevel = currentLevel;
+            console.log(`[MQTT] ${deviceId} buffered ${currentLevel}% (max=${existing.maxLevel}%)`);
+          } else {
+            const timer = setTimeout(() => flushBuffer(deviceId), BUFFER_MS);
+            readingBuffer.set(deviceId, { maxLevel: currentLevel, timer, sensor });
+            console.log(`[MQTT] ${deviceId} buffer iniciado ${currentLevel}% — flush em ${BUFFER_MS / 1000}s`);
+          }
         } catch (err) {
           console.error("[MQTT] Erro ao processar mensagem:", err);
         }
