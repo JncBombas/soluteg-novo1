@@ -245,17 +245,22 @@ export async function getSensorReadingHistory(
   else if (days <= 7)   bucketSeconds = 3600;    // 1 h
   else                  bucketSeconds = 14400;   // 4 h
 
+  // MySQL não aceita bind param dentro de INTERVAL, nem em literais inteiros
+  // de FLOOR/FROM_UNIXTIME quando são repetidos. Usamos sql.raw() para esses.
+  const b = sql.raw(String(bucketSeconds));
+  const cutoff = new Date(Date.now() - days * 86400 * 1000);
+
   const result = await db.execute(sql`
     SELECT
       MAX(currentLevel)                          AS currentLevel,
       FROM_UNIXTIME(
-        FLOOR(UNIX_TIMESTAMP(measuredAt) / ${bucketSeconds}) * ${bucketSeconds}
+        FLOOR(UNIX_TIMESTAMP(measuredAt) / ${b}) * ${b}
       )                                          AS measuredAt
     FROM waterTankMonitoring
     WHERE clientId    = ${clientId}
       AND tankName    = ${tankName}
-      AND measuredAt >= NOW() - INTERVAL ${days} DAY
-    GROUP BY FLOOR(UNIX_TIMESTAMP(measuredAt) / ${bucketSeconds})
+      AND measuredAt >= ${cutoff}
+    GROUP BY FLOOR(UNIX_TIMESTAMP(measuredAt) / ${b})
     ORDER BY measuredAt ASC
   `);
   return (result as unknown as [any[], any])[0] as any[];
