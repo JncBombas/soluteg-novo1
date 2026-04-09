@@ -25,10 +25,16 @@ import type { Response } from "express";
 const sseClients = new Map<number, Set<Response>>();
 
 // ── Buffer de leituras (30 s) ─────────────────────────────────────────────────
-// Acumula leituras brutas por deviceId e persiste apenas o maior valor no intervalo.
+// Sensores JSN-SR04T: guarda a MAIOR distância do intervalo (= menor nível = leitura
+// mais conservadora). Sensores legacy (level_pct): guarda o maior nível.
 const BUFFER_MS = 30_000;
 
 type BufferEntry = {
+  // Para sensores distance_cm: acumula maior distância (distância maior = nível menor)
+  maxDistanceCm: number | null;
+  distVazia: number | null;
+  distCheia: number | null;
+  // Para sensores level_pct legacy
   maxLevel: number;
   timer: ReturnType<typeof setTimeout>;
   sensor: {
@@ -49,27 +55,36 @@ async function flushBuffer(deviceId: string) {
   if (!entry) return;
   readingBuffer.delete(deviceId);
 
+  // Converte distância → nível se for sensor de distância
+  let currentLevel: number;
+  if (entry.maxDistanceCm !== null && entry.distVazia !== null && entry.distCheia !== null) {
+    const raw = (entry.distVazia - entry.maxDistanceCm) / (entry.distVazia - entry.distCheia) * 100;
+    currentLevel = Math.max(0, Math.min(100, Math.round(raw)));
+    console.log(`[MQTT] flush ${deviceId} → ${entry.sensor.tankName}: dist_max=${entry.maxDistanceCm}cm → ${currentLevel}% (30 s)`);
+  } else {
+    currentLevel = entry.maxLevel;
+    console.log(`[MQTT] flush ${deviceId} → ${entry.sensor.tankName}: ${currentLevel}% (max level_pct de 30 s)`);
+  }
+
   const { saveWaterTankReading } = await import("./waterTankDb");
   await saveWaterTankReading({
     clientId: entry.sensor.clientId,
     adminId: entry.sensor.adminId,
     tankName: entry.sensor.tankName,
-    currentLevel: entry.maxLevel,
+    currentLevel,
   });
 
   broadcastTankUpdate(entry.sensor.clientId, {
     type: "level_update",
     tankName: entry.sensor.tankName,
-    currentLevel: entry.maxLevel,
+    currentLevel,
     measuredAt: new Date().toISOString(),
   });
 
   const { checkAndSendAlerts } = await import("./waterTankAlertService");
-  checkAndSendAlerts(entry.sensor.id, entry.sensor.clientId, entry.sensor.tankName, entry.maxLevel).catch(
+  checkAndSendAlerts(entry.sensor.id, entry.sensor.clientId, entry.sensor.tankName, currentLevel).catch(
     (e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message),
   );
-
-  console.log(`[MQTT] flush ${deviceId} → ${entry.sensor.tankName}: ${entry.maxLevel}% (max de 30 s)`);
 }
 
 export function addSseClient(clientId: number, res: Response): void {
@@ -146,35 +161,43 @@ export function initMqtt(): void {
           }
 
           // Support both payload formats:
-          //   { "distance_cm": 67 }  → server converts using sensor calibration
-          //   { "level_pct": 73 }    → used directly (legacy / pre-calibrated)
-          let currentLevel: number;
+          //   { "distance_cm": 67 }  → guarda distância bruta; flush converte usando calibração
+          //   { "level_pct": 73 }    → usado diretamente (legacy / pré-calibrado)
+          const existing = readingBuffer.get(deviceId);
+
           if (payload.distance_cm != null && sensor.distVazia != null && sensor.distCheia != null) {
             const dist = Number(payload.distance_cm);
-            const raw = (sensor.distVazia - dist) / (sensor.distVazia - sensor.distCheia) * 100;
-            currentLevel = Math.max(0, Math.min(100, Math.round(raw)));
-            console.log(`[MQTT] ${deviceId} dist=${dist}cm → ${currentLevel}% (cal: vazia=${sensor.distVazia} cheia=${sensor.distCheia})`);
+            if (isNaN(dist)) return;
+            if (existing) {
+              // Maior distância = menor nível = leitura mais conservadora
+              if (dist > existing.maxDistanceCm!) existing.maxDistanceCm = dist;
+              console.log(`[MQTT] ${deviceId} dist=${dist}cm buffered (max=${existing.maxDistanceCm}cm)`);
+            } else {
+              const timer = setTimeout(() => flushBuffer(deviceId), BUFFER_MS);
+              readingBuffer.set(deviceId, {
+                maxDistanceCm: dist, distVazia: sensor.distVazia, distCheia: sensor.distCheia,
+                maxLevel: 0, timer, sensor,
+              });
+              console.log(`[MQTT] ${deviceId} buffer iniciado dist=${dist}cm — flush em ${BUFFER_MS / 1000}s`);
+            }
           } else if (payload.level_pct != null) {
-            currentLevel = Math.max(0, Math.min(100, Math.round(Number(payload.level_pct))));
+            const lvl = Math.max(0, Math.min(100, Math.round(Number(payload.level_pct))));
+            if (isNaN(lvl)) return;
+            if (existing) {
+              if (lvl > existing.maxLevel) existing.maxLevel = lvl;
+              console.log(`[MQTT] ${deviceId} level=${lvl}% buffered (max=${existing.maxLevel}%)`);
+            } else {
+              const timer = setTimeout(() => flushBuffer(deviceId), BUFFER_MS);
+              readingBuffer.set(deviceId, {
+                maxDistanceCm: null, distVazia: null, distCheia: null,
+                maxLevel: lvl, timer, sensor,
+              });
+              console.log(`[MQTT] ${deviceId} buffer iniciado level=${lvl}% — flush em ${BUFFER_MS / 1000}s`);
+            }
           } else if (payload.distance_cm != null) {
             console.warn(`[MQTT] Sensor ${deviceId} enviou distance_cm mas calibração não configurada — configure dist. vazia/cheia no portal`);
-            return;
           } else {
             console.warn(`[MQTT] Payload inválido do sensor ${deviceId}:`, payload);
-            return;
-          }
-
-          if (isNaN(currentLevel)) return;
-
-          // Buffer: acumula pelo BUFFER_MS e persiste o maior valor
-          const existing = readingBuffer.get(deviceId);
-          if (existing) {
-            if (currentLevel > existing.maxLevel) existing.maxLevel = currentLevel;
-            console.log(`[MQTT] ${deviceId} buffered ${currentLevel}% (max=${existing.maxLevel}%)`);
-          } else {
-            const timer = setTimeout(() => flushBuffer(deviceId), BUFFER_MS);
-            readingBuffer.set(deviceId, { maxLevel: currentLevel, timer, sensor });
-            console.log(`[MQTT] ${deviceId} buffer iniciado ${currentLevel}% — flush em ${BUFFER_MS / 1000}s`);
           }
         } catch (err) {
           console.error("[MQTT] Erro ao processar mensagem:", err);
