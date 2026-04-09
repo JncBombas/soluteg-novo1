@@ -56,6 +56,32 @@ export async function getAllTankHistories(
   return byTank;
 }
 
+export async function getClientAlertLog(
+  clientId: number,
+  tankName: string,
+  limit = 20,
+): Promise<Array<{
+  id: number;
+  alertType: string;
+  triggerPct: number;
+  currentLevel: number;
+  sentAt: Date;
+}>> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db.execute(sql`
+    SELECT a.id, a.alertType, a.triggerPct, a.currentLevel, a.sentAt
+    FROM waterTankAlertLog a
+    JOIN waterTankSensors s ON s.id = a.sensorId
+    WHERE s.clientId = ${clientId}
+      AND s.tankName = ${tankName}
+    ORDER BY a.sentAt DESC
+    LIMIT ${limit}
+  `);
+  return (result as unknown as [any[], any])[0] as any[];
+}
+
 export async function getLatestTankReadings(clientId: number): Promise<Array<{
   id: number | null;
   tankName: string;

@@ -1,6 +1,6 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
-import { getLatestTankReadings, getAllTankHistories } from "../waterTankDb";
+import { getLatestTankReadings, getAllTankHistories, getClientAlertLog } from "../waterTankDb";
 import { getSensorReadingHistory } from "../waterTankSensorDb";
 
 export const waterTankMonitoringRouter = router({
@@ -33,6 +33,13 @@ export const waterTankMonitoringRouter = router({
         result[name] = readings.map((r) => ({ level: r.level, time: new Date(r.time).toISOString() }));
       }
       return result;
+    }),
+
+  getAlarmHistory: publicProcedure
+    .input(z.object({ clientId: z.number(), tankName: z.string() }))
+    .query(async ({ input }) => {
+      if (!input.clientId) return [];
+      return getClientAlertLog(input.clientId, input.tankName);
     }),
 
   /** Histórico downsampled de uma caixa específica — usado pelo gráfico interativo */
