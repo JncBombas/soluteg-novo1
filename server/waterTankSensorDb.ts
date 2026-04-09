@@ -220,23 +220,45 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
   return rows[0] ?? null;
 }
 
+/**
+ * Retorna histórico downsampled para o período pedido.
+ * Usa MAX(currentLevel) por bucket de tempo para evitar enviar dezenas de
+ * milhares de pontos ao cliente — e ainda preservar picos reais.
+ *
+ * Bucket automático:
+ *   ≤ 0.25 d (6 h) → 5 min  → ≈ 72 pontos
+ *   ≤ 1 d          → 15 min → ≈ 96 pontos
+ *   ≤ 7 d          → 1 h    → ≈ 168 pontos
+ *   ≤ 30 d         → 4 h    → ≈ 180 pontos
+ */
 export async function getSensorReadingHistory(
   clientId: number,
   tankName: string,
-  limit = 200,
-): Promise<Array<{ id: number; currentLevel: number; measuredAt: Date }>> {
+  days = 1,
+): Promise<Array<{ currentLevel: number; measuredAt: Date }>> {
   const db = await getDb();
   if (!db) return [];
 
+  let bucketSeconds: number;
+  if (days <= 0.25)     bucketSeconds = 300;     // 5 min
+  else if (days <= 1)   bucketSeconds = 900;     // 15 min
+  else if (days <= 7)   bucketSeconds = 3600;    // 1 h
+  else                  bucketSeconds = 14400;   // 4 h
+
   const result = await db.execute(sql`
-    SELECT id, currentLevel, measuredAt
+    SELECT
+      MAX(currentLevel)                          AS currentLevel,
+      FROM_UNIXTIME(
+        FLOOR(UNIX_TIMESTAMP(measuredAt) / ${bucketSeconds}) * ${bucketSeconds}
+      )                                          AS measuredAt
     FROM waterTankMonitoring
-    WHERE clientId = ${clientId} AND tankName = ${tankName}
-    ORDER BY measuredAt DESC
-    LIMIT ${limit}
+    WHERE clientId    = ${clientId}
+      AND tankName    = ${tankName}
+      AND measuredAt >= NOW() - INTERVAL ${days} DAY
+    GROUP BY FLOOR(UNIX_TIMESTAMP(measuredAt) / ${bucketSeconds})
+    ORDER BY measuredAt ASC
   `);
-  const rows = (result as unknown as [any[], any])[0] as any[];
-  return rows.reverse();
+  return (result as unknown as [any[], any])[0] as any[];
 }
 
 export async function getSensorAlertLog(

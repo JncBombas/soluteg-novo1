@@ -100,12 +100,12 @@ export const waterTankAdminRouter = router({
     }),
 
   getSensorDashboard: adminLocalProcedure
-    .input(z.object({ adminId: z.number(), sensorId: z.number() }))
+    .input(z.object({ adminId: z.number(), sensorId: z.number(), days: z.number().positive().max(30).optional() }))
     .query(async ({ input }) => {
       const sensor = await getSensorById(input.sensorId, input.adminId);
       if (!sensor) throw new Error("Sensor não encontrado");
       const [history, alerts] = await Promise.all([
-        getSensorReadingHistory(sensor.clientId, sensor.tankName),
+        getSensorReadingHistory(sensor.clientId, sensor.tankName, input.days ?? 1),
         getSensorAlertLog(input.sensorId),
       ]);
       return { sensor, history, alerts };

@@ -16,7 +16,19 @@ import {
   Tooltip,
   ReferenceLine,
   ResponsiveContainer,
+  Brush,
 } from "recharts";
+
+// ---- range options -----------------------------------------------------------
+
+const RANGES = [
+  { label: "6h",  days: 0.25 },
+  { label: "24h", days: 1 },
+  { label: "7d",  days: 7 },
+  { label: "30d", days: 30 },
+] as const;
+
+type RangeDays = typeof RANGES[number]["days"];
 
 // ---- helpers ----------------------------------------------------------------
 
@@ -78,6 +90,7 @@ export default function AdminWaterTankDashboard() {
   const params = useParams<{ id: string }>();
   const sensorId = parseInt(params.id ?? "0");
   const [adminId, setAdminId] = useState<number | null>(null);
+  const [days, setDays] = useState<RangeDays>(1);
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
@@ -85,8 +98,8 @@ export default function AdminWaterTankDashboard() {
   }, []);
 
   const { data, isLoading, isError } = trpc.waterTankAdmin.getSensorDashboard.useQuery(
-    { adminId: adminId ?? 0, sensorId },
-    { enabled: !!adminId && !!sensorId, refetchInterval: 30_000 },
+    { adminId: adminId ?? 0, sensorId, days },
+    { enabled: !!adminId && !!sensorId, refetchInterval: 60_000 },
   );
 
   if (isLoading || !adminId) {
@@ -118,11 +131,21 @@ export default function AdminWaterTankDashboard() {
   const alarm = pct != null ? getActiveAlarm(pct, a2, a1, dead) : null;
   const mqttTopic = `soluteg/clients/${sensor.clientId}/tanks/${sensor.tankName}/level`;
 
-  // chart data — limit to last 100 points
-  const chartData = history.slice(-100).map((r: { id: number; currentLevel: number; measuredAt: Date | string }) => ({
-    time: new Date(r.measuredAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+  // X-axis label format depends on range
+  const timeFormat = (iso: Date | string) => {
+    const d = new Date(iso);
+    if (days <= 0.25) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    if (days <= 1)    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const chartData = history.map((r: { currentLevel: number; measuredAt: Date | string }) => ({
+    time: timeFormat(r.measuredAt),
+    rawTime: new Date(r.measuredAt).toLocaleString("pt-BR"),
     nivel: r.currentLevel,
   }));
+
+  const activeRange = RANGES.find((r) => r.days === days)!
 
   return (
     <DashboardLayout>
@@ -273,18 +296,47 @@ export default function AdminWaterTankDashboard() {
 
         {/* Histórico de nível */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Histórico de nível</CardTitle>
-            <CardDescription>Últimas {chartData.length} leituras</CardDescription>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <CardTitle className="text-base">Histórico de nível</CardTitle>
+                <CardDescription>{chartData.length} pontos · {activeRange.label}</CardDescription>
+              </div>
+              {/* Range selector */}
+              <div className="flex gap-1">
+                {RANGES.map((r) => (
+                  <button
+                    key={r.days}
+                    onClick={() => setDays(r.days)}
+                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                      days === r.days
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {chartData.length > 1 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={320}>
+                <LineChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="time" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
+                  <XAxis
+                    dataKey="time"
+                    tick={{ fontSize: 10 }}
+                    interval="preserveStartEnd"
+                    minTickGap={48}
+                  />
                   <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 11 }} width={40} />
-                  <Tooltip formatter={(v: number) => [`${v}%`, "Nível"]} />
+                  <Tooltip
+                    formatter={(v: number) => [`${v}%`, "Nível"]}
+                    labelFormatter={(_, payload) => payload?.[0]?.payload?.rawTime ?? ""}
+                    contentStyle={{ fontSize: 12 }}
+                  />
                   {dead > 0 && (
                     <ReferenceLine y={dead} stroke="#ef4444" strokeDasharray="4 3" label={{ value: `SCI ${dead}%`, fill: "#ef4444", fontSize: 11 }} />
                   )}
@@ -299,8 +351,17 @@ export default function AdminWaterTankDashboard() {
                     dataKey="nivel"
                     stroke="#3b82f6"
                     strokeWidth={2}
-                    dot={chartData.length <= 20}
+                    dot={false}
                     activeDot={{ r: 4 }}
+                  />
+                  {/* Brush para zoom/pan — arraste as alças ou clique e arraste */}
+                  <Brush
+                    dataKey="time"
+                    height={24}
+                    stroke="#94a3b8"
+                    fill="#f1f5f9"
+                    travellerWidth={8}
+                    tickFormatter={() => ""}
                   />
                 </LineChart>
               </ResponsiveContainer>
