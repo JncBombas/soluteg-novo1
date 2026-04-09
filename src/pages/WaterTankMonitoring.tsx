@@ -3,12 +3,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   LogOut, Droplet, AlertTriangle, Loader2, ArrowLeft,
-  Wifi, WifiOff, Flame, CheckCircle, Info,
+  Wifi, WifiOff, Flame, CheckCircle, Info, BarChart2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import {
   AreaChart, Area, Tooltip as RechartTooltip, ResponsiveContainer, YAxis,
+  LineChart, Line, XAxis, CartesianGrid, Tooltip, ReferenceLine, Brush,
 } from "recharts";
+
+const RANGES = [
+  { label: "6h",  days: 0.25 },
+  { label: "24h", days: 1 },
+  { label: "7d",  days: 7 },
+  { label: "30d", days: 30 },
+] as const;
+type RangeDays = typeof RANGES[number]["days"];
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -254,15 +263,104 @@ function SummaryStrip({
   );
 }
 
+// ── Tank chart (interativo, lazy) ────────────────────────────────────────────
+
+function TankChart({
+  clientId, tankName, alarm1, alarm2, dead,
+}: {
+  clientId: number;
+  tankName: string;
+  alarm1: number;
+  alarm2: number;
+  dead: number;
+}) {
+  const [days, setDays] = useState<RangeDays>(1);
+
+  const { data = [], isFetching } = trpc.waterTankMonitoring.getTankHistory.useQuery(
+    { clientId, tankName, days },
+    { staleTime: 60_000 },
+  );
+
+  const timeFormat = (iso: string) => {
+    const d = new Date(iso);
+    if (days <= 0.25) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    if (days <= 1)    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const chartData = data.map((r: { nivel: number; time: string }) => ({
+    time: timeFormat(r.time),
+    rawTime: new Date(r.time).toLocaleString("pt-BR"),
+    nivel: r.nivel,
+  }));
+
+  return (
+    <div className="mt-4 pt-4 border-t border-slate-100">
+      {/* Range selector */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-slate-400 font-medium">
+          {isFetching ? "Carregando…" : `${chartData.length} pontos`}
+        </span>
+        <div className="flex gap-1">
+          {RANGES.map((r) => (
+            <button
+              key={r.days}
+              onClick={() => setDays(r.days)}
+              className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                days === r.days
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isFetching ? (
+        <div className="h-44 flex items-center justify-center">
+          <Loader2 className="w-5 h-5 animate-spin text-slate-300" />
+        </div>
+      ) : chartData.length < 2 ? (
+        <div className="h-44 flex items-center justify-center text-slate-400 text-xs">
+          Sem dados para este período.
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" minTickGap={40} />
+            <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} width={36} />
+            <Tooltip
+              formatter={(v: number) => [`${v}%`, "Nível"]}
+              labelFormatter={(_, payload) => payload?.[0]?.payload?.rawTime ?? ""}
+              contentStyle={{ fontSize: 11 }}
+            />
+            {dead > 0 && <ReferenceLine y={dead} stroke="#ef4444" strokeDasharray="4 3" label={{ value: `SCI ${dead}%`, fill: "#ef4444", fontSize: 10 }} />}
+            {alarm1 > 0 && <ReferenceLine y={alarm1} stroke="#eab308" strokeDasharray="4 3" label={{ value: `⚠ ${alarm1}%`, fill: "#ca8a04", fontSize: 10 }} />}
+            {alarm2 > 0 && <ReferenceLine y={alarm2} stroke="#dc2626" strokeDasharray="4 3" label={{ value: `🚨 ${alarm2}%`, fill: "#dc2626", fontSize: 10 }} />}
+            <Line type="monotone" dataKey="nivel" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 3 }} />
+            <Brush dataKey="time" height={20} stroke="#94a3b8" fill="#f1f5f9" travellerWidth={6} tickFormatter={() => ""} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 // ── Tank card ─────────────────────────────────────────────────────────────────
 
 function TankCard({
   tank,
   sparkData,
+  clientId,
 }: {
   tank: WaterTank;
   sparkData: Array<{ level: number; time: string }> | undefined;
+  clientId: number;
 }) {
+  const [showChart, setShowChart] = useState(false);
   const pct  = tank.levelPercentage;
   const dead = tank.deadVolumePct ?? 0;
   const a1   = tank.alarm1Pct ?? 30;
@@ -370,8 +468,22 @@ function TankCard({
           </div>
         )}
 
-        {/* Sparkline */}
-        {sparkData && <Sparkline data={sparkData} alarm1={a1} alarm2={a2} dead={dead} />}
+        {/* Sparkline (preview rápido quando o chart completo está fechado) */}
+        {!showChart && sparkData && <Sparkline data={sparkData} alarm1={a1} alarm2={a2} dead={dead} />}
+
+        {/* Botão ver histórico */}
+        <button
+          onClick={() => setShowChart((v) => !v)}
+          className="mt-3 flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium"
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          {showChart ? "Fechar histórico" : "Ver histórico completo"}
+        </button>
+
+        {/* Gráfico interativo */}
+        {showChart && (
+          <TankChart clientId={clientId} tankName={tank.tankName} alarm1={a1} alarm2={a2} dead={dead} />
+        )}
 
         {/* Alarm banners */}
         {alarm === "sci" && (
@@ -523,6 +635,7 @@ export default function WaterTankMonitoring() {
               <TankCard
                 key={tank.tankName}
                 tank={tank}
+                clientId={clientId!}
                 sparkData={(histories as Record<string, Array<{ level: number; time: string }>>)[tank.tankName]}
               />
             ))}

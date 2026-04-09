@@ -1,6 +1,7 @@
 import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getLatestTankReadings, getAllTankHistories } from "../waterTankDb";
+import { getSensorReadingHistory } from "../waterTankSensorDb";
 
 export const waterTankMonitoringRouter = router({
   getLatest: publicProcedure
@@ -32,5 +33,21 @@ export const waterTankMonitoringRouter = router({
         result[name] = readings.map((r) => ({ level: r.level, time: new Date(r.time).toISOString() }));
       }
       return result;
+    }),
+
+  /** Histórico downsampled de uma caixa específica — usado pelo gráfico interativo */
+  getTankHistory: publicProcedure
+    .input(z.object({
+      clientId: z.number(),
+      tankName: z.string(),
+      days: z.number().positive().max(30).optional(),
+    }))
+    .query(async ({ input }) => {
+      if (!input.clientId) return [];
+      const rows = await getSensorReadingHistory(input.clientId, input.tankName, input.days ?? 1);
+      return rows.map((r) => ({
+        nivel: r.currentLevel,
+        time: new Date(r.measuredAt).toISOString(),
+      }));
     }),
 });
