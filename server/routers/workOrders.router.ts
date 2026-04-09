@@ -596,7 +596,10 @@ export const workOrdersRouter = router({
 
       const pdfGen = await import("../pdfGenerator");
       const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
-      const filename = `OS-${wo.osNumber || input.id}.pdf`;
+      const osNum = wo.osNumber || `OS-${input.id}`;
+      const clientSlug = (wo.clientName || cliente.name)
+        .trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40);
+      const filename = `${osNum}_${clientSlug}.pdf`;
 
       const { sendWhatsappToNumberWithPDF } = await import("../whatsapp");
       await sendWhatsappToNumberWithPDF(cliente.phone, msg, pdfBuffer, filename);
@@ -619,7 +622,11 @@ export const workOrdersRouter = router({
 
       const pdfGen = await import("../pdfGenerator");
       const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
-      const filename = `OS-${wo.osNumber || input.id}.pdf`;
+      const osNum = wo.osNumber || `OS-${input.id}`;
+      const clientSlug = wo.clientName
+        ? wo.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+      const filename = `${osNum}_${clientSlug}.pdf`;
 
       const { sendWhatsappAlertWithPDF } = await import("../whatsapp");
       sendWhatsappAlertWithPDF(msg, pdfBuffer, filename).catch(e => console.error("Erro no Zap JNC:", e));
