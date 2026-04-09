@@ -248,7 +248,10 @@ export async function getSensorReadingHistory(
   // MySQL não aceita bind param dentro de INTERVAL, nem em literais inteiros
   // de FLOOR/FROM_UNIXTIME quando são repetidos. Usamos sql.raw() para esses.
   const b = sql.raw(String(bucketSeconds));
-  const cutoff = new Date(Date.now() - days * 86400 * 1000);
+  // Drizzle com mysql2 não converte Date → datetime automaticamente em sql``.
+  // Formata manualmente como 'YYYY-MM-DD HH:MM:SS' em UTC.
+  const cutoffDate = new Date(Date.now() - days * 86400 * 1000);
+  const cutoff = sql.raw(`'${cutoffDate.toISOString().slice(0, 19).replace("T", " ")}'`);
 
   const result = await db.execute(sql`
     SELECT
