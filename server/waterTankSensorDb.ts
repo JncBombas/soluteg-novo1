@@ -254,17 +254,18 @@ export async function getSensorReadingHistory(
   const cutoff = sql.raw(`'${cutoffDate.toISOString().slice(0, 19).replace("T", " ")}'`);
 
   const result = await db.execute(sql`
-    SELECT
-      MAX(currentLevel)                          AS currentLevel,
-      FROM_UNIXTIME(
-        FLOOR(UNIX_TIMESTAMP(measuredAt) / ${b}) * ${b}
-      )                                          AS measuredAt
-    FROM waterTankMonitoring
-    WHERE clientId    = ${clientId}
-      AND tankName    = ${tankName}
-      AND measuredAt >= ${cutoff}
-    GROUP BY FLOOR(UNIX_TIMESTAMP(measuredAt) / ${b})
-    ORDER BY measuredAt ASC
+    SELECT MAX(currentLevel) AS currentLevel, bucket AS measuredAt
+    FROM (
+      SELECT
+        currentLevel,
+        FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(measuredAt) / ${b}) * ${b}) AS bucket
+      FROM waterTankMonitoring
+      WHERE clientId  = ${clientId}
+        AND tankName  = ${tankName}
+        AND measuredAt >= ${cutoff}
+    ) t
+    GROUP BY bucket
+    ORDER BY bucket ASC
   `);
   return (result as unknown as [any[], any])[0] as any[];
 }
