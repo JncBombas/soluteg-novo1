@@ -125,8 +125,9 @@ export default function AdminWaterTankDashboard() {
   const a1 = sensor.alarm1Pct ?? 30;
   const a2 = sensor.alarm2Pct ?? 15;
 
-  const latest = history.length > 0 ? history[history.length - 1] : null;
-  const pct = latest?.currentLevel ?? null;
+  // Usa a leitura real do sensor (não o MAX do bucket do gráfico)
+  const pct = sensor.currentLevel ?? null;
+  const latest = { measuredAt: sensor.lastUpdate };
   const colors = pct != null ? getLevelColor(pct, a2, a1, dead) : null;
   const alarm = pct != null ? getActiveAlarm(pct, a2, a1, dead) : null;
   const mqttTopic = `soluteg/clients/${sensor.clientId}/tanks/${sensor.tankName}/level`;

@@ -202,6 +202,8 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
   alertPhone: string | null;
   active: number;
   createdAt: Date;
+  currentLevel: number | null;
+  lastUpdate: Date | null;
 } | null> {
   const db = await getDb();
   if (!db) return null;
@@ -210,9 +212,18 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
     SELECT s.id, s.deviceId, s.clientId, c.name AS clientName, c.phone AS clientPhone,
            s.tankName, s.capacity, s.notes,
            s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alertPhone,
-           s.active, s.createdAt
+           s.active, s.createdAt,
+           latest.currentLevel, latest.measuredAt AS lastUpdate
     FROM waterTankSensors s
     LEFT JOIN clients c ON c.id = s.clientId
+    LEFT JOIN (
+      SELECT currentLevel, measuredAt, clientId, tankName
+      FROM waterTankMonitoring
+      WHERE clientId = (SELECT clientId FROM waterTankSensors WHERE id = ${sensorId})
+        AND tankName = (SELECT tankName FROM waterTankSensors WHERE id = ${sensorId})
+      ORDER BY measuredAt DESC
+      LIMIT 1
+    ) latest ON latest.clientId = s.clientId AND latest.tankName = s.tankName
     WHERE s.id = ${sensorId} AND s.adminId = ${adminId}
     LIMIT 1
   `);
