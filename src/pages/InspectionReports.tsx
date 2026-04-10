@@ -158,7 +158,7 @@ export default function InspectionReports() {
         <div>
           <Button
             variant="outline"
-            onClick={() => navigate("/admin/dashboard")}
+            onClick={() => navigate("/gestor/dashboard")}
           >
             ← Voltar ao Dashboard
           </Button>

@@ -536,7 +536,7 @@ export default function AdminWaterTanks() {
                           <TableCell className="text-right space-x-1">
                             <Button
                               size="sm" variant="ghost"
-                              onClick={() => window.location.href = `/admin/sensores-agua/${s.id}`}
+                              onClick={() => window.location.href = `/gestor/sensores-agua/${s.id}`}
                               className="text-orange-500 hover:text-orange-700" title="Dashboard"
                             >
                               <BarChart2 className="w-4 h-4" />

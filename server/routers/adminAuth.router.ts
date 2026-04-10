@@ -136,36 +136,29 @@ export const adminAuthRouter = router({
   // TROCAR SENHA (estando logado)
   // O admin informa a senha atual e a nova senha. Valida a atual antes de trocar.
   // ──────────────────────────────────────────────
-  changePassword: publicProcedure
+  changePassword: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),            // ID do admin que quer trocar a senha
-      currentPassword: z.string().min(6), // senha atual para confirmar identidade
-      newPassword: z.string().min(6),     // nova senha desejada
+      currentPassword: z.string().min(6),
+      newPassword: z.string().min(6),
     }))
-    .mutation(async ({ input }) => {
-      // Busca o admin no banco pelo ID para obter a senha atual (hasheada)
-      const admin = await db.getAdminById(input.adminId);
+    .mutation(async ({ input, ctx }) => {
+      const admin = await db.getAdminById(ctx.adminId);
 
       if (!admin) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
       }
 
-      // Suporta senhas em texto puro (legado) e hasheadas com bcrypt
       const isBcryptHash = admin.password.startsWith("$2b$") || admin.password.startsWith("$2a$");
       const isValid = isBcryptHash
         ? await verifyPassword(input.currentPassword, admin.password)
         : input.currentPassword === admin.password;
 
       if (!isValid) {
-        // Se a senha atual estiver errada, rejeita a operação
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual incorreta" });
       }
 
-      // Cria o hash da nova senha
       const hashedPassword = await hashPassword(input.newPassword);
-
-      // Salva a nova senha hasheada no banco
-      await db.updateAdminPassword(input.adminId, hashedPassword);
+      await db.updateAdminPassword(ctx.adminId, hashedPassword);
 
       return { success: true, message: "Senha alterada com sucesso" };
     }),
@@ -174,15 +167,12 @@ export const adminAuthRouter = router({
   // ATUALIZAR LABEL CUSTOMIZADO
   // Permite ao admin definir um apelido/rótulo personalizado para sua conta.
   // ──────────────────────────────────────────────
-  updateCustomLabel: publicProcedure
+  updateCustomLabel: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),                        // ID do admin
-      customLabel: z.string().min(1).max(255),    // texto do label (entre 1 e 255 caracteres)
+      customLabel: z.string().min(1).max(255),
     }))
-    .mutation(async ({ input }) => {
-      // Atualiza o campo customLabel do admin no banco de dados
-      await db.updateAdminCustomLabel(input.adminId, input.customLabel);
-
+    .mutation(async ({ input, ctx }) => {
+      await db.updateAdminCustomLabel(ctx.adminId, input.customLabel);
       return { success: true, message: "Label customizado atualizado com sucesso" };
     }),
 });

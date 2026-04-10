@@ -102,7 +102,7 @@ export default function AdminWorkOrders() {
             )}
             
             {/* Botão para criar nova OS */}
-            <Button onClick={() => navigate("/admin/work-orders/new")} >
+            <Button onClick={() => navigate("/gestor/work-orders/new")} >
                Nova OS
             </Button>
           </div>
@@ -166,7 +166,7 @@ export default function AdminWorkOrders() {
                   <div 
                     key={order.id} 
                     className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-slate-200 mb-4 cursor-pointer flex flex-col relative overflow-hidden"
-                    onClick={() => navigate(`/admin/work-orders/${order.id}`)}
+                    onClick={() => navigate(`/gestor/work-orders/${order.id}`)}
                   >
                     {/* Barra lateral colorida indicando a prioridade */}
                     <div 
@@ -226,10 +226,10 @@ export default function AdminWorkOrders() {
 
                       {/* Botões rápidos de visualizar e editar */}
                       <div className="flex items-center gap-2 ml-4 border-l pl-4 border-slate-100" onClick={(e) => e.stopPropagation()}>
-                        <div className="p-2 bg-slate-50 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors" onClick={() => navigate(`/admin/work-orders/${order.id}`)}>
+                        <div className="p-2 bg-slate-50 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors" onClick={() => navigate(`/gestor/work-orders/${order.id}`)}>
                           <Eye className="w-5 h-5" />
                         </div>
-                        <div className="p-2 bg-slate-50 hover:bg-amber-100 rounded-lg text-amber-600 transition-colors" onClick={() => navigate(`/admin/work-orders/${order.id}/edit`)}>
+                        <div className="p-2 bg-slate-50 hover:bg-amber-100 rounded-lg text-amber-600 transition-colors" onClick={() => navigate(`/gestor/work-orders/${order.id}/edit`)}>
                           <Edit2 className="w-5 h-5" />
                         </div>
                       </div>

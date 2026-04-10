@@ -52,8 +52,8 @@ interface BudgetItem {
 
 export default function AdminBudgetDetail() {
   const [, navigate] = useLocation();
-  const [matchNew] = useRoute("/admin/orcamentos/novo");
-  const [matchDetail, params] = useRoute("/admin/orcamentos/:id");
+  const [matchNew] = useRoute("/gestor/orcamentos/novo");
+  const [matchDetail, params] = useRoute("/gestor/orcamentos/:id");
 
   const budgetId = matchDetail ? parseInt(params!.id) : null;
   const isNew = matchNew || !budgetId;
@@ -106,7 +106,7 @@ export default function AdminBudgetDetail() {
   const { data: clientsData } = trpc.clients.list.useQuery({ adminId });
 
   const createMutation = trpc.budgets.create.useMutation({
-    onSuccess: (res) => { toast.success("Orçamento criado!"); navigate(`/admin/orcamentos/${res.id}`); },
+    onSuccess: (res) => { toast.success("Orçamento criado!"); navigate(`/gestor/orcamentos/${res.id}`); },
     onError: (e: any) => toast.error(e.message),
   });
   const updateMutation = trpc.budgets.update.useMutation({
@@ -135,7 +135,7 @@ export default function AdminBudgetDetail() {
       setApproveModalOpen(false);
       refetchBudget();
       if (res.osId) {
-        setTimeout(() => navigate(`/admin/work-orders/${res.osId}`), 1500);
+        setTimeout(() => navigate(`/gestor/work-orders/${res.osId}`), 1500);
       }
     },
     onError: (e: any) => toast.error(e.message),
@@ -144,7 +144,7 @@ export default function AdminBudgetDetail() {
     onSuccess: (res) => {
       toast.success("OS gerada com sucesso!");
       refetchBudget();
-      if (res.osId) setTimeout(() => navigate(`/admin/work-orders/${res.osId}`), 1500);
+      if (res.osId) setTimeout(() => navigate(`/gestor/work-orders/${res.osId}`), 1500);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -325,7 +325,7 @@ export default function AdminBudgetDetail() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate("/admin/orcamentos")} className="gap-2 text-slate-600">
+          <Button variant="ghost" onClick={() => navigate("/gestor/orcamentos")} className="gap-2 text-slate-600">
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
@@ -399,7 +399,7 @@ export default function AdminBudgetDetail() {
               </Button>
             )}
             {budget.generatedOsId && (
-              <Button size="sm" variant="outline" onClick={() => navigate(`/admin/work-orders/${budget.generatedOsId}`)} className="gap-2">
+              <Button size="sm" variant="outline" onClick={() => navigate(`/gestor/work-orders/${budget.generatedOsId}`)} className="gap-2">
                 <ExternalLink className="w-4 h-4" /> Ver OS Gerada
               </Button>
             )}

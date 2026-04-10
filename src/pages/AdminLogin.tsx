@@ -39,7 +39,7 @@ export default function AdminLogin() {
         localStorage.removeItem("adminRememberLogin");
       }
       toast.success("Login realizado com sucesso!");
-      setLocation("/admin/dashboard");
+      setLocation("/gestor/dashboard");
     },
     onError: (error) => {
       toast.error("Credenciais inválidas. Verifique usuário e senha.");

@@ -12,17 +12,15 @@ import DashboardLayout from "@/components/DashboardLayout";
 export default function AdminEditCustomLabel() {
   const [, setLocation] = useLocation();
   const [customLabel, setCustomLabel] = useState("");
-  const [adminId, setAdminId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
     const label = localStorage.getItem("adminCustomLabel");
     if (id) {
-      setAdminId(parseInt(id));
       setCustomLabel(label || "");
     } else {
-      setLocation("/admin/login");
+      setLocation("/gestor/login");
     }
   }, [setLocation]);
 
@@ -30,7 +28,7 @@ export default function AdminEditCustomLabel() {
     onSuccess: () => {
       localStorage.setItem("adminCustomLabel", customLabel);
       toast.success("Label customizado atualizado com sucesso!");
-      setTimeout(() => setLocation("/admin/dashboard"), 1500);
+      setTimeout(() => setLocation("/gestor/dashboard"), 1500);
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao atualizar label");
@@ -38,7 +36,6 @@ export default function AdminEditCustomLabel() {
   });
 
   const handleSave = async () => {
-    if (!adminId) return;
     if (!customLabel.trim()) {
       toast.error("Digite um label customizado");
       return;
@@ -47,7 +44,6 @@ export default function AdminEditCustomLabel() {
     setIsSaving(true);
     try {
       await updateLabelMutation.mutateAsync({
-        adminId,
         customLabel: customLabel.trim(),
       });
     } finally {
@@ -113,7 +109,7 @@ export default function AdminEditCustomLabel() {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setLocation("/admin/dashboard")}
+                onClick={() => setLocation("/gestor/dashboard")}
                 disabled={isSaving}
               >
                 Cancelar

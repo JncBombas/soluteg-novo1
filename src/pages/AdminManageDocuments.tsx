@@ -49,7 +49,7 @@ export default function AdminManageDocuments() {
     if (id) {
       setAdminId(parseInt(id));
     } else {
-      navigate("/admin/login"); // Se não houver ID de admin, expulsa para o login
+      navigate("/gestor/login"); // Se não houver ID de admin, expulsa para o login
     }
   }, []);
 
@@ -270,7 +270,7 @@ export default function AdminManageDocuments() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Documentos Encontrados ({documents.length})</CardTitle>
-              <Button onClick={() => navigate("/admin/documentos/enviar")}>
+              <Button onClick={() => navigate("/gestor/documentos/enviar")}>
                 Enviar Novo Documento
               </Button>
             </div>

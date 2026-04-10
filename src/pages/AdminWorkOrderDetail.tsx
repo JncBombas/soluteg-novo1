@@ -155,7 +155,7 @@ export default function AdminWorkOrderDetail() {
   const deleteWorkOrderMutation = trpc.workOrders.delete.useMutation({
     onSuccess: () => {
       toast.success("OS deletada com sucesso!");
-      navigate("/admin/work-orders");
+      navigate("/gestor/work-orders");
     },
     onError: (error) => {
       toast.error(`Erro ao deletar OS: ${error.message}`);
@@ -258,7 +258,7 @@ export default function AdminWorkOrderDetail() {
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <XCircle className="h-16 w-16 text-destructive" />
         <h2 className="text-2xl font-bold">OS não encontrada</h2>
-        <Button onClick={() => navigate("/admin/work-orders")}>
+        <Button onClick={() => navigate("/gestor/work-orders")}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar para lista
         </Button>
@@ -276,7 +276,7 @@ export default function AdminWorkOrderDetail() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => navigate("/admin/work-orders")}
+            onClick={() => navigate("/gestor/work-orders")}
             className="h-9 w-9 md:h-10 md:w-10"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -487,7 +487,7 @@ export default function AdminWorkOrderDetail() {
                     variant="secondary"
                     size="sm"
                     className="col-span-2 font-bold"
-                    onClick={() => navigate(`/admin/work-orders/${workOrderId}/edit`)}
+                    onClick={() => navigate(`/gestor/work-orders/${workOrderId}/edit`)}
                   >
                     Editar Dados da OS
                   </Button>

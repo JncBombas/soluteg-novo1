@@ -122,7 +122,7 @@ export default function AdminCreateWorkOrderNew() {
       });
 
       toast.success(`OS ${result.osNumber} criada com sucesso!`);
-      navigate("/admin/work-orders");
+      navigate("/gestor/work-orders");
     } catch (error) {
       toast.error("Erro ao criar OS");
     }
@@ -150,7 +150,7 @@ export default function AdminCreateWorkOrderNew() {
               <h1 className="text-3xl font-bold mb-2">Nova Ordem de Serviço</h1>
               <p className="text-gray-600">Preencha os dados para criar uma nova OS</p>
             </div>
-            <Button variant="outline" onClick={() => navigate("/admin/work-orders")}>
+            <Button variant="outline" onClick={() => navigate("/gestor/work-orders")}>
               ← Voltar
             </Button>
           </div>
@@ -470,7 +470,7 @@ export default function AdminCreateWorkOrderNew() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate("/admin/work-orders")}
+              onClick={() => navigate("/gestor/work-orders")}
               className="flex-1 h-12"
             >
               Cancelar

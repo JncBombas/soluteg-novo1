@@ -80,7 +80,7 @@ export default function AdminWorkOrderKanban() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Kanban Soluteg</h1>
-        <Button onClick={() => navigate("/admin/work-orders/new")}>Nova OS</Button>
+        <Button onClick={() => navigate("/gestor/work-orders/new")}>Nova OS</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm border">
@@ -109,7 +109,7 @@ export default function AdminWorkOrderKanban() {
       <DndContext sensors={sensors} onDragStart={(e) => setActiveId(e.active.id as number)} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {STATUS_COLUMNS.map((col) => (
-            <KanbanColumn key={col.status} {...col} workOrders={groupedWorkOrders[col.status] || []} onCardClick={(id: number) => navigate(`/admin/work-orders/${id}`)} />
+            <KanbanColumn key={col.status} {...col} workOrders={groupedWorkOrders[col.status] || []} onCardClick={(id: number) => navigate(`/gestor/work-orders/${id}`)} />
           ))}
         </div>
         <DragOverlay>

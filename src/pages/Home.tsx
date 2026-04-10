@@ -191,7 +191,7 @@ export default function Home() {
             {isAdminLoggedIn ? (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setLocation("/admin/dashboard")}
+                  onClick={() => setLocation("/gestor/dashboard")}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 rounded-lg text-amber-400 text-xs hover:bg-amber-500/25 transition-colors"
                 >
                   <User className="w-3.5 h-3.5" />
@@ -208,7 +208,7 @@ export default function Home() {
                 </Button>
               </div>
             ) : (
-              <Link href="/admin/login">
+              <Link href="/gestor/login">
                 <Button
                   size="sm"
                   variant="outline"
@@ -263,7 +263,7 @@ export default function Home() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    onClick={() => { setLocation("/admin/dashboard"); setMobileMenuOpen(false); }}
+                    onClick={() => { setLocation("/gestor/dashboard"); setMobileMenuOpen(false); }}
                     className="bg-amber-500 hover:bg-amber-400 text-slate-900 gap-1.5"
                   >
                     <User className="w-3.5 h-3.5" />
@@ -280,7 +280,7 @@ export default function Home() {
                   </Button>
                 </div>
               ) : (
-                <Link href="/admin/login">
+                <Link href="/gestor/login">
                   <Button
                     size="sm"
                     variant="outline"

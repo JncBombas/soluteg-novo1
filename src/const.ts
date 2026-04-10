@@ -11,7 +11,7 @@ export const getLoginUrl = () => {
 
   // Guard: se as env vars não estiverem configuradas, retorna a rota de login local.
   if (!oauthPortalUrl || !appId) {
-    return "/admin/login";
+    return "/gestor/login";
   }
 
   const redirectUri = `https://jnc.soluteg.com.br/api/oauth/callback`;

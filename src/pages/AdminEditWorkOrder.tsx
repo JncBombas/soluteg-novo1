@@ -28,7 +28,7 @@ interface WorkOrder {
 
 export default function AdminEditWorkOrder() {
   const [, setLocation] = useLocation();
-  const [match, params] = useRoute("/admin/work-orders/:id/edit");
+  const [match, params] = useRoute("/gestor/work-orders/:id/edit");
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -49,7 +49,7 @@ export default function AdminEditWorkOrder() {
     onSuccess: () => {
       toast.success("OS atualizada com sucesso!");
       setTimeout(() => {
-        setLocation(`/admin/work-orders/${osId}`);
+        setLocation(`/gestor/work-orders/${osId}`);
       }, 500);
     },
     onError: (err) => {
@@ -139,7 +139,7 @@ export default function AdminEditWorkOrder() {
         <div className="max-w-4xl mx-auto">
           <Button
             variant="ghost"
-            onClick={() => setLocation("/admin/work-orders")}
+            onClick={() => setLocation("/gestor/work-orders")}
             className="mb-6 gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -162,7 +162,7 @@ export default function AdminEditWorkOrder() {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => setLocation("/admin/work-orders")}
+            onClick={() => setLocation("/gestor/work-orders")}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -281,7 +281,7 @@ export default function AdminEditWorkOrder() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setLocation(`/admin/work-orders/${osId}`)}
+                  onClick={() => setLocation(`/gestor/work-orders/${osId}`)}
                 >
                   Cancelar
                 </Button>

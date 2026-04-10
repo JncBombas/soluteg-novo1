@@ -100,37 +100,37 @@ const navMain = [
   {
     label: "Visão Geral",
     items: [
-      { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard" },
-      { icon: BarChart2, label: "Métricas de OS", path: "/admin/work-orders/dashboard" },
+      { icon: LayoutDashboard, label: "Dashboard", path: "/gestor/dashboard" },
+      { icon: BarChart2, label: "Métricas de OS", path: "/gestor/work-orders/dashboard" },
     ],
   },
   {
     label: "Ordens de Serviço",
     items: [
-      { icon: Wrench, label: "Painel de Ordens", path: "/admin/work-orders" },
-      { icon: ClipboardList, label: "Orçamentos", path: "/admin/orcamentos" },
+      { icon: Wrench, label: "Painel de Ordens", path: "/gestor/work-orders" },
+      { icon: ClipboardList, label: "Orçamentos", path: "/gestor/orcamentos" },
     ],
   },
   {
     label: "Clientes",
     items: [
-      { icon: Users, label: "Clientes", path: "/admin/clientes" },
-      { icon: FileText, label: "Gerenciar Documentos", path: "/admin/documentos" },
-      { icon: Upload, label: "Enviar Documentos", path: "/admin/documentos/enviar" },
-      { icon: MessageSquare, label: "Mensagens em Massa", path: "/admin/mensagens" },
-      { icon: Droplet, label: "Sensores de Água", path: "/admin/sensores-agua" },
+      { icon: Users, label: "Clientes", path: "/gestor/clientes" },
+      { icon: FileText, label: "Gerenciar Documentos", path: "/gestor/documentos" },
+      { icon: Upload, label: "Enviar Documentos", path: "/gestor/documentos/enviar" },
+      { icon: MessageSquare, label: "Mensagens em Massa", path: "/gestor/mensagens" },
+      { icon: Droplet, label: "Sensores de Água", path: "/gestor/sensores-agua" },
     ],
   },
   {
     label: "Equipe",
     items: [
-      { icon: HardHat, label: "Técnicos", path: "/admin/tecnicos" },
+      { icon: HardHat, label: "Técnicos", path: "/gestor/tecnicos" },
     ],
   },
   {
     label: "Configurações",
     items: [
-      { icon: Tag, label: "Labels Personalizadas", path: "/admin/edit-custom-label" },
+      { icon: Tag, label: "Labels Personalizadas", path: "/gestor/edit-custom-label" },
     ],
   },
 ];
@@ -264,7 +264,7 @@ function DashboardLayoutContent({
   // Pega o usuário logado
   const { user } = useAuth();
 
-  // location = URL atual (ex: "/admin/clientes")
+  // location = URL atual (ex: "/gestor/clientes")
   // setLocation = função para navegar para outra URL
   const [location, setLocation] = useLocation();
 
@@ -281,7 +281,7 @@ function DashboardLayoutContent({
       localStorage.removeItem("adminEmail");
       localStorage.removeItem("adminName");
       localStorage.removeItem("adminCustomLabel");
-      setLocation("/admin/login");
+      setLocation("/gestor/login");
     }
   }, [adminMeQuery.error]);
 
@@ -291,7 +291,7 @@ function DashboardLayoutContent({
       localStorage.removeItem("adminEmail");
       localStorage.removeItem("adminName");
       localStorage.removeItem("adminCustomLabel");
-      setLocation("/admin/login");
+      setLocation("/gestor/login");
     },
   });
 
@@ -553,7 +553,7 @@ function DashboardLayoutContent({
                 <DropdownMenuSeparator />
                 {/* Item "Meu Perfil" — navega para a página de perfil */}
                 <DropdownMenuItem
-                  onClick={() => setLocation("/admin/profile")}
+                  onClick={() => setLocation("/gestor/profile")}
                   className="cursor-pointer gap-2"
                 >
                   <User className="h-4 w-4" />
@@ -649,7 +649,7 @@ function DashboardLayoutContent({
             <DropdownMenuContent align="end" className="w-48">
               {/* Item "Meu Perfil" */}
               <DropdownMenuItem
-                onClick={() => setLocation("/admin/profile")}
+                onClick={() => setLocation("/gestor/profile")}
                 className="cursor-pointer gap-2"
               >
                 <User className="h-4 w-4" />

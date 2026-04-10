@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export default function EditClient() {
   const [, setLocation] = useLocation();
 
-  // Extrai o ID do cliente da URL (/admin/clientes/editar/123 → 123)
+  // Extrai o ID do cliente da URL (/gestor/clientes/editar/123 → 123)
   const pathParts = window.location.pathname.split("/");
   const clientId = Number(pathParts[pathParts.length - 1]) || null;
 
@@ -113,7 +113,7 @@ export default function EditClient() {
       }
 
       setSuccess("Cliente atualizado com sucesso!");
-      setTimeout(() => setLocation("/admin/clientes"), 2000);
+      setTimeout(() => setLocation("/gestor/clientes"), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao atualizar cliente");
     }
@@ -154,7 +154,7 @@ export default function EditClient() {
       <div className="mb-4">
         <Button
           variant="ghost"
-          onClick={() => setLocation("/admin/clientes")}
+          onClick={() => setLocation("/gestor/clientes")}
           className="gap-2 text-slate-600 hover:text-slate-900"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -359,7 +359,7 @@ export default function EditClient() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setLocation("/admin/clientes")}
+                onClick={() => setLocation("/gestor/clientes")}
               >
                 Cancelar
               </Button>

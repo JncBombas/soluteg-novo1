@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const id = localStorage.getItem("adminId");
     if (!id) {
-      setLocation("/admin/login");
+      setLocation("/gestor/login");
       return;
     }
     loadMetrics(parseInt(id));
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
       color: "text-blue-600",
       bg: "bg-blue-50",
       border: "border-blue-200",
-      href: "/admin/clientes",
+      href: "/gestor/clientes",
     },
     {
       label: "Ordens Abertas",
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
       color: "text-amber-600",
       bg: "bg-amber-50",
       border: "border-amber-200",
-      href: "/admin/work-orders",
+      href: "/gestor/work-orders",
     },
     {
       label: "Total de Documentos",
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       color: "text-green-600",
       bg: "bg-green-50",
       border: "border-green-200",
-      href: "/admin/documentos",
+      href: "/gestor/documentos",
     },
     {
       label: "Taxa de Atividade",
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
     {
       title: "Ordens de Serviço",
       desc: "Gerencie atendimentos e serviços",
-      action: () => setLocation("/admin/work-orders"),
+      action: () => setLocation("/gestor/work-orders"),
       label: "Acessar",
       color: "bg-amber-600 hover:bg-amber-700",
       icon: Wrench,
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
     {
       title: "Orçamentos",
       desc: "Propostas, aprovações e geração de OS",
-      action: () => setLocation("/admin/orcamentos"),
+      action: () => setLocation("/gestor/orcamentos"),
       label: "Acessar",
       color: "bg-indigo-600 hover:bg-indigo-700",
       icon: ClipboardList,
@@ -99,7 +99,7 @@ export default function AdminDashboard() {
     {
       title: "Clientes",
       desc: "Criar e gerenciar clientes",
-      action: () => setLocation("/admin/clientes"),
+      action: () => setLocation("/gestor/clientes"),
       label: "Acessar",
       color: "bg-blue-600 hover:bg-blue-700",
       icon: Users,
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
     {
       title: "Documentos",
       desc: "Editar, deletar e substituir documentos",
-      action: () => setLocation("/admin/documentos"),
+      action: () => setLocation("/gestor/documentos"),
       label: "Acessar",
       color: "bg-green-600 hover:bg-green-700",
       icon: FileText,
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
     {
       title: "Mensagens em Massa",
       desc: "Envie WhatsApp para grupos de clientes",
-      action: () => setLocation("/admin/mensagens"),
+      action: () => setLocation("/gestor/mensagens"),
       label: "Acessar",
       color: "bg-orange-500 hover:bg-orange-600",
       icon: MessageSquare,
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
     {
       title: "Técnicos",
       desc: "Gerencie técnicos e seus acessos",
-      action: () => setLocation("/admin/tecnicos"),
+      action: () => setLocation("/gestor/tecnicos"),
       label: "Acessar",
       color: "bg-cyan-600 hover:bg-cyan-700",
       icon: HardHat,

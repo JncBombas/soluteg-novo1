@@ -104,10 +104,10 @@ export default function AdminBudgets() {
                 <Trash2 className="w-4 h-4 mr-2" /> Excluir ({selectedIds.length})
               </Button>
             )}
-            <Button variant="ghost" onClick={() => navigate("/admin/dashboard")} className="gap-2 text-slate-600 hover:text-slate-900">
+            <Button variant="ghost" onClick={() => navigate("/gestor/dashboard")} className="gap-2 text-slate-600 hover:text-slate-900">
               <ArrowLeft className="w-4 h-4" /> Dashboard
             </Button>
-            <Button onClick={() => navigate("/admin/orcamentos/novo")}>
+            <Button onClick={() => navigate("/gestor/orcamentos/novo")}>
               <Plus className="w-4 h-4 mr-2" /> Novo Orçamento
             </Button>
           </div>
@@ -179,7 +179,7 @@ export default function AdminBudgets() {
                   <div
                     key={budget.id}
                     className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all border-2 border-slate-200 cursor-pointer flex flex-col relative overflow-hidden"
-                    onClick={() => navigate(`/admin/orcamentos/${budget.id}`)}
+                    onClick={() => navigate(`/gestor/orcamentos/${budget.id}`)}
                   >
                     {/* Barra lateral colorida por status */}
                     <div className="absolute left-0 top-0 bottom-0 w-[8px] z-20" style={{ backgroundColor: stripeColor }} />
@@ -245,7 +245,7 @@ export default function AdminBudgets() {
                       <div className="flex items-center gap-2 ml-4 border-l pl-4 border-slate-100" onClick={(e) => e.stopPropagation()}>
                         <div
                           className="p-2 bg-slate-50 hover:bg-blue-100 rounded-lg text-blue-600 transition-colors"
-                          onClick={() => navigate(`/admin/orcamentos/${budget.id}`)}
+                          onClick={() => navigate(`/gestor/orcamentos/${budget.id}`)}
                         >
                           <Eye className="w-5 h-5" />
                         </div>

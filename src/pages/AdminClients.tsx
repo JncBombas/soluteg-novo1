@@ -473,7 +473,7 @@ export default function AdminClients() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setLocation(`/admin/clientes/editar/${client.id}`)}
+                          onClick={() => setLocation(`/gestor/clientes/editar/${client.id}`)}
                           className="text-blue-500 hover:text-blue-700"
                         >
                           <Edit2 className="w-4 h-4" />

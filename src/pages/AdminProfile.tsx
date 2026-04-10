@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { User, Lock, Upload } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
-const ADMIN_ID = 1; // ID do admin logado
 
 export default function AdminProfile() {
   const [, setLocation] = useLocation();
@@ -28,10 +27,7 @@ export default function AdminProfile() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   // Queries e mutations
-  const { data: profile, isLoading: profileLoading } = trpc.adminProfile.getProfile.useQuery(
-    { adminId: ADMIN_ID },
-    { enabled: true }
-  );
+  const { data: profile, isLoading: profileLoading } = trpc.adminProfile.getProfile.useQuery();
 
   const updateProfileMutation = trpc.adminProfile.updateProfile.useMutation({
     onSuccess: () => {
@@ -74,7 +70,6 @@ export default function AdminProfile() {
       return;
     }
     await updateProfileMutation.mutateAsync({
-      adminId: ADMIN_ID,
       name: name.trim(),
       phone: phone.trim() || undefined,
       profilePhoto: profilePhoto || undefined,
@@ -96,7 +91,6 @@ export default function AdminProfile() {
       return;
     }
     await changePasswordMutation.mutateAsync({
-      adminId: ADMIN_ID,
       currentPassword,
       newPassword,
     });
@@ -131,7 +125,7 @@ export default function AdminProfile() {
                 Defina como você quer ser identificado na página inicial
               </p>
               <Button
-                onClick={() => setLocation("/admin/edit-custom-label")}
+                onClick={() => setLocation("/gestor/edit-custom-label")}
                 className="w-full"
               >
                 Editar Label

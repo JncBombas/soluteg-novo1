@@ -156,7 +156,7 @@ export default function AdminWaterTankDashboard() {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <Button variant="ghost" size="sm" className="mb-2 -ml-2 text-slate-500"
-              onClick={() => window.location.href = "/admin/sensores-agua"}>
+              onClick={() => window.location.href = "/gestor/sensores-agua"}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
             </Button>
             <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">

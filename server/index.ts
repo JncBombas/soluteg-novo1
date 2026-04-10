@@ -308,7 +308,7 @@ async function startServer() {
 
       // Notifica o admin via WhatsApp
       const { sendWhatsappAlert } = await import("./whatsapp");
-      const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
       const msg =
         `🔔 *SOLICITAÇÃO VIA PORTAL - JNC SOLUTEG*\n\n` +
         `🏢 *Condomínio:* ${client.name}\n` +

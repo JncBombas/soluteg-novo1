@@ -44,25 +44,25 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
-      <Route path={"/admin/login"} component={AdminLogin} />
-      <Route path={"/admin/dashboard"} component={AdminDashboard} />
-        <Route path="/admin/profile" component={AdminProfile} />
-      <Route path="/admin/relatorios" component={InspectionReports} />
-      <Route path="/admin/clientes" component={AdminClients} />
-      <Route path="/admin/mensagens" component={AdminMassMessage} />
-      <Route path="/admin/clientes/editar/:id" component={EditClient} />
-      <Route path="/admin/documentos/enviar" component={AdminDocuments} />
-      <Route path="/admin/documentos" component={AdminManageDocuments} />
-      <Route path="/admin/edit-custom-label" component={AdminEditCustomLabel} />
-      <Route path="/admin/work-orders" component={AdminWorkOrders} />
-      <Route path="/admin/work-orders/dashboard" component={AdminWorkOrderDashboard} />
-      <Route path="/admin/work-orders/kanban" component={AdminWorkOrderKanban} />
-      <Route path="/admin/work-orders/new" component={AdminCreateWorkOrderNew} />
-      <Route path="/admin/work-orders/:id" component={AdminWorkOrderDetail} />
-      <Route path="/admin/work-orders/:id/edit" component={AdminEditWorkOrder} />
-      <Route path="/admin/orcamentos" component={AdminBudgets} />
-      <Route path="/admin/orcamentos/novo" component={AdminBudgetDetail} />
-      <Route path="/admin/orcamentos/:id" component={AdminBudgetDetail} />
+      <Route path={"/gestor/login"} component={AdminLogin} />
+      <Route path={"/gestor/dashboard"} component={AdminDashboard} />
+        <Route path="/gestor/profile" component={AdminProfile} />
+      <Route path="/gestor/relatorios" component={InspectionReports} />
+      <Route path="/gestor/clientes" component={AdminClients} />
+      <Route path="/gestor/mensagens" component={AdminMassMessage} />
+      <Route path="/gestor/clientes/editar/:id" component={EditClient} />
+      <Route path="/gestor/documentos/enviar" component={AdminDocuments} />
+      <Route path="/gestor/documentos" component={AdminManageDocuments} />
+      <Route path="/gestor/edit-custom-label" component={AdminEditCustomLabel} />
+      <Route path="/gestor/work-orders" component={AdminWorkOrders} />
+      <Route path="/gestor/work-orders/dashboard" component={AdminWorkOrderDashboard} />
+      <Route path="/gestor/work-orders/kanban" component={AdminWorkOrderKanban} />
+      <Route path="/gestor/work-orders/new" component={AdminCreateWorkOrderNew} />
+      <Route path="/gestor/work-orders/:id" component={AdminWorkOrderDetail} />
+      <Route path="/gestor/work-orders/:id/edit" component={AdminEditWorkOrder} />
+      <Route path="/gestor/orcamentos" component={AdminBudgets} />
+      <Route path="/gestor/orcamentos/novo" component={AdminBudgetDetail} />
+      <Route path="/gestor/orcamentos/:id" component={AdminBudgetDetail} />
       <Route path="/orcamento/:token" component={BudgetApproval} />
       <Route path="/relatorios/cadastro-cliente" component={ReportClientRegistration} />
       <Route path="/relatorios/visita-inspecao" component={ReportInspectionVisit} />
@@ -72,9 +72,9 @@ function Router() {
       <Route path="/client/portal" component={ClientPortal} />
       <Route path="/client/water-tank" component={WaterTankMonitoring} />
       <Route path="/client/profile" component={ClientProfile} />
-      <Route path="/admin/tecnicos" component={AdminTechnicians} />
-      <Route path="/admin/sensores-agua" component={AdminWaterTanks} />
-      <Route path="/admin/sensores-agua/:id" component={AdminWaterTankDashboard} />
+      <Route path="/gestor/tecnicos" component={AdminTechnicians} />
+      <Route path="/gestor/sensores-agua" component={AdminWaterTanks} />
+      <Route path="/gestor/sensores-agua/:id" component={AdminWaterTankDashboard} />
       <Route path="/technician/login" component={TechnicianLogin} />
       <Route path="/technician/portal" component={TechnicianPortal} />
       <Route path="/technician/work-orders/:id" component={TechnicianWorkOrderDetail} />

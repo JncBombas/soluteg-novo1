@@ -1,16 +1,15 @@
 import * as db from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 const adminDocumentsSubRouter = router({
-  list: publicProcedure
-    .input(z.object({ adminId: z.number() }))
-    .query(async ({ input }) => {
-      return await db.getDocumentsByAdminId(input.adminId);
+  list: adminLocalProcedure
+    .query(async ({ ctx }) => {
+      return await db.getDocumentsByAdminId(ctx.adminId);
     }),
 
-  update: publicProcedure
+  update: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       title: z.string().min(1),
@@ -23,14 +22,14 @@ const adminDocumentsSubRouter = router({
       return { success: true, message: "Documento atualizado com sucesso" };
     }),
 
-  delete: publicProcedure
+  delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteDocument(input.id);
       return { success: true, message: "Documento deletado com sucesso" };
     }),
 
-  updateFile: publicProcedure
+  updateFile: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       fileUrl: z.string().url(),
@@ -42,10 +41,9 @@ const adminDocumentsSubRouter = router({
 });
 
 export const adminProfileRouter = router({
-  getProfile: publicProcedure
-    .input(z.object({ adminId: z.number() }))
-    .query(async ({ input }) => {
-      const admin = await db.getAdminById(input.adminId);
+  getProfile: adminLocalProcedure
+    .query(async ({ ctx }) => {
+      const admin = await db.getAdminById(ctx.adminId);
       if (!admin) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
       }
@@ -58,16 +56,14 @@ export const adminProfileRouter = router({
       };
     }),
 
-  updateProfile: publicProcedure
+  updateProfile: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
       name: z.string().min(1).optional(),
       phone: z.string().optional(),
       profilePhoto: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const { adminId, ...updateData } = input;
-      await db.updateAdminProfile(adminId, updateData);
+    .mutation(async ({ input, ctx }) => {
+      await db.updateAdminProfile(ctx.adminId, input);
       return { success: true, message: "Perfil atualizado com sucesso" };
     }),
 

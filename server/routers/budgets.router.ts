@@ -55,7 +55,7 @@ export const budgetsRouter = router({
 
       const cliente = await db.getClientById(input.clientId);
       const nomeCliente = cliente?.name || `ID ${input.clientId}`;
-      const adminUrl = `https://jnc.soluteg.com.br/admin/orcamentos/${result.id}`;
+      const adminUrl = `https://jnc.soluteg.com.br/gestor/orcamentos/${result.id}`;
       const msg =
         `📝 *NOVO ORÇAMENTO - JNC SOLUTEG*\n\n` +
         `🏢 *Cliente:* ${nomeCliente}\n` +
@@ -186,7 +186,7 @@ export const budgetsRouter = router({
           osId = osResult.id;
           await budgetsDb.linkGeneratedOs(input.id, osId);
 
-          const adminUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+          const adminUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
           const msg =
             `✅ *ORÇAMENTO APROVADO – OS GERADA*\n\n` +
             `📋 Orçamento: ${budget.budgetNumber}\n` +
@@ -281,7 +281,7 @@ export const budgetsRouter = router({
       return { success: true, osId: osResult.id };
     }),
 
-  shareToPortal: publicProcedure
+  shareToPortal: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
@@ -301,7 +301,7 @@ export const budgetsRouter = router({
       });
     }),
 
-  sendWhatsappBudget: publicProcedure
+  sendWhatsappBudget: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       target: z.enum(["admin", "client"]),

@@ -60,7 +60,7 @@ export const workOrdersRouter = router({
 
       const cliente = await db.getClientById(input.clientId);
       const nomeCliente = cliente?.name || `ID ${input.clientId}`;
-      const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${osId}`;
+      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
 
       const msg =
         `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
@@ -572,7 +572,7 @@ export const workOrdersRouter = router({
       return await workOrdersDb.getSharedWorkOrdersForPortal(input.clientId);
     }),
 
-  sendToClientWhatsapp: publicProcedure
+  sendToClientWhatsapp: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -606,14 +606,14 @@ export const workOrdersRouter = router({
       return { success: true };
     }),
 
-  sendToAdminWhatsapp: publicProcedure
+  sendToAdminWhatsapp: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
       const wo = await workOrdersDb.getWorkOrderById(input.id);
       if (!wo) throw new Error("OS não encontrada");
 
-      const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${input.id}`;
+      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${input.id}`;
       const msg =
         `📋 *${wo.osNumber}* - ${wo.title}\n\n` +
         `🏢 Cliente: ${wo.clientName}\n` +
@@ -633,7 +633,7 @@ export const workOrdersRouter = router({
       return { success: true };
     }),
 
-  shareToClientPortal: publicProcedure
+  shareToClientPortal: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
