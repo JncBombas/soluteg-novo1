@@ -24,6 +24,49 @@ import type { Response } from "express";
 // Map de conexões SSE abertas: clientId → conjunto de Response objects
 const sseClients = new Map<number, Set<Response>>();
 
+// ── Cache de configuração dos sensores ───────────────────────────────────────
+// Evita 2 DB queries a cada mensagem MQTT (a cada 5 s por sensor).
+// TTL de 5 min: mudanças de calibração/atribuição propagam em até 5 min.
+const SENSOR_CACHE_TTL = 5 * 60_000;
+const UPSERT_THROTTLE  = 5 * 60_000; // lastSeenAt atualizado no máx 1x a cada 5 min
+
+type CachedSensor = {
+  data: Awaited<ReturnType<typeof import("./waterTankSensorDb").getAssignedSensorByDeviceId>>;
+  cachedAt: number;
+};
+
+const sensorConfigCache = new Map<string, CachedSensor>();
+const lastUpsertTime    = new Map<string, number>();
+
+async function getCachedSensor(deviceId: string) {
+  const now = Date.now();
+
+  // Throttle upsert: só atualiza lastSeenAt no banco a cada UPSERT_THROTTLE ms
+  const lastUpsert = lastUpsertTime.get(deviceId) ?? 0;
+  if (now - lastUpsert >= UPSERT_THROTTLE) {
+    const { upsertSensorDevice } = await import("./waterTankSensorDb");
+    await upsertSensorDevice(deviceId);
+    lastUpsertTime.set(deviceId, now);
+  }
+
+  // Retorna do cache se ainda válido
+  const cached = sensorConfigCache.get(deviceId);
+  if (cached && now - cached.cachedAt < SENSOR_CACHE_TTL) {
+    return cached.data;
+  }
+
+  // Cache miss ou expirado — busca no banco e armazena
+  const { getAssignedSensorByDeviceId } = await import("./waterTankSensorDb");
+  const sensor = await getAssignedSensorByDeviceId(deviceId);
+  sensorConfigCache.set(deviceId, { data: sensor, cachedAt: now });
+  return sensor;
+}
+
+/** Invalida o cache de um sensor imediatamente (ex: após assignSensor/updateSensor) */
+export function invalidateSensorCache(deviceId: string) {
+  sensorConfigCache.delete(deviceId);
+}
+
 // ── Buffer de leituras (30 s) ─────────────────────────────────────────────────
 // Sensores JSN-SR04T: guarda a MAIOR distância do intervalo (= menor nível = leitura
 // mais conservadora). Sensores legacy (level_pct): guarda o maior nível.
@@ -148,13 +191,8 @@ export function initMqtt(): void {
 
           const payload = JSON.parse(message.toString());
 
-          const { upsertSensorDevice, getAssignedSensorByDeviceId } = await import("./waterTankSensorDb");
-
-          // Always update lastSeenAt (auto-register on first contact)
-          await upsertSensorDevice(deviceId);
-
-          // Check if sensor has been assigned by admin
-          const sensor = await getAssignedSensorByDeviceId(deviceId);
+          // Cache: evita 2 DB queries a cada 5s — reutiliza config por até 5 min
+          const sensor = await getCachedSensor(deviceId);
           if (!sensor) {
             console.log(`[MQTT] Sensor ${deviceId} aguardando atribuição — leitura ignorada`);
             return;
