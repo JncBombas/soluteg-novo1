@@ -76,6 +76,40 @@ function fmtTime(date: Date | null, short = false) {
   return `Atualizado ${new Date(date).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: short ? undefined : "2-digit" })}`;
 }
 
+// ── Signal status ─────────────────────────────────────────────────────────────
+// Buffer = 30 s → leitura normal chega a cada ~30 s.
+// 3 min sem leitura = provável instabilidade; 10 min = fora do ar.
+
+function getSensorSignalStatus(recordedAt: Date | null) {
+  if (!recordedAt) return "never" as const;
+  const ago = Date.now() - new Date(recordedAt).getTime();
+  if (ago < 3 * 60_000)  return "live"    as const;
+  if (ago < 10 * 60_000) return "delayed" as const;
+  return "offline" as const;
+}
+
+function SignalBadge({ recordedAt }: { recordedAt: Date | null }) {
+  const status = getSensorSignalStatus(recordedAt);
+  if (status === "live") return (
+    <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+      Ao vivo
+    </span>
+  );
+  if (status === "delayed") return (
+    <span className="flex items-center gap-1 text-xs font-medium text-yellow-600">
+      <span className="w-2 h-2 rounded-full bg-yellow-400" />
+      Sem sinal
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
+      <WifiOff className="w-3 h-3" />
+      Fora do ar
+    </span>
+  );
+}
+
 // ── Vertical tank visual ──────────────────────────────────────────────────────
 
 function TankVisual({
@@ -177,11 +211,13 @@ function SummaryStrip({ tanks, sseConnected }: { tanks: WaterTank[]; sseConnecte
   const alarm1 = withLevel.filter((t) => getActiveAlarm(t.levelPercentage!, t.alarm2Pct, t.alarm1Pct, t.deadVolumePct) === "alarm1");
   const ok     = withLevel.length - sci.length - alarm2.length - alarm1.length;
 
+  const offline = tanks.filter((t) => getSensorSignalStatus(t.recordedAt) === "offline").length;
+
   return (
     <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-white border rounded-xl shadow-sm text-sm">
       <div className="flex items-center gap-1.5 mr-auto">
         {sseConnected
-          ? <><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-green-600 font-medium text-xs">Ao vivo</span></>
+          ? <><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /><span className="text-green-600 font-medium text-xs">Conectado</span></>
           : <><div className="w-2 h-2 rounded-full bg-slate-300" /><span className="text-slate-400 text-xs">Reconectando…</span></>
         }
       </div>
@@ -206,6 +242,12 @@ function SummaryStrip({ tanks, sseConnected }: { tanks: WaterTank[]; sseConnecte
         <div className="flex items-center gap-1 text-red-700">
           <Flame className="w-4 h-4" /><span className="font-semibold">{alarm2.length + sci.length}</span>
           <span className="hidden sm:inline text-xs">crítico</span>
+        </div>
+      )}
+      {offline > 0 && (
+        <div className="flex items-center gap-1 text-slate-400">
+          <WifiOff className="w-4 h-4" /><span className="font-semibold">{offline}</span>
+          <span className="hidden sm:inline text-xs">fora do ar</span>
         </div>
       )}
     </div>
@@ -410,7 +452,10 @@ function TankCard({ tank, sparkData, clientId }: {
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-400">{fmtTime(tank.recordedAt)}</p>
+            <div className="flex items-center gap-3">
+              <SignalBadge recordedAt={tank.recordedAt} />
+              <p className="text-xs text-slate-400">{fmtTime(tank.recordedAt)}</p>
+            </div>
           </div>
 
           {/* 3 columns */}
@@ -537,7 +582,10 @@ function TankCard({ tank, sparkData, clientId }: {
                 <p className="mt-2 text-sm text-slate-400 italic">Aguardando sensor…</p>
               )}
 
-              <p className="text-[11px] text-slate-400 mt-1">{fmtTime(tank.recordedAt)}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-[11px] text-slate-400">{fmtTime(tank.recordedAt)}</p>
+                <SignalBadge recordedAt={tank.recordedAt} />
+              </div>
 
               {pct != null && (
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-[11px] text-slate-500">
