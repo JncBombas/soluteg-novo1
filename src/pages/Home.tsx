@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -8,10 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { APP_LOGO } from "@/const";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { SolutegFooter } from "@/components/SolutegFooter";
 import {
-  LogOut,
   User,
   CheckCircle,
   MessageCircle,
@@ -27,27 +26,8 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const [, setLocation] = useLocation();
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-  const [adminEmail, setAdminEmail] = useState("");
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const adminId = localStorage.getItem("adminId");
-    const email = localStorage.getItem("adminEmail");
-    const customLabel = localStorage.getItem("adminCustomLabel");
-    if (adminId) {
-      setIsAdminLoggedIn(true);
-      setAdminEmail(customLabel || email || "Admin");
-    }
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("adminId");
-    localStorage.removeItem("adminEmail");
-    setIsAdminLoggedIn(false);
-  };
 
   const problems = [
     {
@@ -188,36 +168,6 @@ export default function Home() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            {isAdminLoggedIn ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setLocation("/gestor/dashboard")}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 rounded-lg text-amber-400 text-xs hover:bg-amber-500/25 transition-colors"
-                >
-                  <User className="w-3.5 h-3.5" />
-                  {adminEmail}
-                </button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="border-slate-600 text-slate-300 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/50 gap-1.5"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Sair
-                </Button>
-              </div>
-            ) : (
-              <Link href="/gestor/login">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-600 text-slate-300 hover:bg-slate-700 transition-all"
-                >
-                  Área Administrativa
-                </Button>
-              </Link>
-            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -259,37 +209,6 @@ export default function Home() {
                   Técnico
                 </Button>
               </Link>
-              {isAdminLoggedIn ? (
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => { setLocation("/gestor/dashboard"); setMobileMenuOpen(false); }}
-                    className="bg-amber-500 hover:bg-amber-400 text-slate-900 gap-1.5"
-                  >
-                    <User className="w-3.5 h-3.5" />
-                    Dashboard
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleLogout}
-                    className="border-slate-600 text-slate-300 gap-1.5"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    Sair
-                  </Button>
-                </div>
-              ) : (
-                <Link href="/gestor/login">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-slate-600 text-slate-300"
-                  >
-                    Admin
-                  </Button>
-                </Link>
-              )}
             </div>
           </div>
         )}
