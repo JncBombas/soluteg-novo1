@@ -589,7 +589,7 @@ export const workOrdersRouter = router({
 
       const msg =
         `${saudacao}\n\n` +
-        `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
+        `📋 *${wo.osNumber}* - ${wo.title}\n\n` +
         `🏢 Condomínio: ${wo.clientName || cliente.name}\n` +
         `📌 Status: ${wo.status}` +
         portalLinha;
@@ -615,7 +615,7 @@ export const workOrdersRouter = router({
 
       const portalUrl = `https://jnc.soluteg.com.br/admin/work-orders/${input.id}`;
       const msg =
-        `📋 *OS ${wo.osNumber}* - ${wo.title}\n\n` +
+        `📋 *${wo.osNumber}* - ${wo.title}\n\n` +
         `🏢 Cliente: ${wo.clientName}\n` +
         `📌 Tipo: ${wo.type?.toUpperCase()} | Status: ${wo.status}\n\n` +
         `🔗 *Ver no painel:*\n${portalUrl}`;
@@ -671,7 +671,7 @@ export const workOrdersRouter = router({
         const msg =
           `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
           `${saudacaoPortal}\n\n` +
-          `A OS *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
+          `A *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
           `🔗 Acesse: ${portalUrl}\n` +
           `👤 Login: ${cliente.username}\n` +
           `🔑 Senha: (sua senha cadastrada)\n\n` +
