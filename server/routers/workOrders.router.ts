@@ -423,12 +423,12 @@ export const workOrdersRouter = router({
 
   // ==================== RECURRENCE ====================
   recurrence: router({
-    process: publicProcedure.mutation(async () => {
+    process: adminLocalProcedure.mutation(async () => {
       const recurrence = await import("../workOrdersRecurrence");
       return await recurrence.processRecurringWorkOrders();
     }),
 
-    cancel: publicProcedure
+    cancel: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         cancelFutureOnly: z.boolean().optional().default(false),
@@ -438,21 +438,21 @@ export const workOrdersRouter = router({
         return await recurrence.cancelRecurrence(input.workOrderId, input.cancelFutureOnly);
       }),
 
-    reactivate: publicProcedure
+    reactivate: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .mutation(async ({ input }) => {
         const recurrence = await import("../workOrdersRecurrence");
         return await recurrence.reactivateRecurrence(input.workOrderId);
       }),
 
-    getNextDate: publicProcedure
+    getNextDate: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const recurrence = await import("../workOrdersRecurrence");
         return await recurrence.getNextRecurrenceDate(input.workOrderId);
       }),
 
-    getInstances: publicProcedure
+    getInstances: adminLocalProcedure
       .input(z.object({ parentWorkOrderId: z.number() }))
       .query(async ({ input }) => {
         const recurrence = await import("../workOrdersRecurrence");

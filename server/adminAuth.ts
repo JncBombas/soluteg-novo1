@@ -113,6 +113,48 @@ export function verifyToken(token: string): { adminId: number; type: string } | 
 
 
 // ──────────────────────────────────────────────
+// TOKEN JWT PARA CLIENTE
+// ──────────────────────────────────────────────
+export function generateClientToken(clientId: number): string {
+  return jwt.sign(
+    { clientId, type: 'client' },
+    ENV.jwtSecret,
+    { expiresIn: '7d' }
+  );
+}
+
+export function verifyClientToken(token: string): { clientId: number; type: string } | null {
+  try {
+    const decoded = jwt.verify(token, ENV.jwtSecret) as { clientId: number; type: string };
+    if (decoded.type !== 'client') return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────────
+// TOKEN JWT PARA TÉCNICO
+// ──────────────────────────────────────────────
+export function generateTechnicianToken(technicianId: number): string {
+  return jwt.sign(
+    { technicianId, type: 'technician' },
+    ENV.jwtSecret,
+    { expiresIn: '7d' }
+  );
+}
+
+export function verifyTechnicianToken(token: string): { technicianId: number; type: string } | null {
+  try {
+    const decoded = jwt.verify(token, ENV.jwtSecret) as { technicianId: number; type: string };
+    if (decoded.type !== 'technician') return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
+// ──────────────────────────────────────────────
 // AUTENTICAR ADMIN (função principal de login)
 // Orquestra todo o processo de login:
 //   1. Busca o admin pelo nome de usuário

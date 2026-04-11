@@ -154,7 +154,6 @@ export default function ClientPortal() {
       }
       // Then update the text fields
       await updateProfileMutation.mutateAsync({
-        clientId,
         name: profileForm.name || undefined,
         syndicName: profileForm.syndicName || undefined,
         phone: profileForm.phone || undefined,
@@ -179,14 +178,13 @@ export default function ClientPortal() {
       return;
     }
     await changePasswordMutation.mutateAsync({
-      clientId,
       currentPassword: profileForm.currentPassword,
       newPassword: profileForm.newPassword,
     });
   };
 
   const { data: documents = [], isLoading } = trpc.documents.list.useQuery(
-    { clientId: clientId || 0 },
+    {},
     { enabled: !!clientId }
   );
 
@@ -201,7 +199,7 @@ export default function ClientPortal() {
   );
 
   const { data: profileData, refetch: refetchProfile } = trpc.clientProfile.getProfile.useQuery(
-    { clientId: clientId || 0 },
+    undefined,
     { enabled: !!clientId }
   );
 
@@ -336,6 +334,7 @@ export default function ClientPortal() {
   };
 
   const handleLogout = () => {
+    fetch("/api/client-logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem("clientToken");
     localStorage.removeItem("clientId");
     localStorage.removeItem("clientName");

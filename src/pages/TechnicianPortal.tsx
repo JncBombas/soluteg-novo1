@@ -34,11 +34,12 @@ export default function TechnicianPortal() {
   }, []);
 
   const { data: workOrders = [], isLoading, refetch } = (trpc as any).technicianPortal.getMyWorkOrders.useQuery(
-    { technicianId: technicianId! },
+    undefined,
     { enabled: !!technicianId }
   );
 
   function handleLogout() {
+    fetch("/api/technician-logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem("technicianId");
     localStorage.removeItem("technicianName");
     localStorage.removeItem("technicianToken");

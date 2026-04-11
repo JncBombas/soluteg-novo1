@@ -34,7 +34,7 @@ export default function ClientProfile() {
 
   // Fetch profile data
   const { data: profile, isLoading: isLoadingProfile } = trpc.clientProfile.getProfile.useQuery(
-    { clientId },
+    undefined,
     { enabled: !!clientId }
   );
 
@@ -67,7 +67,6 @@ export default function ClientProfile() {
     setIsLoading(true);
     try {
       await updateProfileMutation.mutateAsync({
-        clientId,
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -101,7 +100,6 @@ export default function ClientProfile() {
     setIsLoading(true);
     try {
       await changePasswordMutation.mutateAsync({
-        clientId,
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
@@ -121,6 +119,7 @@ export default function ClientProfile() {
   };
 
   const handleLogout = () => {
+    fetch("/api/client-logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem("clientId");
     localStorage.removeItem("clientName");
     setLocation("/client/login");

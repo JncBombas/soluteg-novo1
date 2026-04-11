@@ -1,14 +1,13 @@
 import * as db from "../db";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedClientProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { hashPassword, comparePassword } from "../adminAuth";
 
 export const clientProfileRouter = router({
-  getProfile: publicProcedure
-    .input(z.object({ clientId: z.number() }))
-    .query(async ({ input }) => {
-      const client = await db.getClientById(input.clientId);
+  getProfile: protectedClientProcedure
+    .query(async ({ ctx }) => {
+      const client = await db.getClientById(ctx.clientId);
       if (!client) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Cliente nao encontrado" });
       }
@@ -25,6 +24,7 @@ export const clientProfileRouter = router({
       };
     }),
 
+  // Mantido como publicProcedure — também usado pela página admin (EditClient)
   uploadPhoto: publicProcedure
     .input(z.object({
       clientId: z.number(),
@@ -44,29 +44,26 @@ export const clientProfileRouter = router({
       return { success: true, photoUrl: url };
     }),
 
-  updateProfile: publicProcedure
+  updateProfile: protectedClientProcedure
     .input(z.object({
-      clientId: z.number(),
       name: z.string().min(1).optional(),
       email: z.string().email().optional(),
       phone: z.string().optional(),
       address: z.string().optional(),
       syndicName: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const { clientId, ...updateData } = input;
-      await db.updateClient(clientId, updateData);
+    .mutation(async ({ input, ctx }) => {
+      await db.updateClient(ctx.clientId, input);
       return { success: true, message: "Perfil atualizado com sucesso" };
     }),
 
-  changePassword: publicProcedure
+  changePassword: protectedClientProcedure
     .input(z.object({
-      clientId: z.number(),
       currentPassword: z.string(),
       newPassword: z.string().min(6),
     }))
-    .mutation(async ({ input }) => {
-      const client = await db.getClientById(input.clientId);
+    .mutation(async ({ input, ctx }) => {
+      const client = await db.getClientById(ctx.clientId);
       if (!client) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Cliente nao encontrado" });
       }
@@ -75,7 +72,7 @@ export const clientProfileRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Senha atual invalida" });
       }
       const hashedPassword = await hashPassword(input.newPassword);
-      await db.updateClientPassword(input.clientId, hashedPassword);
+      await db.updateClientPassword(ctx.clientId, hashedPassword);
       return { success: true, message: "Senha alterada com sucesso" };
     }),
 });

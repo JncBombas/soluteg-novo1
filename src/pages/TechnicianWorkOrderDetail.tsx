@@ -56,7 +56,7 @@ export default function TechnicianWorkOrderDetail() {
   }, []);
 
   const { data: os, isLoading, refetch } = (trpc as any).technicianPortal.getWorkOrderById.useQuery(
-    { id: workOrderId!, technicianId: technicianId! },
+    { id: workOrderId! },
     { enabled: !!workOrderId && !!technicianId }
   );
 
@@ -71,19 +71,17 @@ export default function TechnicianWorkOrderDetail() {
   });
 
   function handleIniciar() {
-    if (!workOrderId || !technicianId) return;
+    if (!workOrderId) return;
     updateStatusMutation.mutate({
       workOrderId,
-      technicianId,
       newStatus: "em_andamento",
     });
   }
 
   function handleConcluir() {
-    if (!workOrderId || !technicianId) return;
+    if (!workOrderId) return;
     updateStatusMutation.mutate({
       workOrderId,
-      technicianId,
       newStatus: "concluida",
       notes: concludeNotes || undefined,
     });

@@ -63,3 +63,43 @@ export const adminLocalProcedure = t.procedure.use(
     });
   }),
 );
+
+// Middleware para autenticação do cliente (JWT cookie client_token)
+export const protectedClientProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.clientId) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso negado. Faça login no portal do cliente." });
+    }
+
+    const clientId = ctx.clientId as number;
+
+    return next({
+      ctx: {
+        ...ctx,
+        clientId,
+      },
+    });
+  }),
+);
+
+// Middleware para autenticação do técnico (JWT cookie technician_token)
+export const protectedTechnicianProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.technicianId) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Acesso negado. Faça login no portal do técnico." });
+    }
+
+    const technicianId = ctx.technicianId as number;
+
+    return next({
+      ctx: {
+        ...ctx,
+        technicianId,
+      },
+    });
+  }),
+);

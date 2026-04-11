@@ -264,7 +264,7 @@ function TankChart({ clientId, tankName, alarm1, alarm2, dead, height = 220 }: {
   const [days, setDays] = useState<RangeDays>(1);
 
   const { data = [], isFetching } = trpc.waterTankMonitoring.getTankHistory.useQuery(
-    { clientId, tankName, days },
+    { tankName, days },
     { staleTime: 60_000 },
   );
 
@@ -334,7 +334,7 @@ function TankChart({ clientId, tankName, alarm1, alarm2, dead, height = 220 }: {
 
 function AlarmLog({ clientId, tankName }: { clientId: number; tankName: string }) {
   const { data = [], isLoading } = trpc.waterTankMonitoring.getAlarmHistory.useQuery(
-    { clientId, tankName },
+    { tankName },
     { staleTime: 5 * 60_000 },
   );
 
@@ -675,12 +675,12 @@ export default function WaterTankMonitoring() {
   }, []);
 
   const { data: initialTanks = [], isLoading } = trpc.waterTankMonitoring.getLatest.useQuery(
-    { clientId: clientId || 0 },
+    undefined,
     { enabled: !!clientId },
   );
 
   const { data: histories = {} } = trpc.waterTankMonitoring.getAllHistory.useQuery(
-    { clientId: clientId || 0 },
+    undefined,
     { enabled: !!clientId, staleTime: 60_000 },
   );
 
@@ -712,6 +712,7 @@ export default function WaterTankMonitoring() {
   }, [clientId]);
 
   const handleLogout = () => {
+    fetch("/api/client-logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem("clientToken");
     localStorage.removeItem("clientId");
     localStorage.removeItem("clientName");

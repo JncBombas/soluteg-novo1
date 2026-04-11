@@ -1,18 +1,17 @@
 import * as db from "../db";
-import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, protectedClientProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const documentsRouter = router({
-  list: publicProcedure
+  list: protectedClientProcedure
     .input(z.object({
-      clientId: z.number(),
       search: z.string().optional(),
       documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita", "all"]).optional(),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
     }))
-    .query(async ({ input }) => {
-      return await db.getDocumentsByClientIdWithFilters(input);
+    .query(async ({ input, ctx }) => {
+      return await db.getDocumentsByClientIdWithFilters({ ...input, clientId: ctx.clientId });
     }),
 
   listAll: adminLocalProcedure

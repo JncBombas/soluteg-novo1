@@ -1,30 +1,28 @@
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedTechnicianProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as technicianDb from "../technicianDb";
 
 export const technicianPortalRouter = router({
-  getMyWorkOrders: publicProcedure
-    .input(z.object({ technicianId: z.number() }))
-    .query(async ({ input }) => {
-      return await technicianDb.getWorkOrdersByTechnicianId(input.technicianId);
+  getMyWorkOrders: protectedTechnicianProcedure
+    .query(async ({ ctx }) => {
+      return await technicianDb.getWorkOrdersByTechnicianId(ctx.technicianId);
     }),
 
-  getWorkOrderById: publicProcedure
-    .input(z.object({ id: z.number(), technicianId: z.number() }))
-    .query(async ({ input }) => {
-      return await technicianDb.getWorkOrderByIdForTechnician(input.id, input.technicianId);
+  getWorkOrderById: protectedTechnicianProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      return await technicianDb.getWorkOrderByIdForTechnician(input.id, ctx.technicianId);
     }),
 
-  updateStatus: publicProcedure
+  updateStatus: protectedTechnicianProcedure
     .input(z.object({
       workOrderId:  z.number(),
-      technicianId: z.number(),
       newStatus:    z.enum(["em_andamento", "concluida"]),
       notes:        z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, input.technicianId);
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
       if (!os) {
         throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
       }
@@ -39,7 +37,7 @@ export const technicianPortalRouter = router({
 
       await workOrdersDb.addWorkOrderHistory({
         workOrderId:    input.workOrderId,
-        changedBy:      `technician-${input.technicianId}`,
+        changedBy:      `technician-${ctx.technicianId}`,
         changedByType:  "technician",
         previousStatus: os.status,
         newStatus:      input.newStatus,

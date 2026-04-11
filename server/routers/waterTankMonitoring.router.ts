@@ -1,14 +1,12 @@
-import { router, publicProcedure } from "../_core/trpc";
+import { router, protectedClientProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { getLatestTankReadings, getAllTankHistories, getClientAlertLog } from "../waterTankDb";
 import { getSensorReadingHistory } from "../waterTankSensorDb";
 
 export const waterTankMonitoringRouter = router({
-  getLatest: publicProcedure
-    .input(z.object({ clientId: z.number() }))
-    .query(async ({ input }) => {
-      if (!input.clientId) return [];
-      const rows = await getLatestTankReadings(input.clientId);
+  getLatest: protectedClientProcedure
+    .query(async ({ ctx }) => {
+      const rows = await getLatestTankReadings(ctx.clientId);
       return rows.map((r) => ({
         id: r.id ?? 0,
         tankName: r.tankName,
@@ -22,11 +20,9 @@ export const waterTankMonitoringRouter = router({
       }));
     }),
 
-  getAllHistory: publicProcedure
-    .input(z.object({ clientId: z.number() }))
-    .query(async ({ input }) => {
-      if (!input.clientId) return {};
-      const raw = await getAllTankHistories(input.clientId);
+  getAllHistory: protectedClientProcedure
+    .query(async ({ ctx }) => {
+      const raw = await getAllTankHistories(ctx.clientId);
       // Serialize dates as ISO strings for tRPC transport
       const result: Record<string, Array<{ level: number; time: string }>> = {};
       for (const [name, readings] of Object.entries(raw)) {
@@ -35,23 +31,20 @@ export const waterTankMonitoringRouter = router({
       return result;
     }),
 
-  getAlarmHistory: publicProcedure
-    .input(z.object({ clientId: z.number(), tankName: z.string() }))
-    .query(async ({ input }) => {
-      if (!input.clientId) return [];
-      return getClientAlertLog(input.clientId, input.tankName);
+  getAlarmHistory: protectedClientProcedure
+    .input(z.object({ tankName: z.string() }))
+    .query(async ({ input, ctx }) => {
+      return getClientAlertLog(ctx.clientId, input.tankName);
     }),
 
   /** Histórico downsampled de uma caixa específica — usado pelo gráfico interativo */
-  getTankHistory: publicProcedure
+  getTankHistory: protectedClientProcedure
     .input(z.object({
-      clientId: z.number(),
       tankName: z.string(),
       days: z.number().positive().max(30).optional(),
     }))
-    .query(async ({ input }) => {
-      if (!input.clientId) return [];
-      const rows = await getSensorReadingHistory(input.clientId, input.tankName, input.days ?? 1);
+    .query(async ({ input, ctx }) => {
+      const rows = await getSensorReadingHistory(ctx.clientId, input.tankName, input.days ?? 1);
       return rows.map((r) => ({
         nivel: r.currentLevel,
         time: new Date(r.measuredAt).toISOString(),

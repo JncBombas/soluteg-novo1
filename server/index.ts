@@ -162,19 +162,35 @@ async function startServer() {
  
       // Atualiza a data/hora do último login no banco
       await updateClientLastLogin(client.id);
- 
-      // Retorna o token de sessão e dados básicos do cliente
+
+      // Gera JWT e define cookie HttpOnly (não acessível via JS)
+      const { generateClientToken } = await import("./adminAuth");
+      const clientJwt = generateClientToken(client.id);
+      res.cookie("client_token", clientJwt, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      });
+
+      // Retorna dados básicos do cliente (clientId mantido para compatibilidade de display)
       res.json({
         success: true,
-        token: `client-${client.id}`, // Token simples baseado no ID do cliente
+        token: `client-${client.id}`,
         clientId: client.id,
         name: client.name,
       });
- 
+
     } catch (error) {
       console.error("Client login error:", error);
       res.status(500).json({ message: "Erro ao fazer login" });
     }
+  });
+
+  // Logout do cliente — limpa o cookie JWT
+  app.post("/api/client-logout", (_req, res) => {
+    res.clearCookie("client_token", { httpOnly: true, sameSite: "strict" });
+    res.json({ success: true });
   });
  
  
@@ -209,6 +225,16 @@ async function startServer() {
 
       await technicianDb.updateTechnicianLastLogin(technician.id);
 
+      // Gera JWT e define cookie HttpOnly
+      const { generateTechnicianToken } = await import("./adminAuth");
+      const techJwt = generateTechnicianToken(technician.id);
+      res.cookie("technician_token", techJwt, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      });
+
       res.json({
         success:      true,
         token:        `technician-${technician.id}`,
@@ -219,6 +245,12 @@ async function startServer() {
       console.error("Technician login error:", error);
       res.status(500).json({ message: "Erro ao fazer login" });
     }
+  });
+
+  // Logout do técnico — limpa o cookie JWT
+  app.post("/api/technician-logout", (_req, res) => {
+    res.clearCookie("technician_token", { httpOnly: true, sameSite: "strict" });
+    res.json({ success: true });
   });
 
 
