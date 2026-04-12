@@ -190,6 +190,13 @@
       "when": 1775609692408,
       "tag": "0026_small_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "5",
+      "when": 1776024168795,
+      "tag": "0027_fast_black_widow",
+      "breakpoints": true
     }
   ]
 }
