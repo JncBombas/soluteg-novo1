@@ -255,6 +255,7 @@ export const workOrders = mysqlTable("workOrders", {
     "aprovada",
     "rejeitada",
     "em_andamento",
+    "pausada",
     "concluida",
     "aguardando_pagamento",
     "cancelada"
@@ -293,9 +294,16 @@ export const workOrders = mysqlTable("workOrders", {
   clientSignature: text("clientSignature"),
   clientName: varchar("clientName", { length: 255 }),
   signedAt: timestamp("signedAt"),
-  
+
+  // Assinatura antecipada do técnico (antes de finalizar)
+  technicianSignature: text("technicianSignature"),
+  technicianSignedAt: timestamp("technicianSignedAt"),
+
   // Técnico responsável
   technicianId: int("technicianId"),
+
+  // Controle de pausa
+  pausedAt: timestamp("pausedAt"),
 
   // Portal do Cliente
   sharedWithPortal: int("sharedWithPortal").default(0).notNull(),

@@ -9,7 +9,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   aprovada: { label: "Aprovada", color: "bg-lime-100 text-lime-700 border-lime-200" },
   
   // STATUS DE EXECUÇÃO
-  em_andamento: { label: "Em Atendimento", color: "bg-blue-600 text-white border-blue-700" }, 
+  em_andamento: { label: "Em Atendimento", color: "bg-blue-600 text-white border-blue-700" },
+  pausada: { label: "Pausada", color: "bg-amber-100 text-amber-800 border-amber-300" },
   aprovada_em_andamento: { label: "Executando (Aprovada)", color: "bg-emerald-600 text-white border-emerald-700" },
   
   // FINALIZAÇÃO

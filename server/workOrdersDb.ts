@@ -1,6 +1,6 @@
 import { eq, desc, and, gte, lte, like, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
-import { workOrders, workOrderHistory, InsertWorkOrder, InsertWorkOrderHistory } from "../drizzle/schema";
+import { workOrders, workOrderHistory, InsertWorkOrder, InsertWorkOrderHistory, technicians } from "../drizzle/schema";
 
 /**
  * Gerar número de OS único (formato: OS-YYYY-NNNN)
@@ -97,14 +97,21 @@ export async function getWorkOrderById(id: number) {
       collaboratorSignature: workOrders.collaboratorSignature,
       collaboratorName: workOrders.collaboratorName,
       clientSignature: workOrders.clientSignature,
+      technicianSignature: workOrders.technicianSignature,
+      technicianSignedAt: workOrders.technicianSignedAt,
+      technicianId: workOrders.technicianId,
+      pausedAt: workOrders.pausedAt,
       // Dados do cliente
-      clientName: clients.name, // Busca direto da tabela de clientes vinculada
+      clientName: clients.name,
       clientAddress: clients.address,
       clientPhone: clients.phone,
       clientEmail: clients.email,
+      // Nome do técnico vinculado
+      technicianName: technicians.name,
     })
     .from(workOrders)
     .leftJoin(clients, eq(workOrders.clientId, clients.id))
+    .leftJoin(technicians, eq(workOrders.technicianId, technicians.id))
     .where(eq(workOrders.id, id))
     .limit(1);
 
@@ -334,4 +341,48 @@ export async function getSharedWorkOrdersForPortal(clientId: number) {
     .from(workOrders)
     .where(and(eq(workOrders.clientId, clientId), eq(workOrders.sharedWithPortal, 1)))
     .orderBy(desc(workOrders.createdAt));
+}
+
+/**
+ * Atribuir (ou remover) técnico de uma OS
+ */
+export async function assignTechnicianToWorkOrder(
+  workOrderId: number,
+  technicianId: number | null
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(workOrders)
+    .set({ technicianId })
+    .where(eq(workOrders.id, workOrderId));
+}
+
+/**
+ * Salvar assinatura antecipada do técnico
+ */
+export async function saveTechnicianSignature(
+  workOrderId: number,
+  technicianId: number,
+  signature: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Garantia: só salva se a OS pertence ao técnico
+  const rows = await db
+    .select({ technicianId: workOrders.technicianId })
+    .from(workOrders)
+    .where(eq(workOrders.id, workOrderId))
+    .limit(1);
+
+  if (!rows[0] || rows[0].technicianId !== technicianId) {
+    throw new Error("Acesso negado");
+  }
+
+  await db
+    .update(workOrders)
+    .set({ technicianSignature: signature, technicianSignedAt: new Date() })
+    .where(eq(workOrders.id, workOrderId));
 }

@@ -19,12 +19,16 @@ import {
   FileDown,
   Trash2,
   Play,
+  Pause,
   FileText,
   Download,
   MessageCircle,
   Globe,
   ChevronDown,
+  HardHat,
+  UserCheck,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,13 +58,14 @@ import CompleteWorkOrderModal from "@/components/CompleteWorkOrderModal";
 
 export default function AdminWorkOrderDetail() {
   // --- CONFIGURAÇÕES INICIAIS ---
-  const params = useParams(); // Pega o ID da OS na URL do navegador
-  const [, navigate] = useLocation(); // Função para mudar de página
+  const params = useParams();
+  const [, navigate] = useLocation();
   const [exportingPDF, setExportingPDF] = useState(false);
   const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
-  const [completeModalOpen, setCompleteModalOpen] = useState(false); // Abre/fecha o modal de finalizar
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false); // Abre/fecha o aviso de deletar
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const workOrderId = Number(params.id);
+  const adminId = parseInt(localStorage.getItem("adminId") || "1");
 
   // --- BUSCA DE DADOS (CONVERSA COM O BANCO) ---
   const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
@@ -70,6 +75,11 @@ export default function AdminWorkOrderDetail() {
   const { data: history } = trpc.workOrders.getHistory.useQuery({
     workOrderId,
   });
+
+  const { data: techniciansList } = (trpc as any).technicians.list.useQuery(
+    { adminId },
+    { staleTime: 60_000 }
+  );
 
   // --- AÇÕES (BOTÕES QUE ALTERAM O BANCO) ---
 
@@ -151,6 +161,15 @@ export default function AdminWorkOrderDetail() {
     },
   });
 
+  // Atribuir técnico
+  const assignTechnicianMutation = (trpc as any).workOrders.assignTechnician.useMutation({
+    onSuccess: () => {
+      toast.success("Técnico atribuído com sucesso!");
+      refetch();
+    },
+    onError: (e: any) => toast.error(`Erro: ${e.message}`),
+  });
+
   // Deletar a OS permanentemente
   const deleteWorkOrderMutation = trpc.workOrders.delete.useMutation({
     onSuccess: () => {
@@ -184,6 +203,7 @@ export default function AdminWorkOrderDetail() {
       aprovada: "bg-green-500",
       rejeitada: "bg-red-500",
       em_andamento: "bg-purple-500",
+      pausada: "bg-amber-500",
       concluida: "bg-green-600",
       aguardando_pagamento: "bg-orange-500",
       cancelada: "bg-gray-500",
@@ -199,6 +219,7 @@ export default function AdminWorkOrderDetail() {
       aprovada: "Aprovada",
       rejeitada: "Rejeitada",
       em_andamento: "Em Andamento",
+      pausada: "Pausada",
       concluida: "Concluída",
       aguardando_pagamento: "Aguardando Pagamento",
       cancelada: "Cancelada",
@@ -431,6 +452,54 @@ export default function AdminWorkOrderDetail() {
             </CardContent>
           </Card>
 
+          {/* PAINEL: ATRIBUIÇÃO DE TÉCNICO */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <HardHat className="h-4 w-4 text-blue-600" />
+                Técnico Responsável
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(workOrder as any).technicianName ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5 text-green-600" />
+                    <span className="font-semibold">{(workOrder as any).technicianName}</span>
+                  </div>
+                  <button
+                    className="text-xs text-muted-foreground hover:text-red-500 underline"
+                    onClick={() => assignTechnicianMutation.mutate({ workOrderId, technicianId: null })}
+                    disabled={assignTechnicianMutation.isPending}
+                  >
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select
+                    onValueChange={(val) =>
+                      assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })
+                    }
+                    disabled={assignTechnicianMutation.isPending}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Selecionar técnico..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(techniciansList ?? []).map((t: any) => (
+                        <SelectItem key={t.id} value={String(t.id)}>
+                          {t.name}
+                          {t.specialization ? ` — ${t.specialization}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* PAINEL DE CONTROLE INDUSTRIAL (Ações de Status) */}
           <Card className="border-none shadow-2xl overflow-hidden bg-white">
             <div className={`px-4 py-4 flex justify-between items-center ${workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'}`}>
@@ -453,6 +522,17 @@ export default function AdminWorkOrderDetail() {
                     <Play className="mr-4 h-10 w-10 fill-current" />
                     INICIAR AGORA
                   </Button>
+                )}
+
+                {/* OS pausada pelo técnico */}
+                {workOrder.status === "pausada" && (
+                  <div className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <Pause className="h-6 w-6 text-amber-600 flex-shrink-0" />
+                    <div>
+                      <p className="font-bold text-amber-800">Serviço Pausado</p>
+                      <p className="text-sm text-amber-700">O técnico pausou o atendimento.</p>
+                    </div>
+                  </div>
                 )}
 
                 {/* Botão para FINALIZAR o serviço */}

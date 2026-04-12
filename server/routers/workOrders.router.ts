@@ -143,6 +143,17 @@ export const workOrdersRouter = router({
       return await workOrdersDb.getWorkOrderHistory(input.workOrderId);
     }),
 
+  assignTechnician: adminLocalProcedure
+    .input(z.object({
+      workOrderId: z.number(),
+      technicianId: z.number().nullable(),
+    }))
+    .mutation(async ({ input }) => {
+      const workOrdersDb = await import("../workOrdersDb");
+      await workOrdersDb.assignTechnicianToWorkOrder(input.workOrderId, input.technicianId);
+      return { success: true };
+    }),
+
   delete: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
