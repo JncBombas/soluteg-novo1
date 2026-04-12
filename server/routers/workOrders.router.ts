@@ -1,7 +1,8 @@
 import * as db from "../db";
 import { sendWhatsappAlert } from "../whatsapp";
-import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, protectedClientProcedure, router } from "../_core/trpc";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const workOrdersRouter = router({
   list: adminLocalProcedure
@@ -22,7 +23,7 @@ export const workOrdersRouter = router({
       return await workOrdersDb.listWorkOrders(input);
     }),
 
-  getById: publicProcedure
+  getById: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -115,7 +116,7 @@ export const workOrdersRouter = router({
       return { success: true, message: "OS atualizada com sucesso" };
     }),
 
-  updateStatus: publicProcedure
+  updateStatus: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       newStatus: z.string(),
@@ -135,7 +136,7 @@ export const workOrdersRouter = router({
       return { success: true, message: "Status atualizado com sucesso" };
     }),
 
-  getHistory: publicProcedure
+  getHistory: adminLocalProcedure
     .input(z.object({ workOrderId: z.number() }))
     .query(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
@@ -158,7 +159,7 @@ export const workOrdersRouter = router({
       return { success: true, message: `${input.ids.length} OS deletadas com sucesso` };
     }),
 
-  complete: publicProcedure
+  complete: adminLocalProcedure
     .input(z.object({
       id: z.number(),
       collaboratorName: z.string().min(1),
@@ -209,14 +210,14 @@ export const workOrdersRouter = router({
 
   // ==================== TASKS ====================
   tasks: router({
-    list: publicProcedure
+    list: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
         return await auxDb.getTasksByWorkOrderId(input.workOrderId);
       }),
 
-    create: publicProcedure
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         title: z.string().min(1),
@@ -229,7 +230,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Tarefa criada com sucesso" };
       }),
 
-    update: publicProcedure
+    update: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         title: z.string().optional(),
@@ -243,7 +244,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Tarefa atualizada com sucesso" };
       }),
 
-    toggle: publicProcedure
+    toggle: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         isCompleted: z.boolean(),
@@ -255,7 +256,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Tarefa atualizada com sucesso" };
       }),
 
-    setStatus: publicProcedure
+    setStatus: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         status: z.number().min(0).max(2),
@@ -267,7 +268,7 @@ export const workOrdersRouter = router({
         return { success: true };
       }),
 
-    delete: publicProcedure
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -278,14 +279,14 @@ export const workOrdersRouter = router({
 
   // ==================== MATERIALS ====================
   materials: router({
-    list: publicProcedure
+    list: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
         return await auxDb.getMaterialsByWorkOrderId(input.workOrderId);
       }),
 
-    create: publicProcedure
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         materialName: z.string().min(1),
@@ -301,7 +302,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Material adicionado com sucesso" };
       }),
 
-    update: publicProcedure
+    update: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         materialName: z.string().optional(),
@@ -317,7 +318,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Material atualizado com sucesso" };
       }),
 
-    delete: publicProcedure
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -325,7 +326,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Material deletado com sucesso" };
       }),
 
-    getTotalCost: publicProcedure
+    getTotalCost: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -335,7 +336,7 @@ export const workOrdersRouter = router({
 
   // ==================== ATTACHMENTS ====================
   attachments: router({
-    list: publicProcedure
+    list: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         category: z.enum(["before", "during", "after", "document", "other"]).optional(),
@@ -348,7 +349,7 @@ export const workOrdersRouter = router({
         return await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
       }),
 
-    create: publicProcedure
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         fileName: z.string().min(1),
@@ -365,7 +366,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Anexo adicionado com sucesso" };
       }),
 
-    update: publicProcedure
+    update: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         description: z.string().optional(),
@@ -377,7 +378,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Legenda atualizada com sucesso" };
       }),
 
-    delete: publicProcedure
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -388,7 +389,7 @@ export const workOrdersRouter = router({
 
   // ==================== COMMENTS ====================
   comments: router({
-    list: publicProcedure
+    list: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         includeInternal: z.boolean().default(true),
@@ -398,7 +399,7 @@ export const workOrdersRouter = router({
         return await auxDb.getCommentsByWorkOrderId(input.workOrderId, input.includeInternal);
       }),
 
-    create: publicProcedure
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         userId: z.string().min(1),
@@ -412,7 +413,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Comentário adicionado com sucesso" };
       }),
 
-    delete: publicProcedure
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -514,12 +515,35 @@ export const workOrdersRouter = router({
   }),
 
   // ==================== PDF EXPORT ====================
-  exportPDF: publicProcedure
+  exportPDF: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const pdfGen = await import("../pdfGenerator");
       const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
       const workOrdersDb = await import("../workOrdersDb");
+      const wo = await workOrdersDb.getWorkOrderById(input.id);
+      const osNum = wo?.osNumber || `OS-${input.id}`;
+      const clientSlug = wo?.clientName
+        ? wo.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+      return {
+        success: true,
+        pdf: pdfBuffer.toString('base64'),
+        filename: `${osNum}_${clientSlug}.pdf`
+      };
+    }),
+
+  exportPDFForPortal: protectedClientProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const workOrdersDb = await import("../workOrdersDb");
+      const shared = await workOrdersDb.getSharedWorkOrdersForPortal(ctx.clientId);
+      const isShared = (shared as any[]).some((wo: any) => wo.id === input.id);
+      if (!isShared) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado." });
+      }
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.id);
       const wo = await workOrdersDb.getWorkOrderById(input.id);
       const osNum = wo?.osNumber || `OS-${input.id}`;
       const clientSlug = wo?.clientName
@@ -565,11 +589,10 @@ export const workOrdersRouter = router({
     }),
 
   // ==================== PORTAL / WHATSAPP SHARING ====================
-  getSharedForPortal: publicProcedure
-    .input(z.object({ clientId: z.number() }))
-    .query(async ({ input }) => {
+  getSharedForPortal: protectedClientProcedure
+    .query(async ({ ctx }) => {
       const workOrdersDb = await import("../workOrdersDb");
-      return await workOrdersDb.getSharedWorkOrdersForPortal(input.clientId);
+      return await workOrdersDb.getSharedWorkOrdersForPortal(ctx.clientId);
     }),
 
   sendToClientWhatsapp: adminLocalProcedure
@@ -688,14 +711,14 @@ export const workOrdersRouter = router({
 
   // ==================== TIME TRACKING ====================
   timeTracking: router({
-    list: publicProcedure
+    list: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
         return await auxDb.getTimeEntriesByWorkOrderId(input.workOrderId);
       }),
 
-    create: publicProcedure
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         userId: z.string().min(1),
@@ -708,7 +731,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Entrada de tempo criada com sucesso" };
       }),
 
-    end: publicProcedure
+    end: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         endedAt: z.date(),
@@ -719,7 +742,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Entrada de tempo finalizada com sucesso" };
       }),
 
-    update: publicProcedure
+    update: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         notes: z.string().optional(),
@@ -731,7 +754,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Entrada de tempo atualizada com sucesso" };
       }),
 
-    delete: publicProcedure
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");
@@ -739,7 +762,7 @@ export const workOrdersRouter = router({
         return { success: true, message: "Entrada de tempo deletada com sucesso" };
       }),
 
-    getTotalTime: publicProcedure
+    getTotalTime: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");

@@ -189,7 +189,7 @@ export default function ClientPortal() {
   );
 
   const { data: sharedWorkOrders = [] } = trpc.workOrders.getSharedForPortal.useQuery(
-    { clientId: clientId || 0 },
+    undefined,
     { enabled: !!clientId }
   );
 
@@ -251,7 +251,7 @@ export default function ClientPortal() {
     onError: (e: any) => toast.error("Erro ao solicitar orçamento: " + e.message),
   });
 
-  const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
+  const exportPDFMutation = trpc.workOrders.exportPDFForPortal.useMutation({
     onSuccess: (data: any) => {
       const byteCharacters = atob(data.pdf);
       const byteNumbers = new Array(byteCharacters.length);
