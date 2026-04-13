@@ -646,9 +646,7 @@ export default function TechnicianWorkOrderDetail() {
             <DialogTitle>Assinar OS</DialogTitle>
             <DialogDescription>Sua assinatura ficará registrada antes da finalização.</DialogDescription>
           </DialogHeader>
-          <div className="border rounded-lg p-1 bg-white shadow-sm">
-            <SignaturePad onSave={setPendingSignature} height={300} />
-          </div>
+          <SignaturePad onSave={setPendingSignature} />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setSignOpen(false); setPendingSignature(null); }}>Cancelar</Button>
             <Button

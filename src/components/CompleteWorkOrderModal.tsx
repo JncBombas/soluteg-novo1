@@ -152,9 +152,7 @@ export default function CompleteWorkOrderModal({
                   onChange={(e) => setCollaboratorName(e.target.value)}
                   className="bg-white"
                 />
-                <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setCollaboratorSignature} height={400} />
-                </div>
+                <SignaturePad onSave={setCollaboratorSignature} />
               </div>
             </div>
 
@@ -170,9 +168,7 @@ export default function CompleteWorkOrderModal({
                   onChange={(e) => setClientName(e.target.value)}
                   className="bg-white"
                 />
-                <div className="border rounded-lg p-1 bg-white shadow-sm">
-                  <SignaturePad onSave={setClientSignature} height={400} />
-                </div>
+                <SignaturePad onSave={setClientSignature} />
               </div>
             </div>
           </div>

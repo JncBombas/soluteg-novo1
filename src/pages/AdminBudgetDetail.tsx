@@ -773,14 +773,7 @@ export default function AdminBudgetDetail() {
             </div>
             <div>
               <Label>Assinatura *</Label>
-              <div className="border rounded-lg overflow-hidden">
-                <SignaturePad
-                  onSave={setTechSignature}
-                  width={450}
-                  height={160}
-                />
-              </div>
-              {techSignature && <p className="text-xs text-green-600 mt-1">✓ Assinatura capturada</p>}
+              <SignaturePad onSave={setTechSignature} />
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setFinalizeModalOpen(false)}>Cancelar</Button>
@@ -811,10 +804,7 @@ export default function AdminBudgetDetail() {
             </div>
             <div>
               <Label>Assinatura *</Label>
-              <div className="border rounded-lg overflow-hidden">
-                <SignaturePad onSave={setClientSignature} width={450} height={160} />
-              </div>
-              {clientSignature && <p className="text-xs text-green-600 mt-1">✓ Assinatura capturada</p>}
+              <SignaturePad onSave={setClientSignature} />
             </div>
             <div className="flex gap-3 pt-2">
               <Button variant="outline" className="flex-1" onClick={() => setApproveModalOpen(false)}>Cancelar</Button>
