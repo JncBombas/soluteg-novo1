@@ -421,6 +421,112 @@ export default function AdminWorkOrderDetail() {
         </Card>
       </div>
 
+      {/* PAINEL DE CONTROLE — fora das abas, sempre visível */}
+      <Card className="border-none shadow-2xl overflow-hidden bg-white">
+        <div className={`px-4 py-3 flex items-center justify-between ${workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'}`}>
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-white animate-pulse" />
+            <span className="text-white text-sm font-black uppercase">Controle de Operação</span>
+          </div>
+          {/* Técnico responsável no cabeçalho do painel */}
+          <div className="flex items-center gap-2">
+            <HardHat className="h-4 w-4 text-slate-300" />
+            {(workOrder as any).technicianName ? (
+              <div className="flex items-center gap-2">
+                <span className="text-white text-sm font-semibold">{(workOrder as any).technicianName}</span>
+                <button
+                  className="text-slate-400 hover:text-red-300 text-xs underline"
+                  onClick={() => assignTechnicianMutation.mutate({ workOrderId, technicianId: null })}
+                  disabled={assignTechnicianMutation.isPending}
+                >
+                  remover
+                </button>
+              </div>
+            ) : (
+              <Select
+                onValueChange={(val) =>
+                  assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })
+                }
+                disabled={assignTechnicianMutation.isPending}
+              >
+                <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white w-44">
+                  <SelectValue placeholder="Atribuir técnico..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(techniciansList ?? []).map((t: any) => (
+                    <SelectItem key={t.id} value={String(t.id)}>
+                      {t.name}{t.specialization ? ` — ${t.specialization}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3">
+
+            {workOrder.status === "aberta" && (
+              <Button
+                size="lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-xl font-black shadow-xl"
+                onClick={() => handleStatusChange("em_andamento")}
+              >
+                <Play className="mr-3 h-7 w-7 fill-current" />
+                INICIAR AGORA
+              </Button>
+            )}
+
+            {workOrder.status === "pausada" && (
+              <div className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <Pause className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-amber-800">Serviço Pausado</p>
+                  <p className="text-sm text-amber-700">O técnico pausou o atendimento.</p>
+                </div>
+              </div>
+            )}
+
+            {workOrder.status === "em_andamento" && (
+              <div className="space-y-2">
+                <Button
+                  size="lg"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-16 text-xl font-black shadow-xl"
+                  onClick={() => setCompleteModalOpen(true)}
+                >
+                  <CheckCircle2 className="mr-3 h-7 w-7" />
+                  FINALIZAR SERVIÇO
+                </Button>
+                <button
+                  onClick={() => handleStatusChange("aberta")}
+                  className="w-full py-1 text-slate-400 hover:text-red-600 text-[10px] font-black uppercase"
+                >
+                  Voltar para "Aberta" (Correção de erro)
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              {workOrder.status === "aguardando_aprovacao" && (
+                <>
+                  <Button size="sm" className="flex-1 bg-green-600" onClick={() => handleStatusChange("aprovada")}>Aprovar</Button>
+                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("rejeitada")}>Rejeitar</Button>
+                </>
+              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 font-bold"
+                onClick={() => navigate(`/gestor/work-orders/${workOrderId}/edit`)}
+              >
+                Editar Dados da OS
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* SEÇÃO: ABAS DE NAVEGAÇÃO */}
       <Tabs defaultValue="details" className="space-y-4">
         <div className="overflow-x-auto">
@@ -448,130 +554,6 @@ export default function AdminWorkOrderDetail() {
               <div>
                 <label className="text-sm text-muted-foreground">Endereço de Execução</label>
                 <p className="text-lg">{workOrder.clientAddress || "Consultar cadastro"}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* PAINEL: ATRIBUIÇÃO DE TÉCNICO */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <HardHat className="h-4 w-4 text-blue-600" />
-                Técnico Responsável
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(workOrder as any).technicianName ? (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold">{(workOrder as any).technicianName}</span>
-                  </div>
-                  <button
-                    className="text-xs text-muted-foreground hover:text-red-500 underline"
-                    onClick={() => assignTechnicianMutation.mutate({ workOrderId, technicianId: null })}
-                    disabled={assignTechnicianMutation.isPending}
-                  >
-                    Remover
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Select
-                    onValueChange={(val) =>
-                      assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })
-                    }
-                    disabled={assignTechnicianMutation.isPending}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Selecionar técnico..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(techniciansList ?? []).map((t: any) => (
-                        <SelectItem key={t.id} value={String(t.id)}>
-                          {t.name}
-                          {t.specialization ? ` — ${t.specialization}` : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* PAINEL DE CONTROLE INDUSTRIAL (Ações de Status) */}
-          <Card className="border-none shadow-2xl overflow-hidden bg-white">
-            <div className={`px-4 py-4 flex justify-between items-center ${workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'}`}>
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-white animate-pulse" />
-                <span className="text-white text-sm font-black uppercase">Controle de Operação</span>
-              </div>
-            </div>
-
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-5">
-                
-                {/* Botão para dar PLAY no serviço */}
-                {workOrder.status === "aberta" && (
-                  <Button 
-                    size="lg" 
-                    className="w-full bg-blue-600 hover:bg-blue-700 h-24 text-2xl font-black shadow-xl"
-                    onClick={() => handleStatusChange("em_andamento")}
-                  >
-                    <Play className="mr-4 h-10 w-10 fill-current" />
-                    INICIAR AGORA
-                  </Button>
-                )}
-
-                {/* OS pausada pelo técnico */}
-                {workOrder.status === "pausada" && (
-                  <div className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <Pause className="h-6 w-6 text-amber-600 flex-shrink-0" />
-                    <div>
-                      <p className="font-bold text-amber-800">Serviço Pausado</p>
-                      <p className="text-sm text-amber-700">O técnico pausou o atendimento.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Botão para FINALIZAR o serviço */}
-                {workOrder.status === "em_andamento" && (
-                  <div className="space-y-4">
-                    <Button 
-                      size="lg" 
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 h-24 text-2xl font-black shadow-xl"
-                      onClick={() => setCompleteModalOpen(true)}
-                    >
-                      <CheckCircle2 className="mr-4 h-10 w-10" />
-                      FINALIZAR SERVIÇO
-                    </Button>
-                    <button 
-                      onClick={() => handleStatusChange("aberta")}
-                      className="w-full py-2 text-slate-400 hover:text-red-600 text-[10px] font-black uppercase"
-                    >
-                      Voltar para "Aberta" (Correção de erro)
-                    </button>
-                  </div>
-                )}
-
-                {/* Ações de aprovação (Escritório) */}
-                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-slate-100">
-                  {workOrder.status === "aguardando_aprovacao" && (
-                    <>
-                      <Button size="sm" className="bg-green-600" onClick={() => handleStatusChange("aprovada")}>Aprovar</Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleStatusChange("rejeitada")}>Rejeitar</Button>
-                    </>
-                  )}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="col-span-2 font-bold"
-                    onClick={() => navigate(`/gestor/work-orders/${workOrderId}/edit`)}
-                  >
-                    Editar Dados da OS
-                  </Button>
-                </div>
               </div>
             </CardContent>
           </Card>
