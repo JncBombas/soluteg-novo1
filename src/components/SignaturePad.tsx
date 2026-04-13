@@ -8,13 +8,12 @@ interface SignaturePadProps {
   onClear?: () => void;
   disabled?: boolean;
   initialValue?: string;
-  // Mantidos por compatibilidade, não utilizados na versão fullscreen
   width?: number;
   height?: number;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// FullscreenCanvas: overlay fixo em cima de tudo, força landscape no mobile
+// FullscreenCanvas: overlay fullscreen com canvas landscape
 // ────────────────────────────────────────────────────────────────────────────
 function FullscreenCanvas({
   onConfirm,
@@ -30,73 +29,67 @@ function FullscreenCanvas({
   const lineWidthRef = useRef(2);
   const [hasSignature, setHasSignature] = useState(false);
 
-  // Tenta bloquear orientação em landscape e encerrar ao sair do fullscreen
+  // Trava orientação em landscape e fecha ao sair do fullscreen
   useEffect(() => {
     const tryLock = async () => {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (screen.orientation as any).lock?.("landscape");
-      } catch (_) {
-        // API não disponível (desktop, iOS) — o overlay ainda cobre a tela
-      }
+      } catch (_) {}
     };
     tryLock();
 
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        onCancel();
-      }
+    const handleFsChange = () => {
+      if (!document.fullscreenElement) onCancel();
     };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFsChange);
 
     return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("fullscreenchange", handleFsChange);
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (screen.orientation as any).unlock?.();
       } catch (_) {}
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     };
   }, [onCancel]);
 
-  // Dimensiona o canvas ao container via ResizeObserver (mantém desenho entre resizes)
+  // Dimensiona o canvas via ResizeObserver (sem DPR para máxima compatibilidade)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const setupCtx = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, w, h);
+    const applyCtxStyles = (ctx: CanvasRenderingContext2D) => {
       ctx.strokeStyle = "#000059";
-      ctx.shadowBlur = 0.2;
-      ctx.shadowColor = "#000059";
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
+      ctx.shadowBlur = 0.2;
+      ctx.shadowColor = "#000059";
     };
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width < 10 || height < 10) continue;
+        const w = Math.round(entry.contentRect.width);
+        const h = Math.round(entry.contentRect.height);
+        if (w < 10 || h < 10) continue;
 
-        const dpr = window.devicePixelRatio || 1;
-        // Salva conteúdo atual antes de resetar
         const savedContent = hasSignatureRef.current ? canvas.toDataURL() : null;
 
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
+        canvas.width = w;
+        canvas.height = h;
 
         const ctx = canvas.getContext("2d")!;
-        ctx.scale(dpr, dpr);
-        setupCtx(ctx, width, height);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        applyCtxStyles(ctx);
 
         if (savedContent) {
           const img = new Image();
-          img.onload = () => ctx.drawImage(img, 0, 0, width, height);
+          img.onload = () => {
+            ctx.drawImage(img, 0, 0, w, h);
+          };
           img.src = savedContent;
         }
       }
@@ -106,27 +99,89 @@ function FullscreenCanvas({
     return () => ro.disconnect();
   }, []);
 
-  const getCoords = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    const canvas = canvasRef.current!;
-    const rect = canvas.getBoundingClientRect();
-    if ("touches" in e) {
-      const t = e.touches[0];
-      return { x: t.clientX - rect.left, y: t.clientY - rect.top };
-    }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  };
+  // Touch: native listeners com { passive: false } para garantir desenho no mobile
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-  const startDrawing = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    e.preventDefault();
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    const { x, y } = getCoords(e);
+    const getPos = (touch: Touch) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      };
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const { x, y } = getPos(e.touches[0]);
+      lastPosRef.current = { x, y };
+      lineWidthRef.current = 2;
+      ctx.strokeStyle = "#000059";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowBlur = 0.2;
+      ctx.shadowColor = "#000059";
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      isDrawingRef.current = true;
+      hasSignatureRef.current = true;
+      setHasSignature(true);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!isDrawingRef.current) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const { x, y } = getPos(e.touches[0]);
+      const dx = x - lastPosRef.current.x;
+      const dy = y - lastPosRef.current.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const newW = Math.max(1, Math.min(3, 4 - dist / 10));
+      const smooth = lineWidthRef.current + (newW - lineWidthRef.current) * 0.3;
+      ctx.beginPath();
+      ctx.lineWidth = smooth;
+      ctx.strokeStyle = "#000059";
+      ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      lastPosRef.current = { x, y };
+      lineWidthRef.current = smooth;
+    };
+
+    const onTouchEnd = () => {
+      isDrawingRef.current = false;
+    };
+
+    canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onTouchEnd);
+    canvas.addEventListener("touchcancel", onTouchEnd);
+
+    return () => {
+      canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
+      canvas.removeEventListener("touchend", onTouchEnd);
+      canvas.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
+  // Mouse (desktop)
+  const startMouseDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     lastPosRef.current = { x, y };
     lineWidthRef.current = 2;
+    ctx.strokeStyle = "#000059";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(x, y);
     isDrawingRef.current = true;
@@ -134,29 +189,30 @@ function FullscreenCanvas({
     setHasSignature(true);
   };
 
-  const draw = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
-  ) => {
-    e.preventDefault();
+  const continueMouse = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
-    const ctx = canvasRef.current?.getContext("2d");
-    if (!ctx) return;
-    const { x, y } = getCoords(e);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!ctx || !canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     const dx = x - lastPosRef.current.x;
     const dy = y - lastPosRef.current.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const newWidth = Math.max(1, Math.min(3, 4 - distance / 10));
-    const smoothed = lineWidthRef.current + (newWidth - lineWidthRef.current) * 0.3;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const newW = Math.max(1, Math.min(3, 4 - dist / 10));
+    const smooth = lineWidthRef.current + (newW - lineWidthRef.current) * 0.3;
     ctx.beginPath();
-    ctx.lineWidth = smoothed;
+    ctx.lineWidth = smooth;
+    ctx.strokeStyle = "#000059";
     ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
     ctx.lineTo(x, y);
     ctx.stroke();
     lastPosRef.current = { x, y };
-    lineWidthRef.current = smoothed;
+    lineWidthRef.current = smooth;
   };
 
-  const stopDrawing = () => {
+  const stopDraw = () => {
     isDrawingRef.current = false;
   };
 
@@ -164,9 +220,8 @@ function FullscreenCanvas({
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!ctx || !canvas) return;
-    const rect = canvas.getBoundingClientRect();
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     hasSignatureRef.current = false;
     setHasSignature(false);
   };
@@ -174,8 +229,7 @@ function FullscreenCanvas({
   const confirm = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-    onConfirm(dataUrl);
+    onConfirm(canvas.toDataURL("image/jpeg", 0.8));
   };
 
   return (
@@ -196,18 +250,15 @@ function FullscreenCanvas({
       </div>
 
       {/* Área do canvas */}
-      <div className="flex-1 relative bg-white overflow-hidden">
+      <div className="flex-1 relative bg-white" style={{ minHeight: 0 }}>
         <canvas
           ref={canvasRef}
-          className="w-full h-full block touch-none cursor-crosshair"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
-          onTouchCancel={stopDrawing}
+          className="absolute inset-0 touch-none cursor-crosshair"
+          style={{ width: "100%", height: "100%" }}
+          onMouseDown={startMouseDraw}
+          onMouseMove={continueMouse}
+          onMouseUp={stopDraw}
+          onMouseLeave={stopDraw}
         />
         {!hasSignature && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -247,7 +298,7 @@ function FullscreenCanvas({
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// SignaturePad: exibe preview/gatilho; ao clicar abre o canvas fullscreen
+// SignaturePad: preview/gatilho → abre canvas fullscreen ao clicar
 // ────────────────────────────────────────────────────────────────────────────
 export default function SignaturePad({
   onSave,
@@ -260,11 +311,10 @@ export default function SignaturePad({
 
   const handleOpen = async () => {
     if (disabled) return;
-    // Tenta entrar em fullscreen a partir do gesto do usuário
     try {
       await document.documentElement.requestFullscreen({ navigationUI: "hide" });
     } catch (_) {
-      // Desktop ou bloqueado — abre o overlay mesmo sem fullscreen
+      // Desktop ou bloqueado — abre o overlay mesmo sem fullscreen nativo
     }
     setIsOpen(true);
   };
@@ -283,7 +333,7 @@ export default function SignaturePad({
   return (
     <>
       <div className="space-y-2">
-        {/* Área de preview / gatilho */}
+        {/* Preview / gatilho */}
         <div
           role="button"
           tabIndex={disabled ? -1 : 0}
@@ -310,7 +360,7 @@ export default function SignaturePad({
           )}
         </div>
 
-        {/* Botões de ação */}
+        {/* Botões */}
         <div className="flex items-center gap-2">
           <Button
             type="button"
