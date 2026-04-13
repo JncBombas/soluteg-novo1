@@ -155,7 +155,7 @@ export async function listWorkOrders(filters: {
   if (filters.search) {
     const searchPattern = `%${filters.search}%`;
     conditions.push(
-      sql`(${workOrders.title} COLLATE utf8mb4_general_ci LIKE ${searchPattern} OR ${workOrders.osNumber} COLLATE utf8mb4_general_ci LIKE ${searchPattern})`
+      sql`(${workOrders.title} COLLATE utf8mb4_general_ci LIKE ${searchPattern} OR ${workOrders.osNumber} COLLATE utf8mb4_general_ci LIKE ${searchPattern} OR ${clients.name} COLLATE utf8mb4_general_ci LIKE ${searchPattern})`
     );
   }
 
