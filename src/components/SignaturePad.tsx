@@ -12,9 +12,12 @@ interface SignaturePadProps {
   height?: number;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // FullscreenCanvas
-// ────────────────────────────────────────────────────────────────────────────
+// Estratégia: canvas cobre 100% da viewport (fixed inset-0).
+// Header e rodapé ficam sobrepostos (position:absolute, z-index alto).
+// Isso elimina toda complexidade de medir containers via refs.
+// ─────────────────────────────────────────────────────────────────────────────
 function FullscreenCanvas({
   onConfirm,
   onCancel,
@@ -22,64 +25,38 @@ function FullscreenCanvas({
   onConfirm: (sig: string) => void;
   onCancel: () => void;
 }) {
-  const canvasRef    = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef       = useRef<HTMLCanvasElement>(null);
   const isDrawingRef    = useRef(false);
   const lastPosRef      = useRef({ x: 0, y: 0 });
   const lineWidthRef    = useRef(2);
   const hasSignatureRef = useRef(false);
   const [hasSignature, setHasSignature] = useState(false);
 
-  // ── Função utilitária: (re)dimensiona o buffer do canvas ──────────────────
-  const resizeCanvas = (w: number, h: number) => {
+  // Dimensiona o canvas para cobrir toda a viewport.
+  // useLayoutEffect (sem deps) roda após cada render, antes do paint.
+  // O check de igualdade evita reset desnecessário.
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || w < 10 || h < 10) return;
-    // Evita reset desnecessário quando o tamanho não muda
+    if (!canvas) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
     if (canvas.width === w && canvas.height === h) return;
-
     const saved = hasSignatureRef.current ? canvas.toDataURL() : null;
-    canvas.width  = w;
-    canvas.height = h;
-
+    canvas.width        = w;
+    canvas.height       = h;
+    canvas.style.width  = `${w}px`;
+    canvas.style.height = `${h}px`;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, w, h);
-
     if (saved) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, w, h);
       img.src = saved;
     }
-  };
+  });
 
-  // ── useLayoutEffect: dimensiona o canvas antes do primeiro paint ──────────
-  // Isso garante que canvas.width/height == CSS width/height ANTES do usuário
-  // poder tocar — evita o bug onde coordenadas CSS (ex: 400px) excedem o buffer
-  // padrão (300×150) e nada é desenhado.
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    resizeCanvas(container.clientWidth, container.clientHeight);
-  });  // sem deps: re-executa em cada render (é barato — o check de igualdade evita reset)
-
-  // ── ResizeObserver: lida com rotação de tela após orientation lock ─────────
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        resizeCanvas(
-          Math.round(entry.contentRect.width),
-          Math.round(entry.contentRect.height),
-        );
-      }
-    });
-    ro.observe(container);
-    return () => ro.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Orientation lock + listener de saída de fullscreen ───────────────────
+  // Orientation lock, saída de fullscreen e resize (ex: após entrar em fullscreen)
   useEffect(() => {
     const tryLock = async () => {
       try {
@@ -93,15 +70,40 @@ function FullscreenCanvas({
       if (!document.fullscreenElement) onCancel();
     };
     document.addEventListener("fullscreenchange", onFsChange);
+
+    // window resize captura tanto orientationchange quanto mudança de viewport
+    const onResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (canvas.width === w && canvas.height === h) return;
+      const saved = hasSignatureRef.current ? canvas.toDataURL() : null;
+      canvas.width        = w;
+      canvas.height       = h;
+      canvas.style.width  = `${w}px`;
+      canvas.style.height = `${h}px`;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+      if (saved) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, w, h);
+        img.src = saved;
+      }
+    };
+    window.addEventListener("resize", onResize);
+
     return () => {
       document.removeEventListener("fullscreenchange", onFsChange);
+      window.removeEventListener("resize", onResize);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       try { (screen.orientation as any).unlock?.(); } catch (_) {}
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     };
   }, [onCancel]);
 
-  // ── Native touch listeners ({ passive: false }) ───────────────────────────
+  // Native touch listeners com { passive: false }
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -111,23 +113,19 @@ function FullscreenCanvas({
       return { x: touch.clientX - r.left, y: touch.clientY - r.top };
     };
 
-    const applyStyle = (ctx: CanvasRenderingContext2D) => {
-      ctx.strokeStyle = "#000059";
-      ctx.lineCap     = "round";
-      ctx.lineJoin    = "round";
-    };
-
     const onStart = (e: TouchEvent) => {
       e.preventDefault();
-      const { x, y } = getPos(e.touches[0]);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      applyStyle(ctx);
-      ctx.lineWidth = 2;
+      const { x, y } = getPos(e.touches[0]);
+      ctx.strokeStyle = "#000059";
+      ctx.lineWidth   = 2;
+      ctx.lineCap     = "round";
+      ctx.lineJoin    = "round";
       ctx.beginPath();
       ctx.moveTo(x, y);
-      lastPosRef.current  = { x, y };
-      lineWidthRef.current = 2;
+      lastPosRef.current      = { x, y };
+      lineWidthRef.current    = 2;
       isDrawingRef.current    = true;
       hasSignatureRef.current = true;
       setHasSignature(true);
@@ -136,16 +134,17 @@ function FullscreenCanvas({
     const onMove = (e: TouchEvent) => {
       e.preventDefault();
       if (!isDrawingRef.current) return;
-      const { x, y } = getPos(e.touches[0]);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
+      const { x, y } = getPos(e.touches[0]);
       const dx   = x - lastPosRef.current.x;
       const dy   = y - lastPosRef.current.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
       const nw   = Math.max(1, Math.min(3, 4 - dist / 10));
       const sw   = lineWidthRef.current + (nw - lineWidthRef.current) * 0.3;
-      applyStyle(ctx);
-      ctx.lineWidth = sw;
+      ctx.strokeStyle = "#000059";
+      ctx.lineWidth   = sw;
+      ctx.lineCap     = "round";
       ctx.beginPath();
       ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
       ctx.lineTo(x, y);
@@ -168,53 +167,38 @@ function FullscreenCanvas({
     };
   }, []);
 
-  // ── Mouse (desktop) ──────────────────────────────────────────────────────
-  const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Mouse (desktop)
+  const mousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-
   const onMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const ctx = e.currentTarget.getContext("2d");
+    const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const { x, y } = getMousePos(e);
-    ctx.strokeStyle = "#000059";
-    ctx.lineWidth   = 2;
-    ctx.lineCap     = "round";
-    ctx.lineJoin    = "round";
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    lastPosRef.current   = { x, y };
-    lineWidthRef.current = 2;
-    isDrawingRef.current    = true;
-    hasSignatureRef.current = true;
+    const { x, y } = mousePos(e);
+    ctx.strokeStyle = "#000059"; ctx.lineWidth = 2;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(x, y);
+    lastPosRef.current = { x, y }; lineWidthRef.current = 2;
+    isDrawingRef.current = true; hasSignatureRef.current = true;
     setHasSignature(true);
   };
-
   const onMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
-    const ctx = e.currentTarget.getContext("2d");
+    const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
-    const { x, y } = getMousePos(e);
-    const dx   = x - lastPosRef.current.x;
-    const dy   = y - lastPosRef.current.y;
+    const { x, y } = mousePos(e);
+    const dx = x - lastPosRef.current.x; const dy = y - lastPosRef.current.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const nw   = Math.max(1, Math.min(3, 4 - dist / 10));
-    const sw   = lineWidthRef.current + (nw - lineWidthRef.current) * 0.3;
-    ctx.strokeStyle = "#000059";
-    ctx.lineWidth   = sw;
-    ctx.lineCap     = "round";
-    ctx.beginPath();
-    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    lastPosRef.current   = { x, y };
-    lineWidthRef.current = sw;
+    const nw = Math.max(1, Math.min(3, 4 - dist / 10));
+    const sw = lineWidthRef.current + (nw - lineWidthRef.current) * 0.3;
+    ctx.strokeStyle = "#000059"; ctx.lineWidth = sw; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+    ctx.lineTo(x, y); ctx.stroke();
+    lastPosRef.current = { x, y }; lineWidthRef.current = sw;
   };
-
   const onMouseUp = () => { isDrawingRef.current = false; };
 
-  // ── Ações ────────────────────────────────────────────────────────────────
   const clear = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -231,11 +215,45 @@ function FullscreenCanvas({
     onConfirm(canvas.toDataURL("image/jpeg", 0.8));
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 z-[9999] bg-white flex flex-col select-none">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white shrink-0">
+    <div
+      className="fixed inset-0 z-[9999] select-none overflow-hidden"
+      style={{ pointerEvents: "auto" }}
+    >
+      {/* Canvas: cobre toda a viewport, sem restrição de tamanho via CSS */}
+      <canvas
+        ref={canvasRef}
+        className="absolute top-0 left-0 touch-none"
+        style={{ pointerEvents: "auto", cursor: "crosshair" }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+      />
+
+      {/* Placeholder */}
+      {!hasSignature && (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ pointerEvents: "none", zIndex: 1 }}
+        >
+          <p className="text-slate-300 text-2xl font-light tracking-widest">
+            Assine aqui
+          </p>
+        </div>
+      )}
+
+      {/* Linha-guia */}
+      <div
+        className="absolute left-10 right-10 h-px bg-slate-200"
+        style={{ bottom: 74, zIndex: 1, pointerEvents: "none" }}
+      />
+
+      {/* Cabeçalho (sobreposto, z=10) */}
+      <div
+        className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-slate-800 text-white"
+        style={{ zIndex: 10 }}
+      >
         <span className="font-semibold text-sm uppercase tracking-wider flex items-center gap-2">
           <PenLine className="w-4 h-4" />
           Assinatura
@@ -249,34 +267,11 @@ function FullscreenCanvas({
         </button>
       </div>
 
-      {/* Área do canvas */}
+      {/* Rodapé (sobreposto, z=10) */}
       <div
-        ref={containerRef}
-        className="flex-1 relative bg-white overflow-hidden"
-        style={{ minHeight: 0 }}
+        className="absolute bottom-0 left-0 right-0 flex gap-3 px-4 py-3 bg-slate-50 border-t"
+        style={{ zIndex: 10 }}
       >
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 touch-none cursor-crosshair"
-          style={{ width: "100%", height: "100%" }}
-          onMouseDown={onMouseDown}
-          onMouseMove={onMouseMove}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-        />
-        {!hasSignature && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-slate-300 text-2xl font-light tracking-widest">
-              Assine aqui
-            </p>
-          </div>
-        )}
-        {/* Linha-guia */}
-        <div className="absolute bottom-10 left-10 right-10 h-px bg-slate-200 pointer-events-none" />
-      </div>
-
-      {/* Rodapé */}
-      <div className="flex gap-3 px-4 py-3 bg-slate-50 border-t shrink-0">
         <Button
           type="button"
           variant="outline"
@@ -301,17 +296,17 @@ function FullscreenCanvas({
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// SignaturePad: preview/gatilho → abre canvas fullscreen ao clicar
-// ────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SignaturePad: preview/gatilho → abre canvas fullscreen
+// ─────────────────────────────────────────────────────────────────────────────
 export default function SignaturePad({
   onSave,
   onClear,
   disabled = false,
   initialValue,
 }: SignaturePadProps) {
-  const [isOpen,    setIsOpen]    = useState(false);
-  const [captured,  setCaptured]  = useState<string | null>(initialValue ?? null);
+  const [isOpen,   setIsOpen]   = useState(false);
+  const [captured, setCaptured] = useState<string | null>(initialValue ?? null);
 
   const handleOpen = async () => {
     if (disabled) return;
@@ -335,7 +330,6 @@ export default function SignaturePad({
   return (
     <>
       <div className="space-y-2">
-        {/* Preview / gatilho */}
         <div
           role="button"
           tabIndex={disabled ? -1 : 0}
@@ -362,7 +356,6 @@ export default function SignaturePad({
           )}
         </div>
 
-        {/* Botões */}
         <div className="flex items-center gap-2">
           <Button
             type="button"
