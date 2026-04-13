@@ -74,4 +74,108 @@ export const technicianPortalRouter = router({
       await workOrdersDb.saveTechnicianSignature(input.workOrderId, ctx.technicianId, input.signature);
       return { success: true };
     }),
+
+  // ==================== TASKS ====================
+  tasks: router({
+    list: protectedTechnicianProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        const auxDb = await import("../workOrdersAuxDb");
+        return await auxDb.getTasksByWorkOrderId(input.workOrderId);
+      }),
+
+    toggle: protectedTechnicianProcedure
+      .input(z.object({
+        workOrderId:  z.number(),
+        taskId:       z.number(),
+        isCompleted:  z.boolean(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        if (os.status !== "em_andamento" && os.status !== "pausada") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para marcar tarefas." });
+        }
+        const technician = await technicianDb.getTechnicianById(ctx.technicianId);
+        const auxDb = await import("../workOrdersAuxDb");
+        await auxDb.toggleTaskCompletion(
+          input.taskId,
+          input.isCompleted,
+          technician?.name || `Técnico ${ctx.technicianId}`,
+        );
+        return { success: true };
+      }),
+  }),
+
+  // ==================== COMMENTS ====================
+  comments: router({
+    list: protectedTechnicianProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        const auxDb = await import("../workOrdersAuxDb");
+        return await auxDb.getCommentsByWorkOrderId(input.workOrderId, true);
+      }),
+
+    create: protectedTechnicianProcedure
+      .input(z.object({
+        workOrderId: z.number(),
+        comment:     z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        if (os.status !== "em_andamento" && os.status !== "pausada") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para adicionar comentários." });
+        }
+        const auxDb = await import("../workOrdersAuxDb");
+        await auxDb.createComment({
+          workOrderId: input.workOrderId,
+          userId:      `tecnico-${ctx.technicianId}`,
+          userType:    "admin",
+          comment:     input.comment,
+          isInternal:  1,
+        });
+        return { success: true };
+      }),
+  }),
+
+  // ==================== ATTACHMENTS ====================
+  attachments: router({
+    list: protectedTechnicianProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        const auxDb = await import("../workOrdersAuxDb");
+        return await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
+      }),
+
+    create: protectedTechnicianProcedure
+      .input(z.object({
+        workOrderId: z.number(),
+        fileName:    z.string().min(1),
+        fileKey:     z.string().min(1),
+        fileUrl:     z.string().min(1),
+        fileType:    z.string().optional(),
+        fileSize:    z.number().optional(),
+        category:    z.enum(["before", "during", "after", "document", "other"]).default("during"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        if (os.status !== "em_andamento" && os.status !== "pausada") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para adicionar anexos." });
+        }
+        const auxDb = await import("../workOrdersAuxDb");
+        await auxDb.createAttachment({
+          ...input,
+          uploadedBy: `tecnico-${ctx.technicianId}`,
+        });
+        return { success: true };
+      }),
+  }),
 });

@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,12 @@ import {
   PauseCircle,
   PenLine,
   AlertCircle,
+  MessageSquare,
+  Paperclip,
+  Send,
+  ListChecks,
+  ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +67,13 @@ export default function TechnicianWorkOrderDetail() {
   const [signOpen, setSignOpen] = useState(false);
   const [pendingSignature, setPendingSignature] = useState<string | null>(null);
 
+  // Comentários
+  const [newComment, setNewComment] = useState("");
+
+  // Anexos
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   useEffect(() => {
     const id = localStorage.getItem("technicianId");
     if (!id) {
@@ -72,6 +86,26 @@ export default function TechnicianWorkOrderDetail() {
   const { data: os, isLoading, refetch } = (trpc as any).technicianPortal.getWorkOrderById.useQuery(
     { id: workOrderId! },
     { enabled: !!workOrderId && !!technicianId }
+  );
+
+  const canInteract = os?.status === "em_andamento" || os?.status === "pausada";
+
+  // Tasks
+  const { data: tasks, refetch: refetchTasks } = (trpc as any).technicianPortal.tasks.list.useQuery(
+    { workOrderId: workOrderId! },
+    { enabled: !!workOrderId && !!technicianId && canInteract }
+  );
+
+  // Comments
+  const { data: comments, refetch: refetchComments } = (trpc as any).technicianPortal.comments.list.useQuery(
+    { workOrderId: workOrderId! },
+    { enabled: !!workOrderId && !!technicianId && canInteract }
+  );
+
+  // Attachments
+  const { data: attachments, refetch: refetchAttachments } = (trpc as any).technicianPortal.attachments.list.useQuery(
+    { workOrderId: workOrderId! },
+    { enabled: !!workOrderId && !!technicianId && canInteract }
   );
 
   const updateStatusMutation = (trpc as any).technicianPortal.updateStatus.useMutation({
@@ -93,6 +127,24 @@ export default function TechnicianWorkOrderDetail() {
       setPendingSignature(null);
       refetch();
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggleTaskMutation = (trpc as any).technicianPortal.tasks.toggle.useMutation({
+    onSuccess: () => refetchTasks(),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const createCommentMutation = (trpc as any).technicianPortal.comments.create.useMutation({
+    onSuccess: () => {
+      setNewComment("");
+      refetchComments();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const createAttachmentMutation = (trpc as any).technicianPortal.attachments.create.useMutation({
+    onSuccess: () => refetchAttachments(),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -127,9 +179,57 @@ export default function TechnicianWorkOrderDetail() {
     updateStatusMutation.mutate({ workOrderId, newStatus: "concluida", notes: concludeNotes || undefined });
   }
 
-  const canInteract = os?.status === "em_andamento" || os?.status === "pausada";
-  const isActive    = os?.status === "em_andamento";
-  const isPaused    = os?.status === "pausada";
+  function handleToggleTask(taskId: number, currentCompleted: number) {
+    if (!workOrderId) return;
+    const newVal = currentCompleted === 1 ? false : true;
+    toggleTaskMutation.mutate({ workOrderId, taskId, isCompleted: newVal });
+  }
+
+  function handleSendComment() {
+    if (!workOrderId || !newComment.trim()) return;
+    createCommentMutation.mutate({ workOrderId, comment: newComment.trim() });
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !workOrderId) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+
+      const res = await fetch("/api/work-orders/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!data.success) throw new Error(data.message || "Erro no upload");
+
+      for (const uploaded of data.urls) {
+        await createAttachmentMutation.mutateAsync({
+          workOrderId,
+          fileName: uploaded.fileName,
+          fileKey:  uploaded.key,
+          fileUrl:  uploaded.url,
+          fileType: uploaded.fileType,
+          fileSize: uploaded.fileSize,
+          category: "during",
+        });
+      }
+
+      toast.success(`${data.urls.length} arquivo(s) enviado(s)!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar arquivo");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  const isActive  = os?.status === "em_andamento";
+  const isPaused  = os?.status === "pausada";
 
   if (!match || !workOrderId) {
     return (
@@ -211,6 +311,166 @@ export default function TechnicianWorkOrderDetail() {
               </div>
             )}
 
+            {/* ==================== CHECKLIST DE TAREFAS ==================== */}
+            {canInteract && (
+              <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <ListChecks className="w-4 h-4" />
+                  Tarefas
+                </h2>
+
+                {!tasks || tasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhuma tarefa cadastrada para esta OS.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {tasks.map((task: any) => (
+                      <div
+                        key={task.id}
+                        className="flex items-start gap-3 py-1.5"
+                      >
+                        <Checkbox
+                          id={`task-${task.id}`}
+                          checked={task.isCompleted === 1}
+                          onCheckedChange={() => handleToggleTask(task.id, task.isCompleted)}
+                          disabled={toggleTaskMutation.isPending}
+                          className="mt-0.5"
+                        />
+                        <label
+                          htmlFor={`task-${task.id}`}
+                          className={`text-sm cursor-pointer select-none leading-snug ${
+                            task.isCompleted === 1
+                              ? "line-through text-muted-foreground"
+                              : ""
+                          }`}
+                        >
+                          {task.title}
+                          {task.description && (
+                            <span className="block text-xs text-muted-foreground mt-0.5">
+                              {task.description}
+                            </span>
+                          )}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ==================== COMENTÁRIOS / OBSERVAÇÕES ==================== */}
+            {canInteract && (
+              <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Observações
+                </h2>
+
+                {comments && comments.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {comments.map((c: any) => (
+                      <div key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                            {c.userId?.startsWith("tecnico-") ? "Técnico" : c.userId}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            · {format(new Date(c.createdAt), "dd/MM HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <p className="text-sm">{c.comment}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Adicionar observação..."
+                    rows={2}
+                    className="flex-1 resize-none text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendComment();
+                      }
+                    }}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSendComment}
+                    disabled={!newComment.trim() || createCommentMutation.isPending}
+                    className="self-end bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ==================== FOTOS E ANEXOS ==================== */}
+            {canInteract && (
+              <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <Paperclip className="w-4 h-4" />
+                  Fotos e Anexos
+                </h2>
+
+                {attachments && attachments.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {attachments.map((a: any) => (
+                      <a
+                        key={a.id}
+                        href={a.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block rounded-lg overflow-hidden border bg-slate-100 dark:bg-slate-800 aspect-square"
+                      >
+                        {a.fileType?.startsWith("image/") ? (
+                          <img
+                            src={a.fileUrl}
+                            alt={a.fileName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
+                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground text-center truncate w-full">
+                              {a.fileName}
+                            </span>
+                          </div>
+                        )}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Paperclip className="w-4 h-4" />
+                  )}
+                  {uploading ? "Enviando..." : "Adicionar Foto / Arquivo"}
+                </Button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </div>
+            )}
+
             {/* Informações do Cliente */}
             <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 space-y-2">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Cliente</h2>
@@ -286,7 +546,7 @@ export default function TechnicianWorkOrderDetail() {
             )}
 
             {/* Ações de Status */}
-            <div className="space-y-2">
+            <div className="space-y-2 pb-6">
               {/* Iniciar */}
               {(os.status === "aberta" || os.status === "aprovada") && (
                 <Button
