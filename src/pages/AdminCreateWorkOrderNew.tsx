@@ -24,6 +24,7 @@ export default function AdminCreateWorkOrderNew() {
 
   const [formData, setFormData] = useState({
     clientId: "",
+    technicianId: "",
     type: "emergencial" as OSType,
     priority: "normal" as OSPriority,
     title: "",
@@ -49,6 +50,7 @@ export default function AdminCreateWorkOrderNew() {
 
   // Queries
   const { data: clients = [], refetch: refetchClients } = trpc.clients.list.useQuery({ adminId });
+  const { data: techniciansList = [] } = (trpc as any).technicians.list.useQuery({ adminId }, { staleTime: 60_000 });
   const createWorkOrderMutation = trpc.workOrders.create.useMutation();
   const createClientMutation = trpc.clients.create.useMutation();
 
@@ -106,6 +108,7 @@ export default function AdminCreateWorkOrderNew() {
       const result = await createWorkOrderMutation.mutateAsync({
         adminId,
         clientId: parseInt(formData.clientId),
+        technicianId: formData.technicianId ? parseInt(formData.technicianId) : undefined,
         type: formData.type,
         priority: formData.priority,
         title: formData.title,
@@ -116,8 +119,8 @@ export default function AdminCreateWorkOrderNew() {
         estimatedValue: formData.estimatedValue ? parseFloat(formData.estimatedValue) : undefined,
         isRecurring: formData.isRecurring ? 1 : 0,
         recurrenceType: formData.isRecurring ? formData.recurrenceType : undefined,
-        recurrenceDay: formData.isRecurring && formData.recurrenceType === "mensal_fixo" 
-          ? parseInt(formData.recurrenceDay) 
+        recurrenceDay: formData.isRecurring && formData.recurrenceType === "mensal_fixo"
+          ? parseInt(formData.recurrenceDay)
           : undefined,
       });
 
@@ -310,6 +313,26 @@ export default function AdminCreateWorkOrderNew() {
                 </Button>
               </div>
             )}
+          </Card>
+
+          {/* Técnico Responsável */}
+          <Card className="p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Técnico Responsável <span className="text-sm font-normal text-muted-foreground">(opcional)</span></h2>
+            <Select
+              value={formData.technicianId}
+              onValueChange={(value) => handleSelectChange("technicianId", value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar técnico..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(techniciansList as any[]).map((t: any) => (
+                  <SelectItem key={t.id} value={String(t.id)}>
+                    {t.name}{t.specialization ? ` — ${t.specialization}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Card>
 
           {/* Detalhes da OS */}
