@@ -26,7 +26,7 @@ import {
   Globe,
   ChevronDown,
   HardHat,
-  UserCheck,
+  UserCog,
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -47,7 +47,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Importação das sub-telas (Abas)
 import WorkOrderTasks from "@/components/workorder/WorkOrderTasks";
 import WorkOrderMaterials from "@/components/workorder/WorkOrderMaterials";
 import WorkOrderAttachments from "@/components/workorder/WorkOrderAttachments";
@@ -57,7 +56,6 @@ import InspectionTasksTab from "@/components/InspectionTasksTab";
 import CompleteWorkOrderModal from "@/components/CompleteWorkOrderModal";
 
 export default function AdminWorkOrderDetail() {
-  // --- CONFIGURAÇÕES INICIAIS ---
   const params = useParams();
   const [, navigate] = useLocation();
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -67,45 +65,26 @@ export default function AdminWorkOrderDetail() {
   const workOrderId = Number(params.id);
   const adminId = parseInt(localStorage.getItem("adminId") || "1");
 
-  // --- BUSCA DE DADOS (CONVERSA COM O BANCO) ---
-  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({
-    id: workOrderId,
-  });
-
-  const { data: history } = trpc.workOrders.getHistory.useQuery({
-    workOrderId,
-  });
-
+  const { data: workOrder, isLoading, refetch } = trpc.workOrders.getById.useQuery({ id: workOrderId });
+  const { data: history } = trpc.workOrders.getHistory.useQuery({ workOrderId });
   const { data: techniciansList } = (trpc as any).technicians.list.useQuery(
     { adminId },
     { staleTime: 60_000 }
   );
 
-  // --- AÇÕES (BOTÕES QUE ALTERAM O BANCO) ---
-
-  // Função para mudar o status (ex: de Aberta para Em Andamento)
   const updateStatusMutation = trpc.workOrders.updateStatus.useMutation({
-    onSuccess: () => {
-      toast.success("Status atualizado com sucesso");
-      refetch(); // Atualiza a tela com a nova info
-    },
-    onError: (error) => {
-      toast.error(`Erro ao atualizar status: ${error.message}`);
-    },
+    onSuccess: () => { toast.success("Status atualizado com sucesso"); refetch(); },
+    onError: (error) => toast.error(`Erro ao atualizar status: ${error.message}`),
   });
 
-  // Função para gerar e baixar o arquivo PDF
   const exportPDFMutation = trpc.workOrders.exportPDF.useMutation({
     onSuccess: (data) => {
       const byteCharacters = atob(data.pdf);
       const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = data.filename;
       link.style.display = "none";
@@ -115,16 +94,8 @@ export default function AdminWorkOrderDetail() {
       toast.success("PDF gerado com sucesso!");
       setExportingPDF(false);
     },
-    onError: (error) => {
-      toast.error(`Erro ao gerar PDF: ${error.message}`);
-      setExportingPDF(false);
-    },
+    onError: (error) => { toast.error(`Erro ao gerar PDF: ${error.message}`); setExportingPDF(false); },
   });
-
-  const handleExportPDF = async () => {
-    setExportingPDF(true);
-    exportPDFMutation.mutate({ id: workOrderId });
-  };
 
   const sendToClientWhatsappMutation = trpc.workOrders.sendToClientWhatsapp.useMutation({
     onSuccess: () => toast.success("Mensagem enviada para o WhatsApp do cliente!"),
@@ -139,63 +110,38 @@ export default function AdminWorkOrderDetail() {
   const shareToClientPortalMutation = trpc.workOrders.shareToClientPortal.useMutation({
     onSuccess: (data) => {
       const tabLabel: Record<string, string> = {
-        vistoria: "Vistoria",
-        visita: "Visita",
-        servico: "Serviços",
-        orcamentos: "Orçamentos",
+        vistoria: "Vistoria", visita: "Visita", servico: "Serviços", orcamentos: "Orçamentos",
       };
       toast.success(`OS enviada para a aba "${tabLabel[data.portalTab] || data.portalTab}" do portal! Cliente notificado via WhatsApp.`);
     },
     onError: (e) => toast.error(`Erro: ${e.message}`),
   });
 
-  // Finalizar a OS (Envia assinaturas e dados finais)
   const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
-    onSuccess: () => {
-      toast.success("OS concluída com sucesso!");
-      refetch();
-      setCompleteModalOpen(false);
-    },
-    onError: (error) => {
-      toast.error(`Erro: ${error.message}`);
-    },
+    onSuccess: () => { toast.success("OS concluída com sucesso!"); refetch(); setCompleteModalOpen(false); },
+    onError: (error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // Atribuir técnico
   const assignTechnicianMutation = (trpc as any).workOrders.assignTechnician.useMutation({
-    onSuccess: () => {
-      toast.success("Técnico atribuído com sucesso!");
-      refetch();
-    },
+    onSuccess: () => { toast.success("Técnico atribuído com sucesso!"); refetch(); },
     onError: (e: any) => toast.error(`Erro: ${e.message}`),
   });
 
-  // Deletar a OS permanentemente
   const deleteWorkOrderMutation = trpc.workOrders.delete.useMutation({
-    onSuccess: () => {
-      toast.success("OS deletada com sucesso!");
-      navigate("/gestor/work-orders");
-    },
-    onError: (error) => {
-      toast.error(`Erro ao deletar OS: ${error.message}`);
-    },
+    onSuccess: () => { toast.success("OS deletada com sucesso!"); navigate("/gestor/work-orders"); },
+    onError: (error) => toast.error(`Erro ao deletar OS: ${error.message}`),
   });
 
-  const handleDeleteWorkOrder = () => {
-    deleteWorkOrderMutation.mutate({ id: workOrderId });
-    setDeleteDialogOpen(false);
-  };
-
-  const handleCompleteWorkOrder = async (data: any) => {
-    completeWorkOrderMutation.mutate({
+  const handleStatusChange = (newStatus: string) => {
+    updateStatusMutation.mutate({
       id: workOrderId,
-      ...data,
+      newStatus,
+      changedBy: "Admin",
+      changedByType: "admin",
+      notes: `Status alterado para ${getStatusLabel(newStatus)}`,
     });
   };
 
-  // --- TRADUTORES DE CORES E NOMES (LOGICA VISUAL) ---
-  
-  // Define a cor da etiqueta baseada no status
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       aberta: "bg-blue-500",
@@ -211,7 +157,6 @@ export default function AdminWorkOrderDetail() {
     return colors[status] || "bg-gray-500";
   };
 
-  // Transforma o nome técnico do banco em texto bonito para o usuário
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       aberta: "Aberta",
@@ -228,11 +173,7 @@ export default function AdminWorkOrderDetail() {
   };
 
   const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      rotina: "Rotina",
-      emergencial: "Emergencial",
-      orcamento: "Orçamento",
-    };
+    const labels: Record<string, string> = { rotina: "Rotina", emergencial: "Emergencial", orcamento: "Orçamento" };
     return labels[type] || type;
   };
 
@@ -246,25 +187,10 @@ export default function AdminWorkOrderDetail() {
   };
 
   const getPriorityLabel = (priority: string) => {
-    const labels: Record<string, string> = {
-      normal: "Normal",
-      alta: "Alta",
-      critica: "Crítica",
-    };
+    const labels: Record<string, string> = { normal: "Normal", alta: "Alta", critica: "Crítica" };
     return labels[priority] || priority;
   };
 
-  const handleStatusChange = (newStatus: string) => {
-    updateStatusMutation.mutate({
-      id: workOrderId,
-      newStatus,
-      changedBy: "Admin",
-      changedByType: "admin",
-      notes: `Status alterado para ${getStatusLabel(newStatus)}`,
-    });
-  };
-
-  // Se estiver carregando, mostra o ícone de girar
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -273,7 +199,6 @@ export default function AdminWorkOrderDetail() {
     );
   }
 
-  // Se não encontrar a OS, mostra erro
   if (!workOrder) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
@@ -287,169 +212,186 @@ export default function AdminWorkOrderDetail() {
     );
   }
 
-  // --- O QUE APARECE NA TELA (LAYOUT) ---
+  const technicianName = (workOrder as any).technicianName;
+  const technicianId = (workOrder as any).technicianId;
+  const isEmergencial = workOrder.type === "emergencial";
+
   return (
-    <div className="container mx-auto py-4 md:py-6 space-y-4 md:space-y-6 px-4">
-      
-      {/* SEÇÃO: CABEÇALHO (Título, Botão Voltar e Ações rápidas) */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate("/gestor/work-orders")}
-            className="h-9 w-9 md:h-10 md:w-10"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl md:text-3xl font-bold">OS #{workOrder.id}</h1>
-            <p className="text-muted-foreground text-sm md:text-base">{workOrder.title}</p>
+    <div className="container mx-auto py-4 md:py-6 px-4 space-y-4 md:space-y-5">
+
+      {/* ── CABEÇALHO ─────────────────────────────────────────── */}
+      <div className="flex items-start gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/gestor/work-orders")}
+          className="mt-0.5 shrink-0"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl md:text-2xl font-bold">OS #{workOrder.id}</h1>
+            <Badge className={`${getStatusColor(workOrder.status)} text-white`}>
+              {getStatusLabel(workOrder.status)}
+            </Badge>
+            <Badge variant="outline">{getTypeLabel(workOrder.type)}</Badge>
+            <Badge className={getPriorityColor(workOrder.priority)}>
+              {getPriorityLabel(workOrder.priority)}
+            </Badge>
           </div>
-          
-          {/* Dropdown PDF */}
+          <p className="text-sm text-muted-foreground mt-0.5 truncate">{workOrder.title}</p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
           <DropdownMenu open={pdfMenuOpen} onOpenChange={setPdfMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2" disabled={exportingPDF}>
+              <Button variant="outline" size="sm" className="gap-1.5" disabled={exportingPDF}>
                 {exportingPDF ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-                {exportingPDF ? "Gerando..." : "Exportar PDF"}
-                <ChevronDown className="h-3 w-3" />
+                <span className="hidden sm:inline">{exportingPDF ? "Gerando..." : "PDF"}</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onClick={() => { setPdfMenuOpen(false); handleExportPDF(); }}
-                className="gap-2"
-              >
+              <DropdownMenuItem onClick={() => { setPdfMenuOpen(false); setExportingPDF(true); exportPDFMutation.mutate({ id: workOrderId }); }} className="gap-2">
                 <Download className="h-4 w-4" /> Baixar PDF
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => { setPdfMenuOpen(false); sendToClientWhatsappMutation.mutate({ id: workOrderId }); }}
-                disabled={sendToClientWhatsappMutation.isPending}
-                className="gap-2"
-              >
-                <MessageCircle className="h-4 w-4 text-green-600" />
-                Enviar para o Cliente (WhatsApp)
+              <DropdownMenuItem onClick={() => { setPdfMenuOpen(false); sendToClientWhatsappMutation.mutate({ id: workOrderId }); }} disabled={sendToClientWhatsappMutation.isPending} className="gap-2">
+                <MessageCircle className="h-4 w-4 text-green-600" /> Enviar para o Cliente (WhatsApp)
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => { setPdfMenuOpen(false); sendToAdminWhatsappMutation.mutate({ id: workOrderId }); }}
-                disabled={sendToAdminWhatsappMutation.isPending}
-                className="gap-2"
-              >
-                <MessageCircle className="h-4 w-4 text-blue-600" />
-                Enviar para WhatsApp (Admin)
+              <DropdownMenuItem onClick={() => { setPdfMenuOpen(false); sendToAdminWhatsappMutation.mutate({ id: workOrderId }); }} disabled={sendToAdminWhatsappMutation.isPending} className="gap-2">
+                <MessageCircle className="h-4 w-4 text-blue-600" /> Enviar para WhatsApp (Admin)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => { setPdfMenuOpen(false); shareToClientPortalMutation.mutate({ id: workOrderId }); }}
-                disabled={shareToClientPortalMutation.isPending}
-                className="gap-2"
-              >
-                <Globe className="h-4 w-4 text-orange-600" />
-                Enviar para o Cliente (Portal)
+              <DropdownMenuItem onClick={() => { setPdfMenuOpen(false); shareToClientPortalMutation.mutate({ id: workOrderId }); }} disabled={shareToClientPortalMutation.isPending} className="gap-2">
+                <Globe className="h-4 w-4 text-orange-600" /> Enviar para o Cliente (Portal)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           <Button
-            variant="destructive"
-            size="sm"
+            variant="ghost"
+            size="icon"
             onClick={() => setDeleteDialogOpen(true)}
-            className="gap-2"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4" />
-            Deletar
           </Button>
-        </div>
-        
-        {/* Badges de Status e Prioridade */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge className={getStatusColor(workOrder.status)}>
-            {getStatusLabel(workOrder.status)}
-          </Badge>
-          <Badge variant="outline">{getTypeLabel(workOrder.type)}</Badge>
-          <Badge className={getPriorityColor(workOrder.priority)}>
-            {getPriorityLabel(workOrder.priority)}
-          </Badge>
         </div>
       </div>
 
-      {/* SEÇÃO: CARTÕES DE INFORMAÇÃO RÁPIDA */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cliente</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {/* Correção feita aqui: de order.clientName para workOrder.clientName */}
-            <div className="text-lg md:text-xl font-bold">{workOrder.clientName || "Não informado"}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Data Agendada</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">
-              {workOrder.scheduledDate ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR") : "N/A"}
+      {/* ── CARTÕES DE INFORMAÇÃO ───────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+              <User className="h-4 w-4 text-blue-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Cliente</p>
+              <p className="font-semibold text-sm truncate">{workOrder.clientName || "Não informado"}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Estimado</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{workOrder.estimatedHours || 0}h</div>
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
+              <Calendar className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Agendado</p>
+              <p className="font-semibold text-sm">
+                {workOrder.scheduledDate ? new Date(workOrder.scheduledDate).toLocaleDateString("pt-BR") : "—"}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Est.</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">R$ {workOrder.estimatedValue?.toFixed(2) || "0,00"}</div>
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+              <Clock className="h-4 w-4 text-amber-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Estimado</p>
+              <p className="font-semibold text-sm">{workOrder.estimatedHours || 0}h</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border shadow-sm">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="h-9 w-9 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+              <DollarSign className="h-4 w-4 text-green-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Valor Est.</p>
+              <p className="font-semibold text-sm">R$ {workOrder.estimatedValue?.toFixed(2) || "0,00"}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* PAINEL DE CONTROLE — fora das abas, sempre visível */}
-      <Card className="border-none shadow-2xl overflow-hidden bg-white">
-        <div className={`px-4 py-3 flex items-center justify-between ${workOrder.type === 'emergencial' ? 'bg-red-600' : 'bg-slate-900'}`}>
+      {/* ── PAINEL DE CONTROLE ──────────────────────────────────── */}
+      <Card className={`border shadow-sm overflow-hidden ${isEmergencial ? "border-red-200" : ""}`}>
+        <CardHeader className={`py-3 px-4 border-b ${isEmergencial ? "bg-red-50" : "bg-slate-50"}`}>
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-white animate-pulse" />
-            <span className="text-white text-sm font-black uppercase">Controle de Operação</span>
+            <AlertCircle className={`h-4 w-4 ${isEmergencial ? "text-red-500" : "text-slate-400"}`} />
+            <CardTitle className={`text-sm font-semibold uppercase tracking-wide ${isEmergencial ? "text-red-700" : "text-slate-500"}`}>
+              Painel de Controle
+            </CardTitle>
           </div>
-          {/* Técnico responsável no cabeçalho do painel */}
-          <div className="flex items-center gap-2">
-            <HardHat className="h-4 w-4 text-slate-300" />
-            {(workOrder as any).technicianName ? (
-              <div className="flex items-center gap-2">
-                <span className="text-white text-sm font-semibold">{(workOrder as any).technicianName}</span>
-                <button
-                  className="text-slate-400 hover:text-red-300 text-xs underline"
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-3">
+
+          {/* Técnico responsável */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200">
+            <HardHat className="h-4 w-4 text-slate-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Técnico</p>
+              <p className="text-sm font-semibold text-slate-800 truncate">
+                {technicianName || <span className="text-muted-foreground font-normal">Não atribuído</span>}
+              </p>
+            </div>
+
+            {technicianName ? (
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Select
+                  value={String(technicianId ?? "")}
+                  onValueChange={(val) => assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })}
+                  disabled={assignTechnicianMutation.isPending}
+                >
+                  <SelectTrigger className="h-7 w-28 text-xs">
+                    <UserCog className="h-3 w-3 mr-1 opacity-50" />
+                    <SelectValue placeholder="Alterar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(techniciansList ?? []).map((t: any) => (
+                      <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-slate-300 hover:text-red-500 hover:bg-red-50"
+                  title="Remover técnico"
                   onClick={() => assignTechnicianMutation.mutate({ workOrderId, technicianId: null })}
                   disabled={assignTechnicianMutation.isPending}
                 >
-                  remover
-                </button>
+                  <XCircle className="h-4 w-4" />
+                </Button>
               </div>
             ) : (
               <Select
-                onValueChange={(val) =>
-                  assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })
-                }
+                onValueChange={(val) => assignTechnicianMutation.mutate({ workOrderId, technicianId: parseInt(val) })}
                 disabled={assignTechnicianMutation.isPending}
               >
-                <SelectTrigger className="h-7 text-xs bg-white/10 border-white/20 text-white w-44">
+                <SelectTrigger className="h-8 w-44 text-xs shrink-0">
                   <SelectValue placeholder="Atribuir técnico..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -462,72 +404,75 @@ export default function AdminWorkOrderDetail() {
               </Select>
             )}
           </div>
-        </div>
 
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3">
+          {/* Ação principal por status */}
+          {workOrder.status === "aberta" && (
+            <Button
+              size="lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-base font-bold gap-2"
+              onClick={() => handleStatusChange("em_andamento")}
+              disabled={updateStatusMutation.isPending}
+            >
+              <Play className="h-5 w-5 fill-current" />
+              Iniciar Atendimento
+            </Button>
+          )}
 
-            {workOrder.status === "aberta" && (
+          {workOrder.status === "pausada" && (
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200">
+              <Pause className="h-4 w-4 text-amber-500 shrink-0" />
+              <div>
+                <p className="font-semibold text-amber-800 text-sm">Serviço Pausado</p>
+                <p className="text-xs text-amber-600">O técnico pausou o atendimento.</p>
+              </div>
+            </div>
+          )}
+
+          {workOrder.status === "em_andamento" && (
+            <div className="space-y-1.5">
               <Button
                 size="lg"
-                className="w-full bg-blue-600 hover:bg-blue-700 h-16 text-xl font-black shadow-xl"
-                onClick={() => handleStatusChange("em_andamento")}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 h-14 text-base font-bold gap-2"
+                onClick={() => setCompleteModalOpen(true)}
               >
-                <Play className="mr-3 h-7 w-7 fill-current" />
-                INICIAR AGORA
+                <CheckCircle2 className="h-5 w-5" />
+                Finalizar Serviço
               </Button>
-            )}
-
-            {workOrder.status === "pausada" && (
-              <div className="w-full flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <Pause className="h-5 w-5 text-amber-600 flex-shrink-0" />
-                <div>
-                  <p className="font-bold text-amber-800">Serviço Pausado</p>
-                  <p className="text-sm text-amber-700">O técnico pausou o atendimento.</p>
-                </div>
-              </div>
-            )}
-
-            {workOrder.status === "em_andamento" && (
-              <div className="space-y-2">
-                <Button
-                  size="lg"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-16 text-xl font-black shadow-xl"
-                  onClick={() => setCompleteModalOpen(true)}
-                >
-                  <CheckCircle2 className="mr-3 h-7 w-7" />
-                  FINALIZAR SERVIÇO
-                </Button>
-                <button
-                  onClick={() => handleStatusChange("aberta")}
-                  className="w-full py-1 text-slate-400 hover:text-red-600 text-[10px] font-black uppercase"
-                >
-                  Voltar para "Aberta" (Correção de erro)
-                </button>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-2 border-t border-slate-100">
-              {workOrder.status === "aguardando_aprovacao" && (
-                <>
-                  <Button size="sm" className="flex-1 bg-green-600" onClick={() => handleStatusChange("aprovada")}>Aprovar</Button>
-                  <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("rejeitada")}>Rejeitar</Button>
-                </>
-              )}
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1 font-bold"
-                onClick={() => navigate(`/gestor/work-orders/${workOrderId}/edit`)}
+              <button
+                onClick={() => handleStatusChange("aberta")}
+                className="w-full py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-red-500 transition-colors"
               >
-                Editar Dados da OS
-              </Button>
+                Reverter para "Aberta"
+              </button>
             </div>
+          )}
+
+          {/* Ações secundárias */}
+          <div className="flex gap-2 pt-1 border-t border-slate-100">
+            {workOrder.status === "aguardando_aprovacao" && (
+              <>
+                <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => handleStatusChange("aprovada")}>
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Aprovar
+                </Button>
+                <Button size="sm" variant="destructive" className="flex-1" onClick={() => handleStatusChange("rejeitada")}>
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" /> Rejeitar
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => navigate(`/gestor/work-orders/${workOrderId}/edit`)}
+            >
+              <FileText className="h-3.5 w-3.5 mr-1.5" />
+              Editar OS
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* SEÇÃO: ABAS DE NAVEGAÇÃO */}
+      {/* ── ABAS ─────────────────────────────────────────────────── */}
       <Tabs defaultValue="details" className="space-y-4">
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
@@ -541,25 +486,23 @@ export default function AdminWorkOrderDetail() {
           </TabsList>
         </div>
 
-        {/* CONTEÚDO DA ABA DETALHES */}
         <TabsContent value="details" className="space-y-4">
           <Card>
             <CardHeader><CardTitle>Informações Gerais</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm text-muted-foreground">Descrição do Problema</label>
-                <p className="text-lg">{workOrder.description || "Sem descrição detalhada"}</p>
+                <p className="text-base mt-1">{workOrder.description || "Sem descrição detalhada"}</p>
               </div>
               <Separator />
               <div>
                 <label className="text-sm text-muted-foreground">Endereço de Execução</label>
-                <p className="text-lg">{workOrder.clientAddress || "Consultar cadastro"}</p>
+                <p className="text-base mt-1">{workOrder.clientAddress || "Consultar cadastro"}</p>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* OUTRAS ABAS (Carregam componentes externos) */}
         <TabsContent value="tasks"><WorkOrderTasks workOrderId={workOrderId} /></TabsContent>
         <TabsContent value="inspections"><InspectionTasksTab workOrderId={workOrderId} /></TabsContent>
         <TabsContent value="materials"><WorkOrderMaterials workOrderId={workOrderId} /></TabsContent>
@@ -568,11 +511,11 @@ export default function AdminWorkOrderDetail() {
         <TabsContent value="timeline"><WorkOrderTimeline workOrderId={workOrderId} history={history || []} /></TabsContent>
       </Tabs>
 
-      {/* MODAIS (Janelas que abrem por cima da tela) */}
+      {/* ── MODAIS ───────────────────────────────────────────────── */}
       <CompleteWorkOrderModal
         open={completeModalOpen}
         onOpenChange={setCompleteModalOpen}
-        onComplete={handleCompleteWorkOrder}
+        onComplete={(data) => completeWorkOrderMutation.mutate({ id: workOrderId, ...data })}
         isLoading={completeWorkOrderMutation.isPending}
       />
 
@@ -580,11 +523,18 @@ export default function AdminWorkOrderDetail() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Apagar esta OS?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação é permanente e removerá todos os dados desta Ordem de Serviço.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Esta ação é permanente e removerá todos os dados desta Ordem de Serviço.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteWorkOrder} className="bg-destructive text-white">Deletar</AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => { deleteWorkOrderMutation.mutate({ id: workOrderId }); setDeleteDialogOpen(false); }}
+              className="bg-destructive text-white"
+            >
+              Deletar
+            </AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>
