@@ -4,6 +4,7 @@ import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
+
 export const budgetsRouter = router({
   list: adminLocalProcedure
     .input(z.object({
@@ -186,6 +187,23 @@ export const budgetsRouter = router({
           osId = osResult.id;
           await budgetsDb.linkGeneratedOs(input.id, osId);
 
+          // Copiar fotos do orçamento como anexos "before" da OS
+          const auxDb = await import("../workOrdersAuxDb");
+          const budgetPhotos = await budgetsDb.getBudgetAttachments(input.id);
+          for (const photo of budgetPhotos) {
+            await auxDb.createAttachment({
+              workOrderId: osId,
+              fileName:    photo.fileName,
+              fileKey:     photo.fileKey,
+              fileUrl:     photo.fileUrl,
+              fileType:    photo.fileType ?? undefined,
+              fileSize:    photo.fileSize ?? undefined,
+              category:    "before",
+              description: photo.caption ?? undefined,
+              uploadedBy:  photo.uploadedBy ?? undefined,
+            } as any);
+          }
+
           const adminUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
           const msg =
             `✅ *ORÇAMENTO APROVADO – OS GERADA*\n\n` +
@@ -278,6 +296,24 @@ export const budgetsRouter = router({
       } as any);
 
       await budgetsDb.linkGeneratedOs(input.id, osResult.id);
+
+      // Copiar fotos do orçamento como anexos "before" da OS
+      const auxDb = await import("../workOrdersAuxDb");
+      const budgetPhotos = await budgetsDb.getBudgetAttachments(input.id);
+      for (const photo of budgetPhotos) {
+        await auxDb.createAttachment({
+          workOrderId: osResult.id,
+          fileName:    photo.fileName,
+          fileKey:     photo.fileKey,
+          fileUrl:     photo.fileUrl,
+          fileType:    photo.fileType ?? undefined,
+          fileSize:    photo.fileSize ?? undefined,
+          category:    "before",
+          description: photo.caption ?? undefined,
+          uploadedBy:  photo.uploadedBy ?? undefined,
+        } as any);
+      }
+
       return { success: true, osId: osResult.id };
     }),
 
@@ -344,4 +380,50 @@ export const budgetsRouter = router({
 
       return { success: true };
     }),
+
+  // ==================== ATTACHMENTS ====================
+  attachments: router({
+    list: adminLocalProcedure
+      .input(z.object({ budgetId: z.number() }))
+      .query(async ({ input }) => {
+        const budgetsDb = await import("../budgetsDb");
+        return await budgetsDb.getBudgetAttachments(input.budgetId);
+      }),
+
+    create: adminLocalProcedure
+      .input(z.object({
+        budgetId:   z.number(),
+        fileName:   z.string().min(1),
+        fileKey:    z.string().min(1),
+        fileUrl:    z.string().min(1),
+        fileType:   z.string().optional(),
+        fileSize:   z.number().optional(),
+        caption:    z.string().optional(),
+        uploadedBy: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const budgetsDb = await import("../budgetsDb");
+        await budgetsDb.createBudgetAttachment(input as any);
+        return { success: true };
+      }),
+
+    updateCaption: adminLocalProcedure
+      .input(z.object({
+        id:      z.number(),
+        caption: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const budgetsDb = await import("../budgetsDb");
+        await budgetsDb.updateBudgetAttachmentCaption(input.id, input.caption);
+        return { success: true };
+      }),
+
+    delete: adminLocalProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const budgetsDb = await import("../budgetsDb");
+        await budgetsDb.deleteBudgetAttachment(input.id);
+        return { success: true };
+      }),
+  }),
 });

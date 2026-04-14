@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   CheckCircle, XCircle, History,
   Download, Share2, Send, ExternalLink, Package,
   User, DollarSign, ClipboardList, MessageCircle, Copy, ChevronDown,
+  Camera, Pencil, X as XIcon,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -89,6 +90,12 @@ export default function AdminBudgetDetail() {
 
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+
+  // ─── Fotos ───────────────────────────────────────────────────────────
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [editingCaptionId, setEditingCaptionId] = useState<number | null>(null);
+  const [editingCaptionText, setEditingCaptionText] = useState("");
 
   // ─── Queries / Mutations ─────────────────────────────────────────────
   const { data: budget, refetch: refetchBudget } = trpc.budgets.getById.useQuery(
@@ -173,6 +180,54 @@ export default function AdminBudgetDetail() {
     onSuccess: () => toast.success("Orçamento enviado via WhatsApp para o cliente."),
     onError: (e: any) => toast.error(e.message),
   });
+
+  // ─── Fotos: queries / mutations ───────────────────────────────────────
+  const { data: photos = [], refetch: refetchPhotos } = (trpc as any).budgets.attachments.list.useQuery(
+    { budgetId: budgetId! },
+    { enabled: !!budgetId }
+  );
+  const createPhotoMutation = (trpc as any).budgets.attachments.create.useMutation({
+    onSuccess: () => { toast.success("Foto adicionada!"); refetchPhotos(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const updateCaptionMutation = (trpc as any).budgets.attachments.updateCaption.useMutation({
+    onSuccess: () => { setEditingCaptionId(null); refetchPhotos(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const deletePhotoMutation = (trpc as any).budgets.attachments.delete.useMutation({
+    onSuccess: () => { toast.success("Foto removida."); refetchPhotos(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !budgetId) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+      const res = await fetch("/api/work-orders/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Erro no upload");
+      for (const u of data.urls) {
+        await createPhotoMutation.mutateAsync({
+          budgetId,
+          fileName:   u.fileName,
+          fileKey:    u.key,
+          fileUrl:    u.url,
+          fileType:   u.fileType,
+          fileSize:   u.fileSize,
+          uploadedBy: adminName,
+        });
+      }
+      toast.success(`${data.urls.length} foto(s) adicionada(s)!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar foto");
+    } finally {
+      setUploadingPhoto(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  }
 
   // ─── Preenche formulário ao carregar ─────────────────────────────────
   useEffect(() => {
@@ -416,6 +471,7 @@ export default function AdminBudgetDetail() {
         <TabsList className="mb-6">
           <TabsTrigger value="dados"><ClipboardList className="w-4 h-4 mr-2" />Dados</TabsTrigger>
           <TabsTrigger value="itens" disabled={isNew}><Package className="w-4 h-4 mr-2" />Itens</TabsTrigger>
+          <TabsTrigger value="fotos" disabled={isNew}><Camera className="w-4 h-4 mr-2" />Fotos ({photos.length})</TabsTrigger>
           <TabsTrigger value="historico" disabled={isNew}><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
         </TabsList>
 
@@ -710,6 +766,109 @@ export default function AdminBudgetDetail() {
                 {saveItemsMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <Save className="w-4 h-4" />}
                 Salvar Itens
               </Button>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ─── Aba Fotos ──────────────────────────────────────────────────── */}
+        <TabsContent value="fotos">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-bold text-slate-800">Fotos do Local (Antes)</h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Estas fotos serão copiadas automaticamente como anexos "Antes" na OS gerada após aprovação.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-2"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                {uploadingPhoto ? "Enviando..." : "Adicionar Fotos"}
+              </Button>
+              <input
+                ref={photoInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+            </div>
+
+            {photos.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
+                  <Camera className="w-10 h-10 opacity-30" />
+                  <p className="text-sm">Nenhuma foto adicionada ainda.</p>
+                  <Button size="sm" variant="outline" className="gap-2" onClick={() => photoInputRef.current?.click()}>
+                    <Camera className="w-4 h-4" /> Adicionar primeira foto
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {photos.map((photo: any) => (
+                  <div key={photo.id} className="group relative rounded-lg border overflow-hidden bg-white shadow-sm">
+                    {/* Imagem */}
+                    <a href={photo.fileUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={photo.fileUrl}
+                        alt={photo.fileName}
+                        className="w-full aspect-square object-cover"
+                      />
+                    </a>
+
+                    {/* Botão excluir */}
+                    <button
+                      className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                      onClick={() => deletePhotoMutation.mutate({ id: photo.id })}
+                      title="Remover foto"
+                    >
+                      <XIcon className="w-3 h-3" />
+                    </button>
+
+                    {/* Legenda */}
+                    <div className="p-2">
+                      {editingCaptionId === photo.id ? (
+                        <div className="flex gap-1">
+                          <input
+                            autoFocus
+                            className="flex-1 text-xs border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                            value={editingCaptionText}
+                            onChange={(e) => setEditingCaptionText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") updateCaptionMutation.mutate({ id: photo.id, caption: editingCaptionText });
+                              if (e.key === "Escape") setEditingCaptionId(null);
+                            }}
+                            placeholder="Legenda..."
+                          />
+                          <button
+                            className="text-blue-600 hover:text-blue-800"
+                            onClick={() => updateCaptionMutation.mutate({ id: photo.id, caption: editingCaptionText })}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className="flex items-center gap-1 cursor-pointer group/caption"
+                          onClick={() => { setEditingCaptionId(photo.id); setEditingCaptionText(photo.caption ?? ""); }}
+                        >
+                          <span className={`text-xs flex-1 truncate ${photo.caption ? "text-slate-700" : "text-slate-400 italic"}`}>
+                            {photo.caption || "Adicionar legenda..."}
+                          </span>
+                          <Pencil className="w-3 h-3 text-slate-300 group-hover/caption:text-slate-500 flex-shrink-0" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </TabsContent>

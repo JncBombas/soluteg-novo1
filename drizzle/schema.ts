@@ -668,3 +668,22 @@ export const budgetHistory = mysqlTable("budgetHistory", {
 
 export type BudgetHistory = typeof budgetHistory.$inferSelect;
 export type InsertBudgetHistory = typeof budgetHistory.$inferInsert;
+
+/**
+ * Anexos (fotos "antes") do orçamento — copiados como "before" ao gerar OS
+ */
+export const budgetAttachments = mysqlTable("budgetAttachments", {
+  id:         int("id").autoincrement().primaryKey(),
+  budgetId:   int("budgetId").notNull(),
+  fileName:   varchar("fileName", { length: 255 }).notNull(),
+  fileKey:    text("fileKey").notNull(),
+  fileUrl:    text("fileUrl").notNull(),
+  fileType:   varchar("fileType", { length: 100 }),
+  fileSize:   int("fileSize"),
+  caption:    text("caption"),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  uploadedBy: varchar("uploadedBy", { length: 100 }),
+});
+
+export type BudgetAttachment = typeof budgetAttachments.$inferSelect;
+export type InsertBudgetAttachment = typeof budgetAttachments.$inferInsert;

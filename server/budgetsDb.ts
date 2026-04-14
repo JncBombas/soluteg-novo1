@@ -4,10 +4,12 @@ import {
   budgets,
   budgetItems,
   budgetHistory,
+  budgetAttachments,
   clients,
   InsertBudget,
   InsertBudgetItem,
   InsertBudgetHistory,
+  InsertBudgetAttachment,
 } from "../drizzle/schema";
 import crypto from "crypto";
 
@@ -539,4 +541,34 @@ export async function getBudgetMetrics(adminId: number) {
     if (row.status === "reprovado") metrics.rejected = count;
   }
   return metrics;
+}
+
+// ─── Anexos do orçamento (fotos "antes") ──────────────────────────────────
+
+export async function getBudgetAttachments(budgetId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(budgetAttachments)
+    .where(eq(budgetAttachments.budgetId, budgetId))
+    .orderBy(budgetAttachments.uploadedAt);
+}
+
+export async function createBudgetAttachment(data: InsertBudgetAttachment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(budgetAttachments).values(data);
+}
+
+export async function updateBudgetAttachmentCaption(id: number, caption: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(budgetAttachments).set({ caption }).where(eq(budgetAttachments.id, id));
+}
+
+export async function deleteBudgetAttachment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(budgetAttachments).where(eq(budgetAttachments.id, id));
 }
