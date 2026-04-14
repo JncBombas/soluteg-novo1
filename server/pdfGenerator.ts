@@ -820,11 +820,12 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
         doc.fontSize(10).fillColor(GOLD).font('Helvetica-Bold').text('Detalhamento de Itens', L, y); y += 14;
 
         // cabeçalho da tabela
+        // colTotal = 75px para caber valores como "R$ 37.700,00" sem quebrar linha
         const colDesc   = L;
-        const colQty    = R - 240;
-        const colUnit   = R - 190;
-        const colUPrice = R - 120;
-        const colTotal  = R - 50;
+        const colQty    = R - 260;
+        const colUnit   = R - 210;
+        const colUPrice = R - 150;
+        const colTotal  = R - 75;
 
         doc.rect(L, y, CW, 18).fill('#f1f5f9');
         doc.fontSize(8).fillColor(DARK).font('Helvetica-Bold');
@@ -832,7 +833,7 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
         doc.text('Qtd.',        colQty,    y + 4, { width: 46, align: 'center' });
         doc.text('Un.',         colUnit,   y + 4, { width: 46, align: 'center' });
         doc.text('Vl. Unit.',   colUPrice, y + 4, { width: 66, align: 'right' });
-        doc.text('Total',       colTotal,  y + 4, { width: 50, align: 'right' });
+        doc.text('Total',       colTotal,  y + 4, { width: 75, align: 'right' });
         y += 18;
 
         items.forEach((item: any, idx: number) => {
@@ -842,7 +843,7 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
           doc.text((item.quantity / 100).toFixed(2),                colQty,    y + 2, { width: 46, align: 'center' });
           doc.text(item.unit || '—',                                colUnit,   y + 2, { width: 46, align: 'center' });
           doc.text(fmtCurrency(item.unitPrice),                     colUPrice, y + 2, { width: 66, align: 'right' });
-          doc.font('Helvetica-Bold').text(fmtCurrency(item.totalPrice), colTotal,  y + 2, { width: 50, align: 'right' });
+          doc.font('Helvetica-Bold').text(fmtCurrency(item.totalPrice), colTotal,  y + 2, { width: 75, align: 'right' });
           y += 16;
         });
 
@@ -850,7 +851,7 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
         doc.rect(L, y, CW, 18).fill('#1e293b');
         doc.fontSize(9).fillColor('#ffffff').font('Helvetica-Bold');
         doc.text('TOTAL',               colDesc,   y + 4, { width: colUPrice - colDesc - 4 });
-        doc.text(fmtCurrency(budget.totalValue), colTotal, y + 4, { width: 50, align: 'right' });
+        doc.text(fmtCurrency(budget.totalValue), colTotal, y + 4, { width: 75, align: 'right' });
         y += 22;
       }
 
