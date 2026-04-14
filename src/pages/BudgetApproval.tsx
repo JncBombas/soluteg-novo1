@@ -31,9 +31,9 @@ export default function BudgetApproval() {
     { budgetId: budget?.id ?? 0 },
     { enabled: !!budget?.id }
   );
-  const { data: photos } = (trpc as any).budgets.attachments.listPublic.useQuery(
-    { budgetId: budget?.id ?? 0 },
-    { enabled: !!budget?.id }
+  const { data: photos } = (trpc as any).budgets.attachments.listByToken.useQuery(
+    { token },
+    { enabled: !!token && !!budget?.id }
   );
 
   const [approveOpen, setApproveOpen] = useState(false);

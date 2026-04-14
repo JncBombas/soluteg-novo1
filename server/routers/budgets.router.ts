@@ -390,12 +390,14 @@ export const budgetsRouter = router({
         return await budgetsDb.getBudgetAttachments(input.budgetId);
       }),
 
-    // Pública: usada na página de aprovação do cliente
-    listPublic: publicProcedure
-      .input(z.object({ budgetId: z.number() }))
+    // Pública: usada na página de aprovação — exige token válido para evitar enumeração por ID
+    listByToken: publicProcedure
+      .input(z.object({ token: z.string().min(10) }))
       .query(async ({ input }) => {
         const budgetsDb = await import("../budgetsDb");
-        return await budgetsDb.getBudgetAttachments(input.budgetId);
+        const budget = await budgetsDb.getBudgetByToken(input.token);
+        if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+        return await budgetsDb.getBudgetAttachments(budget.id);
       }),
 
     create: adminLocalProcedure
