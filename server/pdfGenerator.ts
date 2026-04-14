@@ -863,16 +863,14 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
       }
 
       // ── POSICIONA ASSINATURAS PRÓXIMAS AO RODAPÉ ─────────────
-      // Espaço estimado: divisor+rótulo (22) + imagem (56) + nome/doc/data (36) por assinatura
-      // + validade (60) + margens internas (26) = ~250px total
-      const sigBlockHeight = 250;
+      // Espaço real: divisor+rótulo (22) + imagem (56) + nome/doc/data (36) por assinatura
+      // + validade (50) + margem interna (16) = ~180px (duas assinaturas cabem em ~230px)
+      const hasTechSig   = !!budget.technicianSignature;
+      const hasClientSig = !!budget.clientSignature;
+      const sigBlockHeight = (hasTechSig ? 120 : 0) + (hasClientSig ? 110 : 0) + 60;
       const posRodape = doc.page.height - sigBlockHeight - 60; // 60 = bottom margin do doc
-      if (y > posRodape) {
-        doc.addPage();
-        y = 40;
-      } else {
-        y = posRodape;
-      }
+      if (y > posRodape) doc.addPage();
+      y = posRodape;
 
       // ── ASSINATURA DO TÉCNICO ─────────────────────────────────
       if (budget.technicianSignature) {
