@@ -178,4 +178,51 @@ export const technicianPortalRouter = router({
         return { success: true };
       }),
   }),
+
+  // ==================== CHECKLISTS ====================
+  checklists: router({
+    // Lista templates disponíveis (apenas estrutura, sem dados de negócio)
+    listTemplates: protectedTechnicianProcedure
+      .query(async () => {
+        const checklistDb = await import("../checklistsDb");
+        return await checklistDb.getAllTemplates();
+      }),
+
+    // Lista checklists da OS — verifica ownership via technicianId
+    listByWorkOrder: protectedTechnicianProcedure
+      .input(z.object({ workOrderId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        const checklistDb = await import("../checklistsDb");
+        return await checklistDb.getChecklistsByWorkOrderId(input.workOrderId);
+      }),
+
+    // Salva respostas — verifica que o checklist pertence a uma OS do técnico
+    updateResponses: protectedTechnicianProcedure
+      .input(z.object({
+        checklistId: z.number(),
+        workOrderId: z.number(),
+        responses:   z.record(z.string(), z.unknown()),
+        isComplete:  z.boolean(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        if (os.status !== "em_andamento" && os.status !== "pausada") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para preencher checklists." });
+        }
+        // Verifica que o checklistId pertence de fato a esta OS
+        const checklistDb = await import("../checklistsDb");
+        const instance = await checklistDb.getChecklistInstanceById(input.checklistId);
+        if (!instance) throw new TRPCError({ code: "NOT_FOUND", message: "Checklist não encontrado" });
+        // Busca a inspectionTask para confirmar que pertence à OS correta
+        const task = await checklistDb.getInspectionTaskById(instance.inspectionTaskId);
+        if (!task || task.workOrderId !== input.workOrderId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Checklist não pertence a esta OS" });
+        }
+        await checklistDb.updateChecklistResponses(input.checklistId, input.responses, input.isComplete);
+        return { success: true };
+      }),
+  }),
 });

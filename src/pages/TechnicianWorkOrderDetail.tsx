@@ -31,6 +31,7 @@ import {
   Paperclip,
   Send,
   ListChecks,
+  ClipboardList,
   ImageIcon,
   Loader2,
 } from "lucide-react";
@@ -38,6 +39,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import SignaturePad from "@/components/SignaturePad";
+import ChecklistForm from "@/components/ChecklistForm";
 
 const TYPE_LABEL: Record<string, string> = {
   rotina: "Rotina",
@@ -74,6 +76,9 @@ export default function TechnicianWorkOrderDetail() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Checklists
+  const [savingChecklistId, setSavingChecklistId] = useState<number | null>(null);
+
   useEffect(() => {
     const id = localStorage.getItem("technicianId");
     if (!id) {
@@ -107,6 +112,29 @@ export default function TechnicianWorkOrderDetail() {
     { workOrderId: workOrderId! },
     { enabled: !!workOrderId && !!technicianId && canInteract }
   );
+
+  // Checklists
+  const { data: checklists = [], refetch: refetchChecklists } = (trpc as any).technicianPortal.checklists.listByWorkOrder.useQuery(
+    { workOrderId: workOrderId! },
+    { enabled: !!workOrderId && !!technicianId && canInteract }
+  );
+
+  const { data: checklistTemplates = [] } = (trpc as any).technicianPortal.checklists.listTemplates.useQuery(
+    undefined,
+    { enabled: canInteract }
+  );
+
+  const updateResponsesMutation = (trpc as any).technicianPortal.checklists.updateResponses.useMutation({
+    onSuccess: () => {
+      toast.success("Respostas salvas!");
+      setSavingChecklistId(null);
+      refetchChecklists();
+    },
+    onError: (e: any) => {
+      toast.error(e.message);
+      setSavingChecklistId(null);
+    },
+  });
 
   const updateStatusMutation = (trpc as any).technicianPortal.updateStatus.useMutation({
     onSuccess: () => {
@@ -354,6 +382,63 @@ export default function TechnicianWorkOrderDetail() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ==================== CHECKLISTS ==================== */}
+            {canInteract && checklists.length > 0 && (
+              <div className="bg-white dark:bg-gray-900 rounded-lg border p-4 space-y-3">
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4" />
+                  Checklists
+                </h2>
+
+                <div className="space-y-4">
+                  {checklists.map((checklist: any) => {
+                    const template = checklistTemplates.find((t: any) => t.id === checklist.templateId) ?? null;
+                    let formStructure = null;
+                    if (template?.formStructure) {
+                      try {
+                        const parsed = JSON.parse(template.formStructure);
+                        formStructure = parsed.fields && !parsed.sections
+                          ? { sections: [{ id: "default", title: "Informações", fields: parsed.fields }] }
+                          : parsed;
+                      } catch { /* ignore */ }
+                    }
+                    const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
+                    const isSaving = savingChecklistId === checklist.id && updateResponsesMutation.isPending;
+
+                    return (
+                      <div key={checklist.id} className="border rounded-lg p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium">{checklist.customTitle}</p>
+                            {(checklist.brand || checklist.power) && (
+                              <p className="text-xs text-muted-foreground">
+                                {[checklist.brand, checklist.power].filter(Boolean).join(" · ")}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${checklist.isComplete ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>
+                            {checklist.isComplete ? "Completo" : "Incompleto"}
+                          </span>
+                        </div>
+                        {formStructure && (
+                          <ChecklistForm
+                            formStructure={formStructure}
+                            initialResponses={responses}
+                            onSave={(newResponses, isComplete) => {
+                              setSavingChecklistId(checklist.id);
+                              updateResponsesMutation.mutate({ checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses, isComplete });
+                            }}
+                            isSaving={isSaving}
+                            readOnly={!!checklist.isComplete}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
