@@ -15,7 +15,7 @@ import { SolutegFooter } from "@/components/SolutegFooter";
 import {
   CheckCircle, XCircle, Loader2, Download,
   FileText, Calendar, User, AlertTriangle,
-  Package, DollarSign,
+  Package, DollarSign, Camera,
 } from "lucide-react";
 import { formatCurrency, SERVICE_TYPE_LABEL as SERVICE_LABEL } from "@/lib/budgetUtils";
 
@@ -28,6 +28,10 @@ export default function BudgetApproval() {
     { enabled: !!token }
   );
   const { data: items } = trpc.budgets.getItems.useQuery(
+    { budgetId: budget?.id ?? 0 },
+    { enabled: !!budget?.id }
+  );
+  const { data: photos } = (trpc as any).budgets.attachments.listPublic.useQuery(
     { budgetId: budget?.id ?? 0 },
     { enabled: !!budget?.id }
   );
@@ -283,6 +287,35 @@ export default function BudgetApproval() {
             <CardContent className="p-4">
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">Observações</p>
               <p className="text-blue-800 text-sm whitespace-pre-wrap">{budget.clientNotes}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Fotos do local (antes) */}
+        {photos && photos.length > 0 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Camera className="w-4 h-4" /> Fotos do Local
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {photos.map((photo: any) => (
+                  <div key={photo.id} className="space-y-1">
+                    <a href={photo.fileUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={photo.fileUrl}
+                        alt={photo.fileName}
+                        className="w-full aspect-square object-cover rounded-lg border"
+                      />
+                    </a>
+                    {photo.caption && (
+                      <p className="text-xs text-slate-500 text-center">{photo.caption}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

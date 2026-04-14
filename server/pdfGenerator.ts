@@ -7,7 +7,7 @@ import PDFDocument from 'pdfkit';
 import { getWorkOrderById } from './workOrdersDb';
 import { getMaterialsByWorkOrderId, getCommentsByWorkOrderId, getAttachmentsByWorkOrderId, getTasksByWorkOrderId } from './workOrdersAuxDb';
 import { getInspectionTasksByWorkOrder, getChecklistsByInspectionTask } from './checklistsDb';
-import { getBudgetById, getBudgetItems } from './budgetsDb';
+import { getBudgetById, getBudgetItems, getBudgetAttachments } from './budgetsDb';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -701,6 +701,7 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
   if (!budget) throw new Error('Orçamento não encontrado');
 
   const items = await getBudgetItems(budgetId);
+  const photos = await getBudgetAttachments(budgetId);
 
   const serviceTypeLabel: Record<string, string> = {
     instalacao: 'Instalação', manutencao: 'Manutenção',
@@ -861,6 +862,42 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
         doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
         doc.fontSize(9).fillColor(GOLD).font('Helvetica-Bold').text('Observações', L, y); y += 14;
         doc.fontSize(9).fillColor(DARK).font('Helvetica').text(budget.clientNotes, L, y, { width: CW }); y += doc.heightOfString(budget.clientNotes, { width: CW }) + 8;
+      }
+
+      // ── FOTOS DO LOCAL (ANTES) ────────────────────────────────
+      const imagePhotos = photos.filter((p: any) => p.fileType?.startsWith('image/'));
+      if (imagePhotos.length > 0) {
+        if (y > doc.page.height - 150) { doc.addPage(); y = 40; }
+        doc.strokeColor('#e2e8f0').lineWidth(1).moveTo(L, y).lineTo(R, y).stroke(); y += 10;
+        doc.fontSize(10).fillColor(GOLD).font('Helvetica-Bold').text('Fotos do Local (Antes)', L, y); y += 16;
+
+        const numCols = 2;
+        const gap     = 10;
+        const imgW    = (CW - gap) / numCols;
+        const imgH    = 140;
+
+        for (let i = 0; i < imagePhotos.length; i++) {
+          const col  = i % numCols;
+          const xPos = L + col * (imgW + gap);
+
+          if (i > 0 && col === 0) y += imgH + (imagePhotos[i - 1].caption ? 28 : 12);
+          if (y > doc.page.height - imgH - 60) { doc.addPage(); y = 40; }
+
+          try {
+            const resp = await axios.get(imagePhotos[i].fileUrl, { responseType: 'arraybuffer' });
+            doc.image(resp.data, xPos, y, { width: imgW, height: imgH, fit: [imgW, imgH], align: 'center', valign: 'center' });
+          } catch {
+            doc.rect(xPos, y, imgW, imgH).strokeColor('#cccccc').stroke();
+            doc.fontSize(7).fillColor(MUTED).text('Imagem indisponível', xPos, y + imgH / 2 - 5, { width: imgW, align: 'center' });
+          }
+
+          if (imagePhotos[i].caption) {
+            doc.fontSize(8).fillColor(DARK).font('Helvetica')
+               .text(imagePhotos[i].caption, xPos, y + imgH + 4, { width: imgW, align: 'center', ellipsis: true });
+          }
+        }
+        // avança y após última linha
+        y += imgH + (imagePhotos[imagePhotos.length - 1].caption ? 28 : 12) + 6;
       }
 
       // ── POSICIONA ASSINATURAS PRÓXIMAS AO RODAPÉ ─────────────

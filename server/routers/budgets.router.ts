@@ -390,6 +390,14 @@ export const budgetsRouter = router({
         return await budgetsDb.getBudgetAttachments(input.budgetId);
       }),
 
+    // Pública: usada na página de aprovação do cliente
+    listPublic: publicProcedure
+      .input(z.object({ budgetId: z.number() }))
+      .query(async ({ input }) => {
+        const budgetsDb = await import("../budgetsDb");
+        return await budgetsDb.getBudgetAttachments(input.budgetId);
+      }),
+
     create: adminLocalProcedure
       .input(z.object({
         budgetId:   z.number(),
