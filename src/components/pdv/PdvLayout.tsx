@@ -117,7 +117,7 @@ function PdvLayoutContent({
     <>
       <div className="relative" ref={sidebarRef}>
         <Sidebar collapsible="icon" className="border-r-0" disableTransition={isResizing}>
-          <SidebarHeader className="h-20 justify-center" style={{ backgroundColor: "#2D3748", borderBottom: "2px solid #D4A15E" }}>
+          <SidebarHeader className="h-20 justify-center" style={{ backgroundColor: "#f3f5f8", borderBottom: "2px solid #D4A15E" }}>
             <div className="flex items-center gap-3 px-2 w-full">
               <button
                 onClick={toggleSidebar}
