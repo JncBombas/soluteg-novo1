@@ -131,7 +131,17 @@ export async function createSale(sale: {
   userId: number;
 }) {
   const db = await getPdvDb();
-  const result = await db.insert(sales).values(sale as any);
+  const values: any = {
+    total: sale.total,
+    paymentMethod: sale.paymentMethod,
+    userId: sale.userId,
+  };
+  if (sale.discount != null)     values.discount     = sale.discount;
+  if (sale.discountType != null) values.discountType = sale.discountType;
+  if (sale.amountPaid != null)   values.amountPaid   = sale.amountPaid;
+  if (sale.change != null)       values.change       = sale.change;
+  if (sale.customerId != null)   values.customerId   = sale.customerId;
+  const result = await db.insert(sales).values(values);
   return { insertId: (result as any)[0]?.insertId || (result as any).insertId };
 }
 
