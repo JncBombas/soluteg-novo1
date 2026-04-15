@@ -40,6 +40,18 @@ async function main() {
   const conn = await mysql.createConnection(DB_URL!);
   console.log("Conectado ao banco.\n");
 
+  // ── AUTO_INCREMENT nos IDs ─────────────────────────────────────────────────
+  console.log("🔧 Corrigindo AUTO_INCREMENT nos IDs:");
+  for (const t of ["sales", "saleItems", "products", "categories", "customers", "cashTransactions"]) {
+    try {
+      await conn.execute(`ALTER TABLE \`${t}\` MODIFY \`id\` int NOT NULL AUTO_INCREMENT`);
+      console.log(`  ✅ ${t}.id → AUTO_INCREMENT`);
+    } catch (e: any) {
+      console.log(`  ⏭  ${t}: ${e.message}`);
+    }
+  }
+  console.log();
+
   // ── SALES ──────────────────────────────────────────────────────────────────
   console.log("📋 Tabela: sales");
   await addColumnIfMissing(conn, "sales", "discount",     "`discount` decimal(10,2) DEFAULT '0.00'");
