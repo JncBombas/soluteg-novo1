@@ -717,7 +717,7 @@ export async function generateBudgetPDF(budgetId: number): Promise<Buffer> {
     return `R$ ${(cents / 100).toFixed(2).replace('.', ',')}`;
   };
 
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       const doc = new PDFDocument({
         size: 'A4',
