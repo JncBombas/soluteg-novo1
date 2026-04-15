@@ -38,7 +38,22 @@ import AdminWaterTankDashboard from "./pages/AdminWaterTankDashboard";
 import TechnicianLogin from "./pages/TechnicianLogin";
 import TechnicianPortal from "./pages/TechnicianPortal";
 import TechnicianWorkOrderDetail from "./pages/TechnicianWorkOrderDetail";
+import PdvLayout from "./components/pdv/PdvLayout";
+import PdvDashboard from "./pages/pdv/PdvDashboard";
+import PdvSales from "./pages/pdv/PdvSales";
+import PdvProducts from "./pages/pdv/PdvProducts";
+import PdvCategories from "./pages/pdv/PdvCategories";
+import PdvHistoricoVendas from "./pages/pdv/PdvHistoricoVendas";
+import PdvCustomers from "./pages/pdv/PdvCustomers";
+import PdvCashFlow from "./pages/pdv/PdvCashFlow";
+import PdvReports from "./pages/pdv/PdvReports";
+import PdvImport from "./pages/pdv/PdvImport";
+import PdvProductLabel from "./pages/pdv/PdvProductLabel";
+import PdvBatchLabels from "./pages/pdv/PdvBatchLabels";
 
+function PdvRoute({ component: Component }: { component: React.ComponentType }) {
+  return <PdvLayout><Component /></PdvLayout>;
+}
 
 function Router() {
   return (
@@ -78,6 +93,20 @@ function Router() {
       <Route path="/technician/login" component={TechnicianLogin} />
       <Route path="/technician/portal" component={TechnicianPortal} />
       <Route path="/technician/work-orders/:id" component={TechnicianWorkOrderDetail} />
+
+      {/* PDV Routes */}
+      <Route path="/pdv">{() => <PdvRoute component={PdvDashboard} />}</Route>
+      <Route path="/pdv/vendas">{() => <PdvRoute component={PdvSales} />}</Route>
+      <Route path="/pdv/produtos/etiqueta/:id">{() => <PdvRoute component={PdvProductLabel} />}</Route>
+      <Route path="/pdv/produtos/etiquetas-lote">{() => <PdvRoute component={PdvBatchLabels} />}</Route>
+      <Route path="/pdv/produtos">{() => <PdvRoute component={PdvProducts} />}</Route>
+      <Route path="/pdv/categorias">{() => <PdvRoute component={PdvCategories} />}</Route>
+      <Route path="/pdv/historico">{() => <PdvRoute component={PdvHistoricoVendas} />}</Route>
+      <Route path="/pdv/clientes">{() => <PdvRoute component={PdvCustomers} />}</Route>
+      <Route path="/pdv/caixa">{() => <PdvRoute component={PdvCashFlow} />}</Route>
+      <Route path="/pdv/relatorios">{() => <PdvRoute component={PdvReports} />}</Route>
+      <Route path="/pdv/importar">{() => <PdvRoute component={PdvImport} />}</Route>
+
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
