@@ -11,9 +11,10 @@ if (!DB_URL) { console.error("DATABASE_URL não definido"); process.exit(1); }
 async function main() {
   const conn = await mysql.createConnection(DB_URL!);
 
-  // Mostra qual banco está sendo usado
-  const [dbRow] = await conn.execute<mysql.RowDataPacket[]>("SELECT DATABASE() as db");
-  console.log("Banco conectado:", dbRow[0].db);
+  // Mostra qual banco + host está sendo usado
+  const [dbRow] = await conn.execute<mysql.RowDataPacket[]>("SELECT DATABASE() as db, @@hostname as host, @@port as port");
+  console.log("Banco conectado:", dbRow[0].db, "| host:", dbRow[0].host, "| port:", dbRow[0].port);
+  console.log("DATABASE_URL host:", new URL(DB_URL!).hostname, "| port:", new URL(DB_URL!).port);
 
   // Mostra FK constraints na tabela sales
   const [fks] = await conn.execute<mysql.RowDataPacket[]>(`
