@@ -40,14 +40,24 @@ async function main() {
   const conn = await mysql.createConnection(DB_URL!);
   console.log("Conectado ao banco.\n");
 
-  // ── AUTO_INCREMENT nos IDs ─────────────────────────────────────────────────
-  console.log("🔧 Corrigindo AUTO_INCREMENT nos IDs:");
+  // ── PRIMARY KEY + AUTO_INCREMENT nos IDs ──────────────────────────────────
+  console.log("🔧 Corrigindo PRIMARY KEY e AUTO_INCREMENT nos IDs:");
   for (const t of ["sales", "saleItems", "products", "categories", "customers", "cashTransactions"]) {
+    // 1. Garante PRIMARY KEY
+    try {
+      await conn.execute(`ALTER TABLE \`${t}\` ADD PRIMARY KEY (\`id\`)`);
+      console.log(`  ✅ ${t} → PRIMARY KEY adicionada`);
+    } catch (e: any) {
+      if (!e.message.includes("Multiple primary key") && !e.message.includes("Duplicate key")) {
+        console.log(`  ⏭  ${t} PK: ${e.message}`);
+      }
+    }
+    // 2. Aplica AUTO_INCREMENT
     try {
       await conn.execute(`ALTER TABLE \`${t}\` MODIFY \`id\` int NOT NULL AUTO_INCREMENT`);
       console.log(`  ✅ ${t}.id → AUTO_INCREMENT`);
     } catch (e: any) {
-      console.log(`  ⏭  ${t}: ${e.message}`);
+      console.log(`  ⏭  ${t} AI: ${e.message}`);
     }
   }
   console.log();
