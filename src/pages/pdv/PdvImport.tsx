@@ -2,7 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle, Database, Loader2 } from "lucide-react";
+import { Upload, ArrowLeft, FileText, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -51,82 +51,6 @@ function parseCSV(text: string): ParsedRow[] {
     });
 }
 
-function MigrationCard() {
-  const { data: tidbCheck } = trpc.pdv.migrate.checkTidb.useQuery();
-  const migrateMutation = trpc.pdv.migrate.fromTidb.useMutation();
-  const [migrateResult, setMigrateResult] = useState<Record<string, number> | null>(null);
-
-  const handleMigrate = async () => {
-    if (!confirm("Isso copiará todos os dados do TiDB Cloud para o MySQL principal. Continuar?")) return;
-    try {
-      const result = await migrateMutation.mutateAsync();
-      setMigrateResult(result.results);
-      toast.success("Migração concluída com sucesso!");
-    } catch (err: any) {
-      toast.error(err.message || "Erro na migração");
-    }
-  };
-
-  const isAvailable = tidbCheck?.available;
-
-  return (
-    <Card className="border-2" style={{ borderColor: "#D4A15E" }}>
-      <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800">
-        <CardTitle className="text-white flex items-center gap-2">
-          <Database className="h-5 w-5" />Migrar Dados do TiDB Cloud → MySQL
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4 space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Use este botão para copiar todos os dados do banco TiDB Cloud (antigo PDV) para o MySQL principal.
-          A operação é segura — usa <code className="text-xs bg-slate-100 px-1 rounded">INSERT ... ON DUPLICATE KEY UPDATE</code> e pode ser executada mais de uma vez.
-        </p>
-
-        {isAvailable === false && (
-          <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
-            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-            <span>
-              <strong>PDV_DATABASE_URL não encontrada no servidor.</strong><br />
-              Adicione a variável ao <code className="text-xs">.env</code> do servidor e reinicie o processo.
-            </span>
-          </div>
-        )}
-
-        {migrateResult ? (
-          <div className="p-3 bg-green-50 border border-green-200 rounded space-y-2">
-            <p className="flex items-center gap-2 font-semibold text-green-700">
-              <CheckCircle className="h-5 w-5" />Migração concluída!
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-              {Object.entries(migrateResult).map(([table, count]) => (
-                <div key={table} className="bg-white rounded p-2 border text-center">
-                  <p className="font-bold text-slate-700">{count}</p>
-                  <p className="text-xs text-muted-foreground">{table}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-green-600 mt-1">
-              Agora você pode remover <code>PDV_DATABASE_URL</code> do <code>.env</code>.
-            </p>
-          </div>
-        ) : (
-          <Button
-            onClick={handleMigrate}
-            disabled={migrateMutation.isPending || isAvailable === false}
-            className="bg-gradient-to-r from-slate-700 to-slate-800 text-white"
-            style={{ borderColor: "#D4A15E", borderWidth: "2px" }}
-          >
-            {migrateMutation.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Migrando...</>
-            ) : (
-              <><Database className="mr-2 h-4 w-4" />Copiar dados do TiDB para MySQL</>
-            )}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function PdvImport() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
@@ -204,8 +128,6 @@ export default function PdvImport() {
           <p className="text-muted-foreground text-sm">Importe produtos em massa a partir de um arquivo CSV</p>
         </div>
       </div>
-
-      <MigrationCard />
 
       <Card className="border-2" style={{ borderColor: "#D4A15E" }}>
         <CardHeader className="bg-gradient-to-r from-slate-700 to-slate-800">
