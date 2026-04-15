@@ -16,6 +16,8 @@ export default function AdminLogin() {
   const [rememberLogin, setRememberLogin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const redirectTo = new URLSearchParams(window.location.search).get("redirect") || "/gestor/dashboard";
+
   useEffect(() => {
     const savedUsername = localStorage.getItem("adminLoginUsername");
     const wasRemembered = localStorage.getItem("adminRememberLogin") === "true";
@@ -39,7 +41,7 @@ export default function AdminLogin() {
         localStorage.removeItem("adminRememberLogin");
       }
       toast.success("Login realizado com sucesso!");
-      setLocation("/gestor/dashboard");
+      setLocation(redirectTo);
     },
     onError: (error) => {
       toast.error("Credenciais inválidas. Verifique usuário e senha.");

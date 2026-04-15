@@ -42,7 +42,7 @@ export default function PdvLayout({ children }: { children: React.ReactNode }) {
     const id = localStorage.getItem("adminId");
     const name = localStorage.getItem("adminName");
     if (!id) {
-      setLocation("/gestor/login");
+      setLocation("/gestor/login?redirect=/pdv");
       return;
     }
     setAdminName(name || "Admin");
