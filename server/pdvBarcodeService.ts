@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const bwipjs = require("bwip-js") as { toBuffer: (opts: Record<string, unknown>) => Promise<Buffer> };
-
 /** Gera um EAN-13 válido com prefixo brasileiro (789) */
 export function generateEAN13(): string {
   const prefix = "789";
@@ -18,13 +15,18 @@ export function generateEAN13(): string {
   return partial + check;
 }
 
-/** Gera PNG do código de barras e retorna Buffer */
+/** Gera PNG do código de barras e retorna Buffer.
+ *  Usa import() dinâmico para compatibilidade com ESM (bwip-js é CJS). */
 export async function generateBarcodeImage(
   barcode: string,
   options: { width?: number; height?: number; includeText?: boolean } = {}
 ): Promise<Buffer> {
   const { width = 2, height = 50, includeText = true } = options;
-  return bwipjs.toBuffer({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mod = await import("bwip-js") as any;
+  const toBuffer: (opts: Record<string, unknown>) => Promise<Buffer> =
+    mod.default?.toBuffer ?? mod.toBuffer;
+  return toBuffer({
     bcid: "ean13",
     text: barcode,
     scale: width,
