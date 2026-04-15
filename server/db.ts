@@ -4,13 +4,18 @@ import { InsertUser, users, reports, InsertReport, invites, InsertInvite, Invite
 import { ENV } from './_core/env';
 import crypto from "crypto";
 
-let _db: ReturnType<typeof drizzle> | null = drizzle("mysql://d5ea2e96_jnc_sistema:d5ea2e96d5ea2e96d5ea2e96@69.6.213.57:3306/d5ea2e96_jncdb");
+let _db: ReturnType<typeof drizzle> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
+    const url = process.env.DATABASE_URL;
+    if (!url) {
+      console.warn("[Database] DATABASE_URL não definido no .env");
+      return null;
+    }
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle(url);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
