@@ -418,6 +418,79 @@ export const pdvRouter = router({
     }),
   }),
 
+  // ── MIGRAÇÃO TIDB → MYSQL ────────────────────────────────
+  migrate: router({
+    /** Verifica se PDV_DATABASE_URL está configurada no servidor */
+    checkTidb: adminLocalProcedure.query(() => {
+      return { available: !!process.env.PDV_DATABASE_URL };
+    }),
+
+    /** Copia todos os dados do TiDB Cloud para o MySQL principal */
+    fromTidb: adminLocalProcedure.mutation(async () => {
+      const tidbUrl = process.env.PDV_DATABASE_URL;
+      if (!tidbUrl) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "PDV_DATABASE_URL não está configurada no servidor. Configure o .env e reinicie.",
+        });
+      }
+
+      const { drizzle } = await import("drizzle-orm/mysql2");
+      const { sql } = await import("drizzle-orm");
+      const {
+        categories, products, sales, saleItems, cashTransactions, customers,
+      } = await import("../pdvSchema");
+
+      const tidb = drizzle(tidbUrl);
+      const mysql = await import("../db").then(m => m.getDb());
+      if (!mysql) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "MySQL não disponível" });
+
+      // Lê tudo do TiDB
+      const [
+        allCategories, allProducts, allSales,
+        allSaleItems, allCash, allCustomers,
+      ] = await Promise.all([
+        tidb.select().from(categories),
+        tidb.select().from(products),
+        tidb.select().from(sales),
+        tidb.select().from(saleItems),
+        tidb.select().from(cashTransactions),
+        tidb.select().from(customers),
+      ]);
+
+      const results: Record<string, number> = {};
+
+      async function upsertBatch<T extends Record<string, unknown>>(
+        table: any,
+        rows: T[],
+        updateKey: string,
+      ) {
+        if (rows.length === 0) return 0;
+        const BATCH = 200;
+        for (let i = 0; i < rows.length; i += BATCH) {
+          const chunk = rows.slice(i, i + BATCH);
+          await mysql!.insert(table).values(chunk as any)
+            .onDuplicateKeyUpdate({ set: { [updateKey]: sql.raw(`VALUES(\`${updateKey}\`)`) } });
+        }
+        return rows.length;
+      }
+
+      await mysql.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
+      try {
+        results.categories       = await upsertBatch(categories,       allCategories, "name");
+        results.products         = await upsertBatch(products,         allProducts,   "name");
+        results.customers        = await upsertBatch(customers,        allCustomers,  "name");
+        results.sales            = await upsertBatch(sales,            allSales,      "total");
+        results.saleItems        = await upsertBatch(saleItems,        allSaleItems,  "productName");
+        results.cashTransactions = await upsertBatch(cashTransactions, allCash,       "description");
+      } finally {
+        await mysql.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
+      }
+
+      return { success: true, results };
+    }),
+  }),
+
   // ── CÓDIGO DE BARRAS ─────────────────────────────────────
   barcode: router({
     generate: adminLocalProcedure.mutation(() => {
