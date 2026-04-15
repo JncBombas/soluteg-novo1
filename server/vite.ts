@@ -65,7 +65,7 @@ export function serveStatic(app: Express) {
 
   app.use("*", (req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"), (err) => {
-      if (err) {
+      if (err && !res.headersSent) {
         res.status(404).send("Arquivo index.html nao encontrado no servidor.");
       }
     });
