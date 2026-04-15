@@ -14,6 +14,8 @@ export const products = mysqlTable("products", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  costPrice: decimal("costPrice", { precision: 10, scale: 2 }),
+  unit: varchar("unit", { length: 20 }).default("un"),
   stock: int("stock").notNull().default(0),
   minStock: int("minStock").notNull().default(5),
   categoryId: int("categoryId"),

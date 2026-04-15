@@ -4,7 +4,13 @@
 //          cashTransactions, customers
 // ============================================================
 import { eq, desc, and, gte, lte, sql, asc } from "drizzle-orm";
-import { getPdvDb } from "./pdvConnection";
+import { getDb } from "./db";
+
+async function getPdvDb() {
+  const db = await getDb();
+  if (!db) throw new Error("[PDV] Database not available");
+  return db;
+}
 import {
   categories,
   products,
@@ -17,22 +23,22 @@ import {
 // ============ CATEGORIES ============
 
 export async function createCategory(category: { name: string; description?: string }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.insert(categories).values(category);
 }
 
 export async function getAllCategories() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(categories).orderBy(asc(categories.name));
 }
 
 export async function updateCategory(id: number, data: { name?: string; description?: string }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.update(categories).set(data).where(eq(categories.id, id));
 }
 
 export async function deleteCategory(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.delete(categories).where(eq(categories.id, id));
 }
 
@@ -51,23 +57,23 @@ export async function createProduct(product: {
   imageUrl?: string;
   imageKey?: string;
 }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.insert(products).values({ minStock: 5, active: true, ...product } as any);
 }
 
 export async function getAllProducts() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(products).orderBy(desc(products.createdAt));
 }
 
 export async function getProductById(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.select().from(products).where(eq(products.id, id)).limit(1);
   return result[0];
 }
 
 export async function getProductByBarcode(barcode: string) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.select().from(products).where(eq(products.barcode, barcode)).limit(1);
   return result[0];
 }
@@ -77,36 +83,36 @@ export async function updateProduct(id: number, data: Partial<{
   stock: number; minStock: number; unit: string; categoryId: number;
   imageUrl: string; imageKey: string; active: boolean;
 }>) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.update(products).set(data as any).where(eq(products.id, id));
 }
 
 export async function deleteProduct(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.delete(products).where(eq(products.id, id));
 }
 
 export async function getLowStockProducts() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(products).where(
     sql`${products.stock} <= ${products.minStock} AND ${products.active} = 1`
   );
 }
 
 export async function searchProducts(query: string) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(products).where(
     sql`(${products.name} LIKE ${`%${query}%`} OR ${products.barcode} LIKE ${`%${query}%`}) AND ${products.active} = 1`
   );
 }
 
 export async function toggleProductActive(productId: number, active: boolean) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.update(products).set({ active } as any).where(eq(products.id, productId));
 }
 
 export async function getActiveProducts() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(products)
     .where(eq(products.active as any, true))
     .orderBy(asc(products.name));
@@ -124,31 +130,31 @@ export async function createSale(sale: {
   customerId?: number;
   userId: number;
 }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.insert(sales).values(sale as any);
   return { insertId: (result as any)[0]?.insertId || (result as any).insertId };
 }
 
 export async function getSaleById(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.select().from(sales).where(eq(sales.id, id)).limit(1);
   return result[0];
 }
 
 export async function getAllSales() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(sales).orderBy(desc(sales.createdAt));
 }
 
 export async function getSalesByDateRange(startDate: Date, endDate: Date) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(sales).where(
     and(gte(sales.createdAt, startDate), lte(sales.createdAt, endDate))
   ).orderBy(desc(sales.createdAt));
 }
 
 export async function cancelSale(saleId: number, reason: string) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   await db.update(sales).set({
     canceled: true,
     cancelReason: reason,
@@ -167,12 +173,12 @@ export async function createSaleItem(item: {
   unitPrice: string;
   subtotal: string;
 }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.insert(saleItems).values(item);
 }
 
 export async function getSaleItemsBySaleId(saleId: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(saleItems).where(eq(saleItems.saleId, saleId));
 }
 
@@ -185,24 +191,24 @@ export async function createCashTransaction(transaction: {
   saleId?: number;
   userId: number;
 }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.insert(cashTransactions).values(transaction as any);
 }
 
 export async function getAllCashTransactions() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(cashTransactions).orderBy(desc(cashTransactions.createdAt));
 }
 
 export async function getCashTransactionsByDateRange(startDate: Date, endDate: Date) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(cashTransactions).where(
     and(gte(cashTransactions.createdAt, startDate), lte(cashTransactions.createdAt, endDate))
   ).orderBy(desc(cashTransactions.createdAt));
 }
 
 export async function getCashBalance() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.select({
     balance: sql<number>`
       SUM(CASE
@@ -218,7 +224,7 @@ export async function getCashBalance() {
 // ============ DASHBOARD ============
 
 export async function getDashboardStats() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -252,42 +258,42 @@ export async function getDashboardStats() {
 // ============ CUSTOMERS ============
 
 export async function getAllCustomers() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(customers).orderBy(desc(customers.createdAt));
 }
 
 export async function getCustomerById(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const result = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
   return result[0];
 }
 
 export async function searchCustomers(query: string) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.select().from(customers).where(
     sql`${customers.name} LIKE ${`%${query}%`} OR ${customers.cpfCnpj} LIKE ${`%${query}%`} OR ${customers.phone} LIKE ${`%${query}%`}`
   ).orderBy(asc(customers.name)).limit(20);
 }
 
 export async function createCustomer(data: { name: string; cpfCnpj?: string; phone?: string; email?: string }) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.insert(customers).values(data as any);
 }
 
 export async function updateCustomer(id: number, data: Partial<{ name: string; cpfCnpj: string; phone: string; email: string }>) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.update(customers).set(data as any).where(eq(customers.id, id));
 }
 
 export async function deleteCustomer(id: number) {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   return await db.delete(customers).where(eq(customers.id, id));
 }
 
 // ============ BACKUP ============
 
 export async function generateFullBackup() {
-  const db = getPdvDb();
+  const db = await getPdvDb();
   const [allProducts, allCategories, allSales, allSaleItems, allCashTransactions, allCustomers] =
     await Promise.all([
       db.select().from(products),

@@ -687,3 +687,6 @@ export const budgetAttachments = mysqlTable("budgetAttachments", {
 
 export type BudgetAttachment = typeof budgetAttachments.$inferSelect;
 export type InsertBudgetAttachment = typeof budgetAttachments.$inferInsert;
+
+// PDV (Ponto de Venda) tables
+export * from "../server/pdvSchema";
