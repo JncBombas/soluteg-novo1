@@ -40,6 +40,18 @@ async function main() {
   const conn = await mysql.createConnection(DB_URL!);
   console.log("Conectado ao banco.\n");
 
+  // ── DEFAULT NOW() nos createdAt ───────────────────────────────────────────
+  console.log("🔧 Corrigindo DEFAULT NOW() nos createdAt:");
+  for (const t of ["sales", "saleItems", "products", "categories", "customers", "cashTransactions"]) {
+    try {
+      await conn.execute(`ALTER TABLE \`${t}\` MODIFY \`createdAt\` timestamp NOT NULL DEFAULT (now())`);
+      console.log(`  ✅ ${t}.createdAt → DEFAULT NOW()`);
+    } catch (e: any) {
+      console.log(`  ⏭  ${t}: ${e.message}`);
+    }
+  }
+  console.log();
+
   // ── PRIMARY KEY + AUTO_INCREMENT nos IDs ──────────────────────────────────
   console.log("🔧 Corrigindo PRIMARY KEY e AUTO_INCREMENT nos IDs:");
   for (const t of ["sales", "saleItems", "products", "categories", "customers", "cashTransactions"]) {
