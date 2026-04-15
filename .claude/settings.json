@@ -22,7 +22,8 @@
       "Read(//c/Users/thiag/.claude/projects/c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1/memory/**)",
       "Bash(pnpm db:push)",
       "Bash(npx drizzle-kit:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Read(//c/Users/thiag/**)"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\.claude\\projects\\c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1\\memory"
