@@ -38,6 +38,8 @@ import AdminWaterTankDashboard from "./pages/AdminWaterTankDashboard";
 import TechnicianLogin from "./pages/TechnicianLogin";
 import TechnicianPortal from "./pages/TechnicianPortal";
 import TechnicianWorkOrderDetail from "./pages/TechnicianWorkOrderDetail";
+import AdminLaudos from "./pages/AdminLaudos";
+import AdminLaudoForm from "./pages/AdminLaudoForm";
 import PdvLayout from "./components/pdv/PdvLayout";
 import PdvDashboard from "./pages/pdv/PdvDashboard";
 import PdvSales from "./pages/pdv/PdvSales";
@@ -90,6 +92,10 @@ function Router() {
       <Route path="/gestor/tecnicos" component={AdminTechnicians} />
       <Route path="/gestor/sensores-agua" component={AdminWaterTanks} />
       <Route path="/gestor/sensores-agua/:id" component={AdminWaterTankDashboard} />
+      <Route path="/gestor/laudos" component={AdminLaudos} />
+      <Route path="/gestor/laudos/novo" component={AdminLaudoForm} />
+      <Route path="/gestor/laudos/:id" component={AdminLaudoForm} />
+
       <Route path="/technician/login" component={TechnicianLogin} />
       <Route path="/technician/portal" component={TechnicianPortal} />
       <Route path="/technician/work-orders/:id" component={TechnicianWorkOrderDetail} />

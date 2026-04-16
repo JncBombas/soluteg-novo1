@@ -18,6 +18,7 @@ import { technicianPortalRouter } from "./routers/technicianPortal.router";
 import { waterTankMonitoringRouter } from "./routers/waterTankMonitoring.router";
 import { waterTankAdminRouter } from "./routers/waterTankAdmin.router";
 import { pdvRouter } from "./routers/pdv.router";
+import { laudosRouter } from "./routers/laudos.router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -38,6 +39,7 @@ export const appRouter = router({
   waterTankMonitoring: waterTankMonitoringRouter,
   waterTankAdmin: waterTankAdminRouter,
   pdv: pdvRouter,
+  laudos: laudosRouter,
 });
 
 export type AppRouter = typeof appRouter;

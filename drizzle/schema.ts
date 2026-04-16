@@ -690,3 +690,84 @@ export type InsertBudgetAttachment = typeof budgetAttachments.$inferInsert;
 
 // PDV (Ponto de Venda) tables
 export * from "../server/pdvSchema";
+
+/**
+ * Laudos Técnicos
+ */
+export const laudos = mysqlTable("laudos", {
+  id: int("id").autoincrement().primaryKey(),
+  numero: varchar("numero", { length: 20 }).notNull().unique(),
+  tipo: mysqlEnum("tipo", ["instalacao_eletrica", "inspecao_predial", "nr10_nr12", "grupo_gerador", "adequacoes"]).notNull(),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  clienteId: int("clienteId"),
+  osId: int("osId"),
+  status: mysqlEnum("status", ["rascunho", "finalizado", "enviado"]).default("rascunho").notNull(),
+  objeto: text("objeto"),
+  metodologia: text("metodologia"),
+  equipamentosUtilizados: text("equipamentosUtilizados"),
+  condicoesLocal: text("condicoesLocal"),
+  constatacoes: text("constatacoes"), // JSON: [{item, descricao, status, referenciaNormativa}]
+  conclusaoParecer: mysqlEnum("conclusaoParecer", ["conforme", "nao_conforme", "parcialmente_conforme"]),
+  conclusaoTexto: text("conclusaoTexto"),
+  recomendacoes: text("recomendacoes"),
+  normasReferencia: text("normasReferencia"), // JSON: [{codigo, titulo}]
+  validadeMeses: int("validadeMeses").default(12).notNull(),
+  dataInspecao: timestamp("dataInspecao"),
+  criadoPor: int("criadoPor"),
+  criadoPorTipo: mysqlEnum("criadoPorTipo", ["admin", "tecnico"]),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Laudo = typeof laudos.$inferSelect;
+export type InsertLaudo = typeof laudos.$inferInsert;
+
+/**
+ * Fotos dos laudos
+ */
+export const laudoFotos = mysqlTable("laudoFotos", {
+  id: int("id").autoincrement().primaryKey(),
+  laudoId: int("laudoId").notNull(),
+  url: text("url").notNull(),
+  legenda: text("legenda"),
+  comentario: text("comentario"),
+  classificacao: mysqlEnum("classificacao", ["conforme", "nao_conforme", "atencao"]),
+  ordem: int("ordem").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LaudoFoto = typeof laudoFotos.$inferSelect;
+export type InsertLaudoFoto = typeof laudoFotos.$inferInsert;
+
+/**
+ * Medições dos laudos
+ */
+export const laudoMedicoes = mysqlTable("laudoMedicoes", {
+  id: int("id").autoincrement().primaryKey(),
+  laudoId: int("laudoId").notNull(),
+  descricao: text("descricao").notNull(),
+  unidade: varchar("unidade", { length: 30 }),
+  valorMedido: varchar("valorMedido", { length: 100 }),
+  valorReferencia: varchar("valorReferencia", { length: 100 }),
+  resultado: mysqlEnum("resultado", ["aprovado", "reprovado"]),
+  ordem: int("ordem").default(0).notNull(),
+});
+
+export type LaudoMedicao = typeof laudoMedicoes.$inferSelect;
+export type InsertLaudoMedicao = typeof laudoMedicoes.$inferInsert;
+
+/**
+ * Configurações do técnico responsável pelos laudos
+ */
+export const configuracoesTecnico = mysqlTable("configuracoesTecnico", {
+  id: int("id").autoincrement().primaryKey(),
+  nomeCompleto: varchar("nomeCompleto", { length: 255 }),
+  registroCrt: varchar("registroCrt", { length: 100 }),
+  especialidade: varchar("especialidade", { length: 150 }),
+  empresa: varchar("empresa", { length: 255 }),
+  cidade: varchar("cidade", { length: 100 }),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ConfiguracoesTecnico = typeof configuracoesTecnico.$inferSelect;
+export type InsertConfiguracoesTecnico = typeof configuracoesTecnico.$inferInsert;

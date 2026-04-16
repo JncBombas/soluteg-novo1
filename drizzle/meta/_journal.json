@@ -204,6 +204,13 @@
       "when": 1776257523174,
       "tag": "0028_curly_sleepwalker",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1776301153167,
+      "tag": "0029_new_zodiak",
+      "breakpoints": true
     }
   ]
 }

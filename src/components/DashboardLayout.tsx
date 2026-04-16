@@ -119,6 +119,7 @@ const navMain = [
       { icon: Upload, label: "Enviar Documentos", path: "/gestor/documentos/enviar" },
       { icon: MessageSquare, label: "Mensagens em Massa", path: "/gestor/mensagens" },
       { icon: Droplet, label: "Sensores de Água", path: "/gestor/sensores-agua" },
+      { icon: FileText, label: "Laudos Técnicos", path: "/gestor/laudos" },
     ],
   },
   {
