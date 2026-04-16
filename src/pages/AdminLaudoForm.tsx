@@ -218,7 +218,8 @@ export default function AdminLaudoForm() {
 
   const addFotoMutation = trpc.laudos.addFoto.useMutation();
   const removeFotoMutation = trpc.laudos.removeFoto.useMutation();
-  const updateFotoMutation = trpc.laudos.updateFoto.useMutation();
+  const updateFotoAdminMutation = trpc.laudos.updateFoto.useMutation();
+  const updateFotoTecnicoMutation = trpc.laudos.updateFotoTecnico.useMutation();
   const addMedicaoMutation = trpc.laudos.addMedicao.useMutation();
   const removeMedicaoMutation = trpc.laudos.removeMedicao.useMutation();
 
@@ -323,6 +324,8 @@ export default function AdminLaudoForm() {
   async function saveFotoMetaWithValue(index: number, overrides?: Partial<Foto>) {
     const foto = { ...fotos[index], ...overrides };
     if (!foto.id) return;
+    const isTecnico = window.location.pathname.startsWith("/tecnico");
+    const updateFotoMutation = isTecnico ? updateFotoTecnicoMutation : updateFotoAdminMutation;
     await updateFotoMutation.mutateAsync({
       id: foto.id,
       legenda: foto.legenda || undefined,

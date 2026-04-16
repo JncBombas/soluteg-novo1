@@ -152,6 +152,7 @@ export async function createLaudo(data: {
   titulo: string;
   clienteId?: number;
   osId?: number;
+  normasReferencia?: any[];
   criadoPor?: number;
   criadoPorTipo?: "admin" | "tecnico";
 }) {
@@ -166,6 +167,7 @@ export async function createLaudo(data: {
     titulo: data.titulo,
     clienteId: data.clienteId ?? null,
     osId: data.osId ?? null,
+    normasReferencia: data.normasReferencia ? JSON.stringify(data.normasReferencia) : null,
     criadoPor: data.criadoPor ?? null,
     criadoPorTipo: data.criadoPorTipo ?? null,
     status: "rascunho",
@@ -223,6 +225,17 @@ export async function deleteLaudo(id: number) {
 }
 
 // ── Fotos ────────────────────────────────────────────────────────────────────
+
+export async function getLaudoFotoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [foto] = await db
+    .select()
+    .from(laudoFotos)
+    .where(eq(laudoFotos.id, id))
+    .limit(1);
+  return foto ?? null;
+}
 
 export async function addLaudoFoto(data: {
   laudoId: number;

@@ -60,6 +60,10 @@ export const laudosRouter = router({
       titulo: z.string().min(1),
       clienteId: z.number().optional(),
       osId: z.number().optional(),
+      normasReferencia: z.array(z.object({
+        codigo: z.string(),
+        titulo: z.string(),
+      })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await import("../laudosDb");
@@ -77,6 +81,10 @@ export const laudosRouter = router({
       titulo: z.string().min(1),
       clienteId: z.number().optional(),
       osId: z.number().optional(),
+      normasReferencia: z.array(z.object({
+        codigo: z.string(),
+        titulo: z.string(),
+      })).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = await import("../laudosDb");
@@ -242,6 +250,27 @@ export const laudosRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
       const db = await import("../laudosDb");
+      await db.updateLaudoFoto(id, data as any);
+      return { success: true };
+    }),
+
+  updateFotoTecnico: protectedTechnicianProcedure
+    .input(z.object({
+      id: z.number(),
+      legenda: z.string().optional(),
+      comentario: z.string().optional(),
+      classificacao: z.enum(["conforme", "nao_conforme", "atencao"]).optional(),
+      ordem: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { id, ...data } = input;
+      const db = await import("../laudosDb");
+      const foto = await db.getLaudoFotoById(id);
+      if (!foto) throw new TRPCError({ code: "NOT_FOUND", message: "Foto não encontrada" });
+      const laudo = await db.getLaudoById(foto.laudoId);
+      if (!laudo || laudo.criadoPor !== ctx.technicianId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      }
       await db.updateLaudoFoto(id, data as any);
       return { success: true };
     }),
