@@ -218,19 +218,31 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
       // Bloco técnico
       doc.rect(L, y, CW, 2).fill(GOLD);
       y += 10;
-      doc.fontSize(9).font("Helvetica-Bold").fillColor(DARK).text("TECNICO RESPONSAVEL", L, y);
+      const tecnicosAtribuidos = (laudoRef as any).tecnicos as Array<{ nome?: string | null; tecnicoId: number }> | undefined;
+      const temTecnicosAtribuidos = tecnicosAtribuidos && tecnicosAtribuidos.length > 0;
+      doc.fontSize(9).font("Helvetica-Bold").fillColor(DARK)
+        .text(temTecnicosAtribuidos ? "TECNICOS RESPONSAVEIS" : "TECNICO RESPONSAVEL", L, y);
       y += 14;
-      doc.fontSize(9).font("Helvetica").fillColor(DARK)
-        .text(tecnico?.nomeCompleto ?? "Nao informado", L, y);
-      y += 12;
-      const tecnicoInfo = [
-        tecnico?.registroCrt ?? "",
-        tecnico?.especialidade ?? "",
-        tecnico?.empresa ?? "",
-        tecnico?.cidade ?? "",
-      ].filter(Boolean).join(" | ");
-      if (tecnicoInfo) {
-        doc.fontSize(8).fillColor(MUTED).text(tecnicoInfo, L, y);
+      if (temTecnicosAtribuidos) {
+        for (let ti = 0; ti < tecnicosAtribuidos!.length; ti++) {
+          const t = tecnicosAtribuidos![ti];
+          doc.fontSize(9).font("Helvetica").fillColor(DARK)
+            .text(t.nome ?? `Tecnico #${t.tecnicoId}`, L, y);
+          y += 12;
+        }
+      } else {
+        doc.fontSize(9).font("Helvetica").fillColor(DARK)
+          .text(tecnico?.nomeCompleto ?? "Nao informado", L, y);
+        y += 12;
+        const tecnicoInfo = [
+          tecnico?.registroCrt ?? "",
+          tecnico?.especialidade ?? "",
+          tecnico?.empresa ?? "",
+          tecnico?.cidade ?? "",
+        ].filter(Boolean).join(" | ");
+        if (tecnicoInfo) {
+          doc.fontSize(8).fillColor(MUTED).text(tecnicoInfo, L, y);
+        }
       }
 
       // ══════════════════════════════════════════════════════════════════════

@@ -43,6 +43,7 @@ import {
   Upload,
   X,
   AlertTriangle,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -142,11 +143,19 @@ export default function AdminLaudoForm() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ── Técnicos atribuídos (somente admin)
+  const isAdminView = !window.location.pathname.startsWith("/tecnico");
+  const [tecnicoSelecionado, setTecnicoSelecionado] = useState<string>("none");
+
   // ── Dados de suporte
   const { data: clientesList = [] } = trpc.clients.list.useQuery({ adminId: 1 }, { staleTime: 60_000 });
+  const { data: tecnicosList = [] } = (trpc.technicians as any).list.useQuery(
+    {},
+    { enabled: isAdminView, staleTime: 60_000 }
+  );
 
   // ── Carregar laudo existente
-  const { data: laudoData, isLoading: loadingLaudo } = trpc.laudos.getById.useQuery(
+  const { data: laudoData, isLoading: loadingLaudo, refetch: refetchLaudo } = trpc.laudos.getById.useQuery(
     { id: laudoId! },
     { enabled: !isNew && laudoId !== null }
   );
@@ -213,6 +222,15 @@ export default function AdminLaudoForm() {
       setLaudoStatus("finalizado");
       setFinalizeConfirm(false);
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const atribuirTecnicoMutation = (trpc.laudos as any).atribuirTecnico.useMutation({
+    onSuccess: () => { toast.success("Técnico atribuído"); setTecnicoSelecionado("none"); refetchLaudo(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const removerTecnicoMutation = (trpc.laudos as any).removerTecnico.useMutation({
+    onSuccess: () => { toast.success("Técnico removido"); refetchLaudo(); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -583,6 +601,62 @@ export default function AdminLaudoForm() {
                     </div>
                   )}
                 </div>
+                {/* Técnicos atribuídos — visível somente para admin */}
+                {isAdminView && !isNew && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label>Técnicos Atribuídos</Label>
+                    {/* Lista de técnicos já atribuídos */}
+                    {(laudoData as any)?.tecnicos?.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(laudoData as any).tecnicos.map((t: any) => (
+                          <div key={t.id} className="flex items-center gap-1.5 bg-secondary px-2.5 py-1 rounded-full text-sm">
+                            <span>{t.nome ?? `Técnico #${t.tecnicoId}`}</span>
+                            {!isFinalized && (
+                              <button
+                                onClick={() => removerTecnicoMutation.mutate({ laudoId: laudoId!, tecnicoId: t.tecnicoId })}
+                                className="text-muted-foreground hover:text-destructive ml-0.5"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Nenhum técnico atribuído.</p>
+                    )}
+                    {/* Adicionar técnico */}
+                    {!isFinalized && (
+                      <div className="flex gap-2 mt-1">
+                        <Select value={tecnicoSelecionado} onValueChange={setTecnicoSelecionado}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecionar técnico" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">— Selecione —</SelectItem>
+                            {(tecnicosList as any[]).map((t: any) => (
+                              <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          disabled={tecnicoSelecionado === "none" || atribuirTecnicoMutation.isPending}
+                          onClick={() => {
+                            if (tecnicoSelecionado !== "none") {
+                              atribuirTecnicoMutation.mutate({ laudoId: laudoId!, tecnicoId: Number(tecnicoSelecionado) });
+                            }
+                          }}
+                        >
+                          {atribuirTecnicoMutation.isPending
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <UserPlus className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

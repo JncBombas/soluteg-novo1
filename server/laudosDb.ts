@@ -1,7 +1,7 @@
-import { eq, desc, and, like, or } from "drizzle-orm";
+import { eq, desc, and, like, or, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import {
-  laudos, laudoFotos, laudoMedicoes, configuracoesTecnico,
+  laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos,
   InsertLaudo, InsertLaudoFoto, InsertLaudoMedicao, InsertConfiguracoesTecnico,
 } from "../drizzle/schema";
 
@@ -42,19 +42,48 @@ export async function listLaudos(params: {
   search?: string;
   criadoPor?: number;
   criadoPorTipo?: "admin" | "tecnico";
+  tecnicoId?: number; // inclui laudos atribuídos ao técnico
 }) {
   const db = await getDb();
   if (!db) return [];
 
   const { clients } = await import("../drizzle/schema");
 
+  // Se for filtro por técnico, inclui laudos criados OU atribuídos a ele
+  let laudoIdsFiltro: number[] | undefined;
+  if (params.tecnicoId !== undefined) {
+    const atribuidos = await db
+      .select({ laudoId: laudoTecnicos.laudoId })
+      .from(laudoTecnicos)
+      .where(eq(laudoTecnicos.tecnicoId, params.tecnicoId));
+    const idsAtribuidos = atribuidos.map((r) => r.laudoId);
+
+    // laudos criados pelo técnico
+    const criados = await db
+      .select({ id: laudos.id })
+      .from(laudos)
+      .where(and(eq(laudos.criadoPor, params.tecnicoId), eq(laudos.criadoPorTipo, "tecnico")));
+    const idsCriados = criados.map((r) => r.id);
+
+    const todos = Array.from(new Set([...idsAtribuidos, ...idsCriados]));
+    laudoIdsFiltro = todos;
+  }
+
   const conditions: any[] = [];
 
   if (params.tipo) conditions.push(eq(laudos.tipo, params.tipo as any));
   if (params.status) conditions.push(eq(laudos.status, params.status as any));
   if (params.clienteId) conditions.push(eq(laudos.clienteId, params.clienteId));
-  if (params.criadoPor) conditions.push(eq(laudos.criadoPor, params.criadoPor));
-  if (params.criadoPorTipo) conditions.push(eq(laudos.criadoPorTipo, params.criadoPorTipo));
+  if (params.criadoPor && params.criadoPorTipo !== "tecnico") {
+    conditions.push(eq(laudos.criadoPor, params.criadoPor));
+  }
+  if (params.criadoPorTipo && !params.tecnicoId) {
+    conditions.push(eq(laudos.criadoPorTipo, params.criadoPorTipo));
+  }
+  if (laudoIdsFiltro !== undefined) {
+    if (laudoIdsFiltro.length === 0) return [];
+    conditions.push(inArray(laudos.id, laudoIdsFiltro));
+  }
   if (params.search) {
     conditions.push(
       or(
@@ -126,6 +155,8 @@ export async function getLaudoById(id: number) {
 
   if (!laudo) return null;
 
+  const { technicians } = await import("../drizzle/schema");
+
   const fotos = await db
     .select()
     .from(laudoFotos)
@@ -138,12 +169,25 @@ export async function getLaudoById(id: number) {
     .where(eq(laudoMedicoes.laudoId, id))
     .orderBy(laudoMedicoes.ordem);
 
+  const tecnicosRows = await db
+    .select({
+      id: laudoTecnicos.id,
+      tecnicoId: laudoTecnicos.tecnicoId,
+      nome: technicians.name,
+      atribuidoEm: laudoTecnicos.atribuidoEm,
+      atribuidoPor: laudoTecnicos.atribuidoPor,
+    })
+    .from(laudoTecnicos)
+    .leftJoin(technicians, eq(laudoTecnicos.tecnicoId, technicians.id))
+    .where(eq(laudoTecnicos.laudoId, id));
+
   return {
     ...laudo,
     constatacoes: laudo.constatacoes ? JSON.parse(laudo.constatacoes) : [],
     normasReferencia: laudo.normasReferencia ? JSON.parse(laudo.normasReferencia) : [],
     fotos,
     medicoes,
+    tecnicos: tecnicosRows,
   };
 }
 
@@ -221,6 +265,7 @@ export async function deleteLaudo(id: number) {
 
   await db.delete(laudoFotos).where(eq(laudoFotos.laudoId, id));
   await db.delete(laudoMedicoes).where(eq(laudoMedicoes.laudoId, id));
+  await db.delete(laudoTecnicos).where(eq(laudoTecnicos.laudoId, id));
   await db.delete(laudos).where(eq(laudos.id, id));
 }
 
@@ -307,6 +352,59 @@ export async function removeLaudoMedicao(id: number) {
   if (!db) throw new Error("Database not available");
 
   await db.delete(laudoMedicoes).where(eq(laudoMedicoes.id, id));
+}
+
+// ── Técnicos atribuídos ──────────────────────────────────────────────────────
+
+export async function getLaudoTecnicos(laudoId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { technicians } = await import("../drizzle/schema");
+
+  const rows = await db
+    .select({
+      id: laudoTecnicos.id,
+      tecnicoId: laudoTecnicos.tecnicoId,
+      nome: technicians.name,
+      atribuidoEm: laudoTecnicos.atribuidoEm,
+      atribuidoPor: laudoTecnicos.atribuidoPor,
+    })
+    .from(laudoTecnicos)
+    .leftJoin(technicians, eq(laudoTecnicos.tecnicoId, technicians.id))
+    .where(eq(laudoTecnicos.laudoId, laudoId));
+
+  return rows;
+}
+
+export async function atribuirTecnico(data: {
+  laudoId: number;
+  tecnicoId: number;
+  atribuidoPor?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // INSERT IGNORE equivalente — tenta inserir, ignora duplicata
+  try {
+    await db.insert(laudoTecnicos).values({
+      laudoId: data.laudoId,
+      tecnicoId: data.tecnicoId,
+      atribuidoPor: data.atribuidoPor ?? null,
+    });
+  } catch (e: any) {
+    // errno 1062 = Duplicate entry
+    if (e.errno !== 1062) throw e;
+  }
+}
+
+export async function removerTecnico(laudoId: number, tecnicoId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(laudoTecnicos)
+    .where(and(eq(laudoTecnicos.laudoId, laudoId), eq(laudoTecnicos.tecnicoId, tecnicoId)));
 }
 
 // ── Configurações do Técnico ─────────────────────────────────────────────────

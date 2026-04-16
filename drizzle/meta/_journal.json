@@ -211,6 +211,13 @@
       "when": 1776301153167,
       "tag": "0029_new_zodiak",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1776306013348,
+      "tag": "0030_careless_vermin",
+      "breakpoints": true
     }
   ]
 }

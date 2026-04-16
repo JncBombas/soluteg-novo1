@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, text, tinyint, datetime, mysqlEnum, timestamp } from "drizzle-orm/mysql-core";
+import { mysqlTable, int, varchar, text, tinyint, datetime, mysqlEnum, timestamp, uniqueIndex } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 /**
  * Core user table backing auth flow.
@@ -771,3 +771,19 @@ export const configuracoesTecnico = mysqlTable("configuracoesTecnico", {
 
 export type ConfiguracoesTecnico = typeof configuracoesTecnico.$inferSelect;
 export type InsertConfiguracoesTecnico = typeof configuracoesTecnico.$inferInsert;
+
+/**
+ * Técnicos atribuídos a um laudo
+ */
+export const laudoTecnicos = mysqlTable("laudoTecnicos", {
+  id: int("id").autoincrement().primaryKey(),
+  laudoId: int("laudoId").notNull(),
+  tecnicoId: int("tecnicoId").notNull(),
+  atribuidoEm: timestamp("atribuidoEm").defaultNow().notNull(),
+  atribuidoPor: int("atribuidoPor"),
+}, (table) => ({
+  uniqLaudoTecnico: uniqueIndex("laudoTecnicos_laudo_tecnico_unique").on(table.laudoId, table.tecnicoId),
+}));
+
+export type LaudoTecnico = typeof laudoTecnicos.$inferSelect;
+export type InsertLaudoTecnico = typeof laudoTecnicos.$inferInsert;

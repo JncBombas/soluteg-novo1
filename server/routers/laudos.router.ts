@@ -26,8 +26,7 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       return await db.listLaudos({
         ...input,
-        criadoPor: ctx.technicianId,
-        criadoPorTipo: "tecnico",
+        tecnicoId: ctx.technicianId,
       });
     }),
 
@@ -93,6 +92,8 @@ export const laudosRouter = router({
         criadoPor: ctx.technicianId,
         criadoPorTipo: "tecnico",
       });
+      // Auto-atribui o técnico ao laudo que ele mesmo criou
+      await db.atribuirTecnico({ laudoId: result.id, tecnicoId: ctx.technicianId });
       return { success: true, ...result };
     }),
 
@@ -305,6 +306,31 @@ export const laudosRouter = router({
     .mutation(async ({ input }) => {
       const db = await import("../laudosDb");
       await db.removeLaudoMedicao(input.id);
+      return { success: true };
+    }),
+
+  // ── Técnicos atribuídos ────────────────────────────────────────────────────
+  atribuirTecnico: adminLocalProcedure
+    .input(z.object({
+      laudoId: z.number(),
+      tecnicoId: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await import("../laudosDb");
+      const laudo = await db.getLaudoById(input.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      await db.atribuirTecnico({ laudoId: input.laudoId, tecnicoId: input.tecnicoId, atribuidoPor: ctx.adminId });
+      return { success: true };
+    }),
+
+  removerTecnico: adminLocalProcedure
+    .input(z.object({
+      laudoId: z.number(),
+      tecnicoId: z.number(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await import("../laudosDb");
+      await db.removerTecnico(input.laudoId, input.tecnicoId);
       return { success: true };
     }),
 
