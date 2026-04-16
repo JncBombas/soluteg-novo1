@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "wouter";
-import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,35 +14,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { APP_LOGO } from "@/const";
 import {
   Plus,
   Trash2,
   ChevronUp,
   ChevronDown,
   Save,
-  CheckCircle,
   Download,
   ArrowLeft,
   Loader2,
   Upload,
   X,
   AlertTriangle,
-  UserPlus,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -98,7 +82,7 @@ const STATUS_CONSTATACAO = [
 
 // ── Componente principal ───────────────────────────────────────────────────
 
-export default function AdminLaudoForm() {
+export default function TecnicoLaudoForm() {
   const params = useParams<{ id?: string }>();
   const [, navigate] = useLocation();
   const isNew = !params.id || params.id === "novo";
@@ -108,7 +92,6 @@ export default function AdminLaudoForm() {
   const [tipo, setTipo] = useState("instalacao_eletrica");
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<number | null>(null);
-  const [osId, setOsId] = useState<number | null>(null);
   const [dataInspecao, setDataInspecao] = useState("");
   const [validadeMeses, setValidadeMeses] = useState(12);
   const [normas, setNormas] = useState<Norma[]>([]);
@@ -139,24 +122,11 @@ export default function AdminLaudoForm() {
 
   // ── Estado geral
   const [laudoStatus, setLaudoStatus] = useState("rascunho");
-  const [finalizeConfirm, setFinalizeConfirm] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // ── Técnicos atribuídos (somente admin)
-  const isAdminView = !window.location.pathname.startsWith("/technician");
-  const [tecnicoSelecionado, setTecnicoSelecionado] = useState<string>("none");
-  const utils = trpc.useUtils();
-
-  // ── Dados de suporte
-  const { data: clientesList = [] } = trpc.clients.list.useQuery({ adminId: 1 }, { staleTime: 60_000 });
-  const { data: tecnicosList = [] } = (trpc.technicians as any).list.useQuery(
-    {},
-    { enabled: isAdminView, staleTime: 60_000 }
-  );
-
   // ── Carregar laudo existente
-  const { data: laudoData, isLoading: loadingLaudo } = trpc.laudos.getById.useQuery(
+  const { data: laudoData, isLoading: loadingLaudo } = (trpc as any).laudos.getByIdTecnico.useQuery(
     { id: laudoId! },
     { enabled: !isNew && laudoId !== null }
   );
@@ -166,7 +136,6 @@ export default function AdminLaudoForm() {
     setTipo(laudoData.tipo);
     setTitulo(laudoData.titulo);
     setClienteId(laudoData.clienteId ?? null);
-    setOsId(laudoData.osId ?? null);
     setDataInspecao(
       laudoData.dataInspecao ? new Date(laudoData.dataInspecao).toISOString().split("T")[0] : ""
     );
@@ -204,52 +173,26 @@ export default function AdminLaudoForm() {
   }, [laudoData]);
 
   // ── Mutations
-  const createMutation = trpc.laudos.create.useMutation({
+  const createMutation = (trpc as any).laudos.createTecnico.useMutation({
     onSuccess: (data: any) => {
       toast.success(`Laudo ${data.numero} criado!`);
-      navigate(`/gestor/laudos/${data.id}`);
+      navigate(`/technician/laudos/${data.id}`);
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  const updateMutation = trpc.laudos.update.useMutation({
+  const updateMutation = (trpc as any).laudos.updateTecnico.useMutation({
     onSuccess: () => toast.success("Laudo salvo"),
     onError: (e: any) => toast.error(e.message),
   });
 
-  const finalizeMutation = trpc.laudos.finalize.useMutation({
-    onSuccess: () => {
-      toast.success("Laudo finalizado!");
-      setLaudoStatus("finalizado");
-      setFinalizeConfirm(false);
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
+  const addFotoMutation = (trpc as any).laudos.addFotoTecnico.useMutation();
+  const removeFotoMutation = (trpc as any).laudos.removeFoto.useMutation();
+  const updateFotoMutation = (trpc as any).laudos.updateFotoTecnico.useMutation();
+  const addMedicaoMutation = (trpc as any).laudos.addMedicao.useMutation();
+  const removeMedicaoMutation = (trpc as any).laudos.removeMedicao.useMutation();
 
-  const atribuirTecnicoMutation = (trpc.laudos as any).atribuirTecnico.useMutation({
-    onSuccess: () => {
-      (utils as any).laudos.getById.invalidate({ id: laudoId });
-      toast.success("Técnico atribuído");
-      setTecnicoSelecionado("none");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-  const removerTecnicoMutation = (trpc.laudos as any).removerTecnico.useMutation({
-    onSuccess: () => {
-      (utils as any).laudos.getById.invalidate({ id: laudoId });
-      toast.success("Técnico removido");
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const addFotoMutation = trpc.laudos.addFoto.useMutation();
-  const removeFotoMutation = trpc.laudos.removeFoto.useMutation();
-  const updateFotoAdminMutation = trpc.laudos.updateFoto.useMutation();
-  const updateFotoTecnicoMutation = trpc.laudos.updateFotoTecnico.useMutation();
-  const addMedicaoMutation = trpc.laudos.addMedicao.useMutation();
-  const removeMedicaoMutation = trpc.laudos.removeMedicao.useMutation();
-
-  const generatePdfMutation = trpc.laudos.generatePdf.useMutation({
+  const generatePdfMutation = (trpc as any).laudos.generatePdf.useMutation({
     onSuccess: (data: any) => {
       const bytes = atob(data.pdf);
       const arr = new Uint8Array(bytes.length);
@@ -275,7 +218,12 @@ export default function AdminLaudoForm() {
     setSaving(true);
     try {
       if (isNew) {
-        await createMutation.mutateAsync({ tipo: tipo as any, titulo, clienteId: clienteId ?? undefined, osId: osId ?? undefined, normasReferencia: normas as any });
+        await createMutation.mutateAsync({
+          tipo: tipo as any,
+          titulo,
+          clienteId: clienteId ?? undefined,
+          normasReferencia: normas as any,
+        });
         return;
       }
 
@@ -284,7 +232,6 @@ export default function AdminLaudoForm() {
         tipo: tipo as any,
         titulo,
         clienteId,
-        osId,
         objeto,
         metodologia,
         equipamentosUtilizados: equipamentos,
@@ -297,9 +244,6 @@ export default function AdminLaudoForm() {
         validadeMeses,
         dataInspecao: dataInspecao || null,
       });
-
-      // Sincronizar medições (remover todas e adicionar de novo é simples para ETAPA 1)
-      // Na prática, as medições são gerenciadas via addMedicao/removeMedicao inline
     } finally {
       setSaving(false);
     }
@@ -350,8 +294,6 @@ export default function AdminLaudoForm() {
   async function saveFotoMetaWithValue(index: number, overrides?: Partial<Foto>) {
     const foto = { ...fotos[index], ...overrides };
     if (!foto.id) return;
-    const isTecnico = window.location.pathname.startsWith("/tecnico");
-    const updateFotoMutation = isTecnico ? updateFotoTecnicoMutation : updateFotoAdminMutation;
     await updateFotoMutation.mutateAsync({
       id: foto.id,
       legenda: foto.legenda || undefined,
@@ -383,7 +325,7 @@ export default function AdminLaudoForm() {
     if (!laudoId) { toast.error("Salve o laudo primeiro"); return; }
     const m = medicoes[index];
     if (!m.descricao) return;
-    if (m.id) return; // já salvo
+    if (m.id) return;
     try {
       await addMedicaoMutation.mutateAsync({
         laudoId,
@@ -446,34 +388,39 @@ export default function AdminLaudoForm() {
     setConstatacoes((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleLogout() {
+    fetch("/api/technician-logout", { method: "POST" }).catch(() => {});
+    localStorage.removeItem("technicianId");
+    localStorage.removeItem("technicianName");
+    localStorage.removeItem("technicianToken");
+    window.location.href = "/technician/login";
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!isNew && loadingLaudo) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </DashboardLayout>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-5">
-        {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/gestor/laudos")}>
-              <ArrowLeft className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={() => navigate("/technician/laudos")}>
+              <ArrowLeft className="w-4 h-4" />
             </Button>
+            <img src={APP_LOGO} alt="JNC Logo" className="h-8" />
             <div>
-              <h1 className="text-xl font-bold">
-                {isNew ? "Novo Laudo Técnico" : (laudoData?.numero ?? "Laudo")}
-              </h1>
-              {!isNew && laudoData?.titulo && (
-                <p className="text-sm text-muted-foreground">{laudoData.titulo}</p>
-              )}
+              <p className="text-xs text-muted-foreground">Portal do Técnico</p>
+              <p className="font-semibold text-sm">
+                {isNew ? "Novo Laudo" : (laudoData?.numero ?? "Laudo")}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -484,16 +431,24 @@ export default function AdminLaudoForm() {
                 disabled={pdfLoading}
                 onClick={() => { setPdfLoading(true); generatePdfMutation.mutate({ id: laudoId! }); }}
               >
-                {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+                {pdfLoading
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  : <Download className="h-3.5 w-3.5 mr-1" />}
                 PDF
               </Button>
             )}
             {isFinalized && (
               <Badge className="bg-blue-600 text-white">Finalizado</Badge>
             )}
+            <Button size="sm" variant="outline" onClick={handleLogout} className="gap-1">
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </Button>
           </div>
         </div>
+      </header>
 
+      <main className="container mx-auto px-4 py-6 space-y-5 max-w-4xl">
         {/* Banner laudo finalizado */}
         {isFinalized && (
           <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800 text-sm">
@@ -530,34 +485,25 @@ export default function AdminLaudoForm() {
                   </div>
                   <div className="space-y-1.5">
                     <Label>Título *</Label>
-                    <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} disabled={isFinalized} placeholder="Ex: Vistoria elétrica do condomínio X" />
+                    <Input
+                      value={titulo}
+                      onChange={(e) => setTitulo(e.target.value)}
+                      disabled={isFinalized}
+                      placeholder="Ex: Vistoria elétrica do condomínio X"
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label>Cliente</Label>
-                    <Select
-                      value={clienteId?.toString() ?? "none"}
-                      onValueChange={(v) => setClienteId(v === "none" ? null : Number(v))}
-                      disabled={isFinalized}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Selecionar cliente" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">— Nenhum —</SelectItem>
-                        {clientesList.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="space-y-1.5">
                     <Label>Data da Inspeção</Label>
-                    <Input type="date" value={dataInspecao} onChange={(e) => setDataInspecao(e.target.value)} disabled={isFinalized} />
+                    <Input
+                      type="date"
+                      value={dataInspecao}
+                      onChange={(e) => setDataInspecao(e.target.value)}
+                      disabled={isFinalized}
+                    />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Validade (meses)</Label>
                     <Input
@@ -609,62 +555,6 @@ export default function AdminLaudoForm() {
                     </div>
                   )}
                 </div>
-                {/* Técnicos atribuídos — visível somente para admin */}
-                {isAdminView && !isNew && (
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label>Técnicos Atribuídos</Label>
-                    {/* Lista de técnicos já atribuídos */}
-                    {(laudoData as any)?.tecnicos?.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {(laudoData as any).tecnicos.map((t: any) => (
-                          <div key={t.id} className="flex items-center gap-1.5 bg-secondary px-2.5 py-1 rounded-full text-sm">
-                            <span>{t.nome ?? `Técnico #${t.tecnicoId}`}</span>
-                            {!isFinalized && (
-                              <button
-                                onClick={() => removerTecnicoMutation.mutate({ laudoId: laudoId!, tecnicoId: t.tecnicoId })}
-                                className="text-muted-foreground hover:text-destructive ml-0.5"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Nenhum técnico atribuído.</p>
-                    )}
-                    {/* Adicionar técnico */}
-                    {!isFinalized && (
-                      <div className="flex gap-2 mt-1">
-                        <Select value={tecnicoSelecionado} onValueChange={setTecnicoSelecionado}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecionar técnico" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">— Selecione —</SelectItem>
-                            {(tecnicosList as any[]).map((t: any) => (
-                              <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={tecnicoSelecionado === "none" || atribuirTecnicoMutation.isPending}
-                          onClick={() => {
-                            if (tecnicoSelecionado !== "none") {
-                              atribuirTecnicoMutation.mutate({ laudoId: laudoId!, tecnicoId: Number(tecnicoSelecionado) });
-                            }
-                          }}
-                        >
-                          {atribuirTecnicoMutation.isPending
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <UserPlus className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -826,7 +716,6 @@ export default function AdminLaudoForm() {
                   <p className="text-sm text-muted-foreground text-center py-8">Nenhuma medição adicionada.</p>
                 ) : (
                   <div className="space-y-2">
-                    {/* Cabeçalho */}
                     <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-2 text-xs font-semibold text-muted-foreground uppercase px-1">
                       <span>Descrição</span>
                       <span>Unidade</span>
@@ -1020,9 +909,8 @@ export default function AdminLaudoForm() {
             <Card>
               <CardHeader><CardTitle className="text-base">Conclusão e Parecer Técnico</CardTitle></CardHeader>
               <CardContent className="space-y-5">
-                {/* Parecer visual */}
                 <div className="space-y-2">
-                  <Label>Parecer Final *</Label>
+                  <Label>Parecer Final</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { value: "conforme", label: "Conforme", icon: "🟢", border: "border-green-400 bg-green-50 text-green-800" },
@@ -1072,7 +960,7 @@ export default function AdminLaudoForm() {
           </TabsContent>
         </Tabs>
 
-        {/* Barra de ações inferior */}
+        {/* Barra de ações inferior — técnico não finaliza */}
         {!isFinalized && (
           <div className="flex justify-end gap-3 pt-2 border-t">
             <Button
@@ -1084,44 +972,9 @@ export default function AdminLaudoForm() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Salvar Rascunho
             </Button>
-            {!isNew && (
-              <Button
-                onClick={() => setFinalizeConfirm(true)}
-                disabled={!titulo || !parecer}
-                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                <CheckCircle className="h-4 w-4" />
-                Finalizar Laudo
-              </Button>
-            )}
           </div>
         )}
-      </div>
-
-      {/* Dialog de confirmação de finalização */}
-      <AlertDialog open={finalizeConfirm} onOpenChange={setFinalizeConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Finalizar laudo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Após finalizado, o laudo não poderá mais ser editado. Esta ação é irreversível.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex justify-end gap-2 mt-2">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={async () => {
-                await handleSave();
-                finalizeMutation.mutate({ id: laudoId! });
-              }}
-              disabled={finalizeMutation.isPending}
-            >
-              {finalizeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Finalizar"}
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-    </DashboardLayout>
+      </main>
+    </div>
   );
 }

@@ -46,7 +46,9 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.id);
       if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
-      if (laudo.criadoPor !== ctx.technicianId) {
+      const foiCriadorDoLaudo = laudo.criadoPor === ctx.technicianId;
+      const tecnicoAtribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriadorDoLaudo && !tecnicoAtribuido) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
       return laudo;
@@ -166,7 +168,9 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.id);
       if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
-      if (laudo.criadoPor !== ctx.technicianId) {
+      const foiCriadorDoLaudo = laudo.criadoPor === ctx.technicianId;
+      const tecnicoAtribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriadorDoLaudo && !tecnicoAtribuido) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
       if (laudo.status !== "rascunho") {
@@ -233,7 +237,10 @@ export const laudosRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.laudoId);
-      if (!laudo || laudo.criadoPor !== ctx.technicianId) {
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      const foiCriadorDoLaudo = laudo.criadoPor === ctx.technicianId;
+      const tecnicoAtribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriadorDoLaudo && !tecnicoAtribuido) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
       await db.addLaudoFoto(input);
@@ -269,7 +276,10 @@ export const laudosRouter = router({
       const foto = await db.getLaudoFotoById(id);
       if (!foto) throw new TRPCError({ code: "NOT_FOUND", message: "Foto não encontrada" });
       const laudo = await db.getLaudoById(foto.laudoId);
-      if (!laudo || laudo.criadoPor !== ctx.technicianId) {
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      const foiCriadorDoLaudo = laudo.criadoPor === ctx.technicianId;
+      const tecnicoAtribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriadorDoLaudo && !tecnicoAtribuido) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       }
       await db.updateLaudoFoto(id, data as any);

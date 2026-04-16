@@ -13,6 +13,7 @@ import {
   User,
   ClipboardList,
   RefreshCw,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -76,6 +77,22 @@ export default function TechnicianPortal() {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6 max-w-2xl">
+        {/* Acesso rápido */}
+        <div className="grid grid-cols-1 gap-2">
+          <button
+            onClick={() => setLocation("/technician/laudos")}
+            className="flex items-center gap-3 bg-white dark:bg-gray-900 rounded-lg border p-4 text-left hover:shadow-md hover:border-blue-300 transition-all group"
+          >
+            <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+              <FileText className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-sm">Laudos Técnicos</p>
+              <p className="text-xs text-muted-foreground">Criar e editar laudos de inspeção</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-600" />
+          </button>
+        </div>
         {/* Resumo */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white dark:bg-gray-900 rounded-lg border p-3 text-center">

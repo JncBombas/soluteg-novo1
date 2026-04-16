@@ -40,6 +40,8 @@ import TechnicianPortal from "./pages/TechnicianPortal";
 import TechnicianWorkOrderDetail from "./pages/TechnicianWorkOrderDetail";
 import AdminLaudos from "./pages/AdminLaudos";
 import AdminLaudoForm from "./pages/AdminLaudoForm";
+import TecnicoLaudos from "./pages/TecnicoLaudos";
+import TecnicoLaudoForm from "./pages/TecnicoLaudoForm";
 import PdvLayout from "./components/pdv/PdvLayout";
 import PdvDashboard from "./pages/pdv/PdvDashboard";
 import PdvSales from "./pages/pdv/PdvSales";
@@ -99,6 +101,9 @@ function Router() {
       <Route path="/technician/login" component={TechnicianLogin} />
       <Route path="/technician/portal" component={TechnicianPortal} />
       <Route path="/technician/work-orders/:id" component={TechnicianWorkOrderDetail} />
+      <Route path="/technician/laudos" component={TecnicoLaudos} />
+      <Route path="/technician/laudos/novo" component={TecnicoLaudoForm} />
+      <Route path="/technician/laudos/:id" component={TecnicoLaudoForm} />
 
       {/* PDV Routes */}
       <Route path="/pdv">{() => <PdvRoute component={PdvDashboard} />}</Route>
