@@ -146,12 +146,13 @@ export default function AdminLaudoForm() {
   // ── Técnicos atribuídos (somente admin)
   const isAdminView = !window.location.pathname.startsWith("/technician");
   const [tecnicoSelecionado, setTecnicoSelecionado] = useState<string>("none");
+  const [tecnicosAtribuidos, setTecnicosAtribuidos] = useState<any[]>([]);
   const utils = trpc.useUtils();
 
   // ── Dados de suporte
   const { data: clientesList = [] } = trpc.clients.list.useQuery({ adminId: 1 }, { staleTime: 60_000 });
-  const { data: tecnicosList = [] } = (trpc.technicians as any).list.useQuery(
-    {},
+  const { data: tecnicosList = [] } = (trpc as any).technicians.list.useQuery(
+    { adminId: 1 },
     { enabled: isAdminView, staleTime: 60_000 }
   );
 
@@ -201,6 +202,7 @@ export default function AdminLaudoForm() {
     setConclusao(laudoData.conclusaoTexto ?? "");
     setRecomendacoes(laudoData.recomendacoes ?? "");
     setLaudoStatus(laudoData.status);
+    setTecnicosAtribuidos((laudoData as any).tecnicos ?? []);
   }, [laudoData]);
 
   // ── Mutations
@@ -228,6 +230,17 @@ export default function AdminLaudoForm() {
 
   const atribuirTecnicoMutation = (trpc.laudos as any).atribuirTecnico.useMutation({
     onSuccess: () => {
+      const tecnico = (tecnicosList as any[]).find(
+        (t: any) => t.id === Number(tecnicoSelecionado)
+      );
+      setTecnicosAtribuidos((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          tecnicoId: Number(tecnicoSelecionado),
+          nome: tecnico?.name ?? `Técnico #${tecnicoSelecionado}`,
+        },
+      ]);
       (utils as any).laudos.getById.invalidate({ id: laudoId });
       toast.success("Técnico atribuído");
       setTecnicoSelecionado("none");
@@ -235,11 +248,18 @@ export default function AdminLaudoForm() {
     onError: (e: any) => toast.error(e.message),
   });
   const removerTecnicoMutation = (trpc.laudos as any).removerTecnico.useMutation({
+    onMutate: (vars: any) => {
+      setTecnicosAtribuidos((prev) =>
+        prev.filter((t) => t.tecnicoId !== vars.tecnicoId)
+      );
+    },
     onSuccess: () => {
       (utils as any).laudos.getById.invalidate({ id: laudoId });
       toast.success("Técnico removido");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: () => {
+      (utils as any).laudos.getById.invalidate({ id: laudoId });
+    },
   });
 
   const addFotoMutation = trpc.laudos.addFoto.useMutation();
@@ -614,9 +634,9 @@ export default function AdminLaudoForm() {
                   <div className="space-y-2 pt-2 border-t">
                     <Label>Técnicos Atribuídos</Label>
                     {/* Lista de técnicos já atribuídos */}
-                    {(laudoData as any)?.tecnicos?.length > 0 ? (
+                    {tecnicosAtribuidos.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {(laudoData as any).tecnicos.map((t: any) => (
+                        {tecnicosAtribuidos.map((t: any) => (
                           <div key={t.id} className="flex items-center gap-1.5 bg-secondary px-2.5 py-1 rounded-full text-sm">
                             <span>{t.nome ?? `Técnico #${t.tecnicoId}`}</span>
                             {!isFinalized && (
