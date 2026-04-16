@@ -248,7 +248,7 @@ export default function AdminLaudoForm() {
     setSaving(true);
     try {
       if (isNew) {
-        await createMutation.mutateAsync({ tipo: tipo as any, titulo, clienteId: clienteId ?? undefined, osId: osId ?? undefined });
+        await createMutation.mutateAsync({ tipo: tipo as any, titulo, clienteId: clienteId ?? undefined, osId: osId ?? undefined, normasReferencia: normas as any });
         return;
       }
 
@@ -320,8 +320,8 @@ export default function AdminLaudoForm() {
     );
   }
 
-  async function saveFotoMeta(index: number) {
-    const foto = fotos[index];
+  async function saveFotoMetaWithValue(index: number, overrides?: Partial<Foto>) {
+    const foto = { ...fotos[index], ...overrides };
     if (!foto.id) return;
     await updateFotoMutation.mutateAsync({
       id: foto.id,
@@ -890,7 +890,7 @@ export default function AdminLaudoForm() {
                         <Input
                           value={foto.legenda}
                           onChange={(e) => handleFotoChange(i, "legenda", e.target.value)}
-                          onBlur={() => saveFotoMeta(i)}
+                          onBlur={() => saveFotoMetaWithValue(i)}
                           disabled={isFinalized}
                           placeholder="Legenda da foto"
                           className="h-8 text-sm"
@@ -898,7 +898,7 @@ export default function AdminLaudoForm() {
                         <Input
                           value={foto.comentario}
                           onChange={(e) => handleFotoChange(i, "comentario", e.target.value)}
-                          onBlur={() => saveFotoMeta(i)}
+                          onBlur={() => saveFotoMetaWithValue(i)}
                           disabled={isFinalized}
                           placeholder="Comentário técnico (opcional)"
                           className="h-8 text-sm"
@@ -906,7 +906,9 @@ export default function AdminLaudoForm() {
                         <Select
                           value={foto.classificacao || "none"}
                           onValueChange={(v) => {
-                            handleFotoChange(i, "classificacao", v === "none" ? "" : v);
+                            const val = v === "none" ? "" : v;
+                            handleFotoChange(i, "classificacao", val);
+                            saveFotoMetaWithValue(i, { classificacao: val as any });
                           }}
                           disabled={isFinalized}
                         >
