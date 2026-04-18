@@ -33,6 +33,8 @@ import {
   ListChecks,
   ClipboardList,
   ImageIcon,
+  Download,
+  Globe,
   Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -179,6 +181,21 @@ export default function TechnicianWorkOrderDetail() {
 
   const sendPdfToAdminMutation = (trpc as any).technicianPortal.sendPdfToAdmin.useMutation({
     onSuccess: () => toast.success("PDF enviado ao gestor via WhatsApp!"),
+    onError:   (e: any) => toast.error(e.message),
+  });
+
+  const exportPDFMutation = (trpc as any).technicianPortal.exportPDF.useMutation({
+    onSuccess: (data: any) => {
+      const link = document.createElement("a");
+      link.href = `data:application/pdf;base64,${data.pdf}`;
+      link.download = data.filename;
+      link.click();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const shareToPortalMutation = (trpc as any).technicianPortal.shareToClientPortal.useMutation({
+    onSuccess: () => toast.success("OS enviada ao portal do cliente!"),
     onError:   (e: any) => toast.error(e.message),
   });
 
@@ -734,10 +751,34 @@ export default function TechnicianWorkOrderDetail() {
                 </div>
               )}
 
-              {/* Enviar via WhatsApp (OS concluída) */}
+              {/* Ações pós-conclusão */}
               {os.status === "concluida" && (
                 <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Enviar PDF via WhatsApp</p>
+                  {/* Download e Portal */}
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Documento</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => exportPDFMutation.mutate({ workOrderId: workOrderId! })}
+                      disabled={exportPDFMutation.isPending}
+                    >
+                      {exportPDFMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      Baixar PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2 border-blue-400 text-blue-700 hover:bg-blue-50"
+                      onClick={() => shareToPortalMutation.mutate({ workOrderId: workOrderId! })}
+                      disabled={shareToPortalMutation.isPending}
+                    >
+                      {shareToPortalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+                      Enviar ao Portal
+                    </Button>
+                  </div>
+
+                  {/* WhatsApp */}
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide pt-1">Enviar PDF via WhatsApp</p>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"

@@ -154,6 +154,71 @@ export const technicianPortalRouter = router({
       return { success: true };
     }),
 
+  exportPDF: protectedTechnicianProcedure
+    .input(z.object({ workOrderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+      if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.workOrderId);
+      const osNum = os.osNumber || `OS-${input.workOrderId}`;
+      const clientSlug = os.clientName
+        ? os.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+
+      return {
+        success: true,
+        pdf: pdfBuffer.toString('base64'),
+        filename: `${osNum}_${clientSlug}.pdf`,
+      };
+    }),
+
+  shareToClientPortal: protectedTechnicianProcedure
+    .input(z.object({ workOrderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+      if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+
+      const dbModule = await import("../db");
+      const cliente = await dbModule.getClientById(os.clientId);
+      if (cliente?.type === "sem_portal") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Este cliente não possui portal. Use o envio por WhatsApp." });
+      }
+
+      let portalTab: string;
+      if (os.type === "rotina") {
+        portalTab = "vistoria";
+      } else if (os.type === "emergencial") {
+        portalTab = "visita";
+      } else if (["instalacao", "manutencao", "corretiva", "preventiva"].includes(os.type) && os.status === "concluida") {
+        portalTab = "servico";
+      } else {
+        portalTab = "visita";
+      }
+
+      const workOrdersDb = await import("../workOrdersDb");
+      await workOrdersDb.shareWorkOrderToPortal(input.workOrderId, portalTab);
+
+      if (cliente?.phone) {
+        const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
+        const tabLabel: Record<string, string> = { vistoria: "Vistoria", visita: "Visita", servico: "Serviços" };
+        const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
+        const msg =
+          `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
+          `${saudacao}\n\n` +
+          `A *${os.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
+          `🔗 Acesse: ${portalUrl}\n` +
+          `👤 Login: ${cliente.username}\n` +
+          `🔑 Senha: (sua senha cadastrada)\n\n` +
+          `Em caso de dúvidas, entre em contato conosco.`;
+        const { sendWhatsappToNumber } = await import("../whatsapp");
+        sendWhatsappToNumber(cliente.phone, msg).catch(e => console.error("Erro Zap portal:", e));
+      }
+
+      return { success: true };
+    }),
+
   // ==================== TASKS ====================
   tasks: router({
     list: protectedTechnicianProcedure
