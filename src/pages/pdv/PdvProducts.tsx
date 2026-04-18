@@ -125,7 +125,7 @@ export default function PdvProducts() {
       categoryId: form.categoryId && form.categoryId !== "none" ? parseInt(form.categoryId) : undefined,
       unit: form.unit || "un",
       description: form.description || undefined,
-      imageUrl: imageUrl || (editingProduct?.imageUrl),
+      imageUrl: imageUrl || editingProduct?.imageUrl || undefined,
     };
 
     try {
