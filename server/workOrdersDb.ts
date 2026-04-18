@@ -175,9 +175,12 @@ export async function listWorkOrders(filters: {
       title: workOrders.title,
       scheduledDate: workOrders.scheduledDate,
       createdAt: workOrders.createdAt,
+      technicianId: workOrders.technicianId,
+      technicianName: technicians.name,
     })
     .from(workOrders)
     .leftJoin(clients, eq(workOrders.clientId, clients.id))
+    .leftJoin(technicians, eq(workOrders.technicianId, technicians.id))
     .where(whereClause);
 
   // Ordenação dinâmica

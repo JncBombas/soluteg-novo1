@@ -145,8 +145,15 @@ function WorkOrderCard({ workOrder, isDragging }: any) {
         </div>
         <h4 className="font-bold text-sm text-gray-800 leading-tight">{workOrder.title}</h4>
         <div className="flex gap-2"><Badge className={`${typeStyle.color} text-[10px]`}>{typeStyle.label}</Badge><StatusBadge status={workOrder.status} /></div>
-        <div className="pt-2 border-t flex items-center gap-2 text-xs text-gray-600">
-          <User className="w-3 h-3" /> <span className="truncate">{workOrder.clientName || "Sem Cliente"}</span>
+        <div className="pt-2 border-t space-y-1">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <User className="w-3 h-3" /> <span className="truncate">{workOrder.clientName || "Sem Cliente"}</span>
+          </div>
+          {workOrder.technicianName && (
+            <div className="flex items-center gap-2 text-xs text-blue-600">
+              <User className="w-3 h-3" /> <span className="truncate">{workOrder.technicianName}</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

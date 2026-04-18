@@ -212,11 +212,16 @@ export default function AdminWorkOrders() {
                           <h3 className="text-slate-900 font-black text-lg leading-tight truncate">
                             {order.title}
                           </h3>
-                          {/* Rodapé do card com Cliente e Data */}
-                          <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500 font-bold">
+                          {/* Rodapé do card com Cliente, Técnico e Data */}
+                          <div className="flex items-center gap-3 mt-2 text-[11px] text-slate-500 font-bold flex-wrap">
                             <span className="flex items-center gap-1">
                               <User className="w-3.5 h-3.5" /> {order.clientName || 'Sem Cliente'}
                             </span>
+                            {order.technicianName && (
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <User className="w-3.5 h-3.5" /> {order.technicianName}
+                              </span>
+                            )}
                             <span className="flex items-center gap-1">
                               <Calendar className="w-3.5 h-3.5" /> {new Date(order.createdAt).toLocaleDateString('pt-BR')}
                             </span>
