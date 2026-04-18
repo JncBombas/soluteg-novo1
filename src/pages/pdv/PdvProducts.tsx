@@ -28,7 +28,7 @@ type ProductForm = {
 
 const EMPTY_FORM: ProductForm = {
   name: "", barcode: "", price: "", costPrice: "", stock: "0",
-  minStock: "5", categoryId: "", unit: "un", description: "",
+  minStock: "5", categoryId: "none", unit: "un", description: "",
 };
 
 export default function PdvProducts() {
@@ -76,7 +76,7 @@ export default function PdvProducts() {
     setForm({
       name: p.name, barcode: p.barcode || "", price: p.price,
       costPrice: p.costPrice || "", stock: String(p.stock),
-      minStock: String(p.minStock), categoryId: p.categoryId ? String(p.categoryId) : "",
+      minStock: String(p.minStock), categoryId: p.categoryId ? String(p.categoryId) : "none",
       unit: p.unit || "un", description: p.description || "",
     });
     setImageFile(null);
@@ -122,7 +122,7 @@ export default function PdvProducts() {
       costPrice: form.costPrice || undefined,
       stock: parseInt(form.stock) || 0,
       minStock: parseInt(form.minStock) || 5,
-      categoryId: form.categoryId ? parseInt(form.categoryId) : undefined,
+      categoryId: form.categoryId && form.categoryId !== "none" ? parseInt(form.categoryId) : undefined,
       unit: form.unit || "un",
       description: form.description || undefined,
       imageUrl: imageUrl || (editingProduct?.imageUrl),
@@ -378,7 +378,7 @@ export default function PdvProducts() {
                 <Select value={form.categoryId} onValueChange={(v) => setForm(f => ({ ...f, categoryId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Sem categoria" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem categoria</SelectItem>
+                    <SelectItem value="none">Sem categoria</SelectItem>
                     {categories?.map((c: any) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
