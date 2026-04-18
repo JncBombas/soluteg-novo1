@@ -65,9 +65,13 @@ export default function TechnicianWorkOrderDetail() {
   const [concludeOpen, setConcludeOpen] = useState(false);
   const [concludeNotes, setConcludeNotes] = useState("");
 
-  // Diálogo: Assinar
+  // Diálogo: Assinar (técnico)
   const [signOpen, setSignOpen] = useState(false);
   const [pendingSignature, setPendingSignature] = useState<string | null>(null);
+
+  // Diálogo: Assinar (cliente)
+  const [clientSignOpen, setClientSignOpen] = useState(false);
+  const [pendingClientSignature, setPendingClientSignature] = useState<string | null>(null);
 
   // Comentários
   const [newComment, setNewComment] = useState("");
@@ -158,6 +162,26 @@ export default function TechnicianWorkOrderDetail() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const saveClientSignatureMutation = (trpc as any).technicianPortal.saveClientSignature.useMutation({
+    onSuccess: () => {
+      toast.success("Assinatura do cliente salva!");
+      setClientSignOpen(false);
+      setPendingClientSignature(null);
+      refetch();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const sendPdfToClientMutation = (trpc as any).technicianPortal.sendPdfToClient.useMutation({
+    onSuccess: () => toast.success("PDF enviado ao cliente via WhatsApp!"),
+    onError:   (e: any) => toast.error(e.message),
+  });
+
+  const sendPdfToAdminMutation = (trpc as any).technicianPortal.sendPdfToAdmin.useMutation({
+    onSuccess: () => toast.success("PDF enviado ao gestor via WhatsApp!"),
+    onError:   (e: any) => toast.error(e.message),
+  });
+
   const toggleTaskMutation = (trpc as any).technicianPortal.tasks.toggle.useMutation({
     onSuccess: () => refetchTasks(),
     onError: (e: any) => toast.error(e.message),
@@ -194,6 +218,11 @@ export default function TechnicianWorkOrderDetail() {
   function handleSaveSignature() {
     if (!workOrderId || !pendingSignature) return;
     saveSignatureMutation.mutate({ workOrderId, signature: pendingSignature });
+  }
+
+  function handleSaveClientSignature() {
+    if (!workOrderId || !pendingClientSignature) return;
+    saveClientSignatureMutation.mutate({ workOrderId, clientSignature: pendingClientSignature });
   }
 
   function handleConcluir() {
@@ -320,12 +349,13 @@ export default function TechnicianWorkOrderDetail() {
             )}
 
             {/* Assinatura — indicador */}
+            {/* Assinatura do técnico */}
             {canInteract && (
               <div className={`flex items-center justify-between rounded-lg border p-3 ${os.technicianSignature ? "bg-green-50 border-green-200" : "bg-slate-50 border-slate-200"}`}>
                 <div className="flex items-center gap-2">
                   <PenLine className={`w-4 h-4 ${os.technicianSignature ? "text-green-600" : "text-slate-400"}`} />
                   <span className="text-sm font-medium">
-                    {os.technicianSignature ? "Assinatura registrada" : "Sem assinatura"}
+                    {os.technicianSignature ? "Sua assinatura registrada" : "Sem assinatura (técnico)"}
                   </span>
                   {os.technicianSignedAt && (
                     <span className="text-xs text-muted-foreground">
@@ -335,6 +365,21 @@ export default function TechnicianWorkOrderDetail() {
                 </div>
                 <Button size="sm" variant="outline" onClick={() => setSignOpen(true)}>
                   {os.technicianSignature ? "Reassinar" : "Assinar"}
+                </Button>
+              </div>
+            )}
+
+            {/* Assinatura do cliente */}
+            {canInteract && (
+              <div className={`flex items-center justify-between rounded-lg border p-3 ${os.clientSignature ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"}`}>
+                <div className="flex items-center gap-2">
+                  <PenLine className={`w-4 h-4 ${os.clientSignature ? "text-blue-600" : "text-slate-400"}`} />
+                  <span className="text-sm font-medium">
+                    {os.clientSignature ? "Assinatura do cliente registrada" : "Sem assinatura (cliente)"}
+                  </span>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setClientSignOpen(true)}>
+                  {os.clientSignature ? "Reassinar" : "Coletar assinatura"}
                 </Button>
               </div>
             )}
@@ -688,6 +733,33 @@ export default function TechnicianWorkOrderDetail() {
                   </Button>
                 </div>
               )}
+
+              {/* Enviar via WhatsApp (OS concluída) */}
+              {os.status === "concluida" && (
+                <div className="space-y-2 pt-2 border-t">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Enviar PDF via WhatsApp</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="gap-2 border-green-500 text-green-700 hover:bg-green-50"
+                      onClick={() => sendPdfToClientMutation.mutate({ workOrderId: workOrderId! })}
+                      disabled={sendPdfToClientMutation.isPending}
+                    >
+                      {sendPdfToClientMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Para Cliente
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2 border-slate-400 text-slate-700 hover:bg-slate-50"
+                      onClick={() => sendPdfToAdminMutation.mutate({ workOrderId: workOrderId! })}
+                      disabled={sendPdfToAdminMutation.isPending}
+                    >
+                      {sendPdfToAdminMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Para Gestor
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -738,6 +810,28 @@ export default function TechnicianWorkOrderDetail() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleSaveSignature}
               disabled={!pendingSignature || saveSignatureMutation.isPending}
+            >
+              <PenLine className="w-4 h-4 mr-2" />
+              Salvar Assinatura
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Assinar (cliente) */}
+      <Dialog open={clientSignOpen} onOpenChange={(v) => { setClientSignOpen(v); if (!v) setPendingClientSignature(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Assinatura do Cliente</DialogTitle>
+            <DialogDescription>O cliente assina aqui confirmando o serviço realizado.</DialogDescription>
+          </DialogHeader>
+          <SignaturePad onSave={setPendingClientSignature} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setClientSignOpen(false); setPendingClientSignature(null); }}>Cancelar</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSaveClientSignature}
+              disabled={!pendingClientSignature || saveClientSignatureMutation.isPending}
             >
               <PenLine className="w-4 h-4 mr-2" />
               Salvar Assinatura

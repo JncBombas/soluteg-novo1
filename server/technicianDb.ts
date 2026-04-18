@@ -120,6 +120,7 @@ export type WorkOrderDetail = {
   internalNotes: string | null;
   technicianSignature: string | null;
   technicianSignedAt: Date | null;
+  clientSignature: string | null;
   createdAt: Date;
   updatedAt: Date;
   clientId: number;
@@ -152,6 +153,7 @@ export async function getWorkOrderByIdForTechnician(
       internalNotes: workOrders.internalNotes,
       technicianSignature: workOrders.technicianSignature,
       technicianSignedAt: workOrders.technicianSignedAt,
+      clientSignature: workOrders.clientSignature,
       createdAt: workOrders.createdAt,
       updatedAt: workOrders.updatedAt,
       clientId: workOrders.clientId,

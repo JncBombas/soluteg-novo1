@@ -75,6 +75,85 @@ export const technicianPortalRouter = router({
       return { success: true };
     }),
 
+  saveClientSignature: protectedTechnicianProcedure
+    .input(z.object({
+      workOrderId:     z.number(),
+      clientSignature: z.string().min(10),
+      clientName:      z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+      if (!os) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+      }
+      if (os.status !== "em_andamento" && os.status !== "pausada") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para registrar assinatura do cliente." });
+      }
+      await workOrdersDb.updateWorkOrder(input.workOrderId, {
+        clientSignature: input.clientSignature,
+        clientName: input.clientName || undefined,
+      } as any);
+      return { success: true };
+    }),
+
+  sendPdfToClient: protectedTechnicianProcedure
+    .input(z.object({ workOrderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+      if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+
+      const dbModule = await import("../db");
+      const cliente = await dbModule.getClientById(os.clientId);
+      if (!cliente?.phone) throw new TRPCError({ code: "BAD_REQUEST", message: "Cliente sem telefone cadastrado" });
+
+      const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
+      const portalLinha = cliente.type === "com_portal"
+        ? `\n🔗 *Acesse seu portal:*\nhttps://jnc.soluteg.com.br/client/portal`
+        : "";
+      const msg =
+        `${saudacao}\n\n` +
+        `📋 *${os.osNumber}* - ${os.title}\n\n` +
+        `🏢 Condomínio: ${os.clientName || cliente.name}\n` +
+        `📌 Status: ${os.status}` +
+        portalLinha;
+
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.workOrderId);
+      const osNum = os.osNumber || `OS-${input.workOrderId}`;
+      const clientSlug = (os.clientName || cliente.name)
+        .trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40);
+
+      const { sendWhatsappToNumberWithPDF } = await import("../whatsapp");
+      await sendWhatsappToNumberWithPDF(cliente.phone, msg, pdfBuffer, `${osNum}_${clientSlug}.pdf`);
+      return { success: true };
+    }),
+
+  sendPdfToAdmin: protectedTechnicianProcedure
+    .input(z.object({ workOrderId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+      if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+
+      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${input.workOrderId}`;
+      const msg =
+        `📋 *${os.osNumber}* - ${os.title}\n\n` +
+        `🏢 Cliente: ${os.clientName}\n` +
+        `📌 Tipo: ${os.type?.toUpperCase()} | Status: ${os.status}\n\n` +
+        `🔗 *Ver no painel:*\n${portalUrl}`;
+
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateWorkOrderPDF(input.workOrderId);
+      const osNum = os.osNumber || `OS-${input.workOrderId}`;
+      const clientSlug = os.clientName
+        ? os.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+
+      const { sendWhatsappAlertWithPDF } = await import("../whatsapp");
+      sendWhatsappAlertWithPDF(msg, pdfBuffer, `${osNum}_${clientSlug}.pdf`)
+        .catch(e => console.error("Erro no Zap JNC:", e));
+      return { success: true };
+    }),
+
   // ==================== TASKS ====================
   tasks: router({
     list: protectedTechnicianProcedure

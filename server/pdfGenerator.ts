@@ -615,7 +615,7 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
       const imageY       = posRodape;
       const sigLineY     = imageY + 45;
 
-      const collabSig = (workOrder as any).collaboratorSignature;
+      const collabSig = (workOrder as any).collaboratorSignature || (workOrder as any).technicianSignature;
       if (collabSig) {
         try {
           const b64 = collabSig.includes(',') ? collabSig.split(',')[1] : collabSig;
