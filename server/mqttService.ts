@@ -67,6 +67,38 @@ export function invalidateSensorCache(deviceId: string) {
   sensorConfigCache.delete(deviceId);
 }
 
+// ── Estado de alerta por sensor ───────────────────────────────────────────────
+export type SensorZone = "normal" | "alarm1" | "alarm2" | "sci" | "boia_high";
+
+export type SensorAlertState = {
+  consecutiveDownCount: number;     // flushes consecutivos confirmando descida
+  consecutiveUpCount: number;       // flushes consecutivos confirmando subida
+  currentZone: SensorZone;          // zona atual confirmada
+  lastDropAlertLevel: number | null; // nível no último alerta progressivo disparado
+  fillingNotified: boolean;         // já notificou "enchendo" neste ciclo
+  lastKnownLevel: number | null;
+};
+
+const sensorAlertState = new Map<string, SensorAlertState>();
+
+function getOrCreateAlertState(deviceId: string): SensorAlertState {
+  if (!sensorAlertState.has(deviceId)) {
+    sensorAlertState.set(deviceId, {
+      consecutiveDownCount: 0,
+      consecutiveUpCount: 0,
+      currentZone: "normal",
+      lastDropAlertLevel: null,
+      fillingNotified: false,
+      lastKnownLevel: null,
+    });
+  }
+  return sensorAlertState.get(deviceId)!;
+}
+
+export function invalidateSensorAlertState(deviceId: string) {
+  sensorAlertState.delete(deviceId);
+}
+
 // ── Buffer de leituras (30 s) ─────────────────────────────────────────────────
 // Sensores JSN-SR04T: guarda a MAIOR distância do intervalo (= menor nível = leitura
 // mais conservadora). Sensores legacy (level_pct): guarda o maior nível.
@@ -124,10 +156,33 @@ async function flushBuffer(deviceId: string) {
     measuredAt: new Date().toISOString(),
   });
 
+  const state = getOrCreateAlertState(deviceId);
+  const previousZone = state.currentZone;
+
+  const isGoingDown = currentLevel < (state.lastKnownLevel ?? currentLevel);
+  const isGoingUp   = currentLevel > (state.lastKnownLevel ?? currentLevel);
+
+  if (isGoingDown) {
+    state.consecutiveDownCount++;
+    state.consecutiveUpCount = 0;
+  } else if (isGoingUp) {
+    state.consecutiveUpCount++;
+    state.consecutiveDownCount = 0;
+  }
+
+  state.lastKnownLevel = currentLevel;
+
   const { checkAndSendAlerts } = await import("./waterTankAlertService");
-  checkAndSendAlerts(entry.sensor.id, entry.sensor.clientId, entry.sensor.tankName, currentLevel).catch(
-    (e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message),
-  );
+  checkAndSendAlerts({
+    sensorId: entry.sensor.id,
+    clientId: entry.sensor.clientId,
+    tankName: entry.sensor.tankName,
+    currentLevel,
+    state,
+    previousZone,
+    isGoingDown,
+    isGoingUp,
+  }).catch((e: Error) => console.error("[MQTT] Erro ao verificar alertas:", e.message));
 }
 
 export function addSseClient(clientId: number, res: Response): void {

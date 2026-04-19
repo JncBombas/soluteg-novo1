@@ -535,6 +535,9 @@ export const waterTankSensors = mysqlTable("waterTankSensors", {
   // Calibração: distâncias medidas fisicamente (cm)
   distVazia: int("distVazia"),   // distância sensor→água com caixa VAZIA
   distCheia: int("distCheia"),   // distância sensor→água com caixa CHEIA
+  tankType: mysqlEnum("tankType", ["superior", "inferior"]).default("superior").notNull(),
+  alarm3BoiaPct: int("alarm3BoiaPct").default(90).notNull(),
+  dropStepPct: int("dropStepPct").default(10).notNull(),
   active: tinyint("active").default(1).notNull(),
   lastSeenAt: timestamp("lastSeenAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -551,12 +554,34 @@ export const waterTankAlertLog = mysqlTable("waterTankAlertLog", {
   sensorId: int("sensorId").notNull(),
   clientId: int("clientId").notNull(),
   tankName: varchar("tankName", { length: 100 }).notNull(),
-  alertType: mysqlEnum("alertType", ["alarm1", "alarm2", "sci_reserve"]).notNull(),
+  alertType: mysqlEnum("alertType", ["alarm1", "alarm2", "alarm3_boia", "sci_reserve", "drop_step", "filling", "level_restored", "boia_fault"]).notNull(),
   triggerPct: int("triggerPct").notNull(),   // Limiar configurado que disparou o alerta
   currentLevel: int("currentLevel").notNull(), // Nível no momento do disparo
   sentTo: varchar("sentTo", { length: 100 }), // Telefone(s) notificados
   sentAt: timestamp("sentAt").defaultNow().notNull(),
+  direction: mysqlEnum("direction", ["down", "up"]).notNull(),
+  tankType: mysqlEnum("tankType", ["superior", "inferior"]).notNull(),
+  observation: text("observation"),
 });
+
+/**
+ * Log de falhas em equipamentos de caixa d'água (boias, bombas, etc.)
+ */
+export const waterTankFaultLog = mysqlTable("waterTankFaultLog", {
+  id: int("id").autoincrement().primaryKey(),
+  sensorId: int("sensorId").notNull(),
+  clientId: int("clientId").notNull(),
+  tankName: varchar("tankName", { length: 100 }).notNull(),
+  faultType: mysqlEnum("faultType", ["boia", "cebola", "bomba", "falta_agua", "tubulacao", "acionamento", "fiacao", "outro"]).notNull(),
+  description: text("description"),
+  levelAtFault: int("levelAtFault").notNull(),
+  osId: int("osId"),
+  registeredBy: varchar("registeredBy", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type WaterTankFaultLog = typeof waterTankFaultLog.$inferSelect;
+export type InsertWaterTankFaultLog = typeof waterTankFaultLog.$inferInsert;
 
 /**
  * Orçamentos - entidade separada das OS

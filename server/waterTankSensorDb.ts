@@ -132,6 +132,9 @@ export type AssignData = {
   deadVolumePct?: number;
   alarm1Pct?: number;
   alarm2Pct?: number;
+  alarm3BoiaPct?: number;
+  dropStepPct?: number;
+  tankType?: "superior" | "inferior";
   alertPhone?: string | null;
   distVazia?: number | null;
   distCheia?: number | null;
@@ -152,6 +155,9 @@ export async function assignSensor(sensorId: number, data: AssignData) {
       deadVolumePct: data.deadVolumePct ?? 0,
       alarm1Pct: data.alarm1Pct ?? 30,
       alarm2Pct: data.alarm2Pct ?? 15,
+      alarm3BoiaPct: data.alarm3BoiaPct ?? 90,
+      dropStepPct: data.dropStepPct ?? 10,
+      tankType: data.tankType ?? "superior",
       alertPhone: data.alertPhone ?? null,
       distVazia: data.distVazia ?? null,
       distCheia: data.distCheia ?? null,
@@ -199,6 +205,9 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
   deadVolumePct: number;
   alarm1Pct: number;
   alarm2Pct: number;
+  alarm3BoiaPct: number;
+  dropStepPct: number;
+  tankType: string;
   alertPhone: string | null;
   active: number;
   createdAt: Date;
@@ -211,8 +220,8 @@ export async function getSensorById(sensorId: number, adminId: number): Promise<
   const result = await db.execute(sql`
     SELECT s.id, s.deviceId, s.clientId, c.name AS clientName, c.phone AS clientPhone,
            s.tankName, s.capacity, s.notes,
-           s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alertPhone,
-           s.active, s.createdAt,
+           s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alarm3BoiaPct, s.dropStepPct, s.tankType,
+           s.alertPhone, s.active, s.createdAt,
            latest.currentLevel, latest.measuredAt AS lastUpdate
     FROM waterTankSensors s
     LEFT JOIN clients c ON c.id = s.clientId

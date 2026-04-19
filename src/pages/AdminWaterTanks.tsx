@@ -29,6 +29,9 @@ interface SensorRow {
   deadVolumePct: number;
   alarm1Pct: number;
   alarm2Pct: number;
+  alarm3BoiaPct: number;
+  dropStepPct: number;
+  tankType: string;
   alertPhone: string | null;
   distVazia: number | null;
   distCheia: number | null;
@@ -55,6 +58,9 @@ type AssignForm = {
   deadVolumePct: string;
   alarm1Pct: string;
   alarm2Pct: string;
+  alarm3BoiaPct: string;
+  dropStepPct: string;
+  tankType: string;
   alertPhone: string;
   distVazia: string;
   distCheia: string;
@@ -62,8 +68,9 @@ type AssignForm = {
 
 const defaultAssign: AssignForm = {
   clientId: "", tankName: "", capacity: "", notes: "",
-  deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15", alertPhone: "",
-  distVazia: "", distCheia: "",
+  deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15",
+  alarm3BoiaPct: "90", dropStepPct: "10", tankType: "superior",
+  alertPhone: "", distVazia: "", distCheia: "",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -189,8 +196,20 @@ function AssignFormFields({
       </div>
 
       {/* Alarmes */}
-      <div className="border rounded-lg p-3 space-y-2">
+      <div className="border rounded-lg p-3 space-y-3">
         <p className="text-sm font-semibold text-slate-700">Limiares de Alarme</p>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Tipo de Reservatório</label>
+          <Select value={form.tankType} onValueChange={(v) => setForm({ ...form, tankType: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="superior">Superior</SelectItem>
+              <SelectItem value="inferior">Inferior (Cisterna)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm font-medium text-yellow-700">⚠ Alerta 1 (%)</label>
@@ -209,7 +228,29 @@ function AssignFormFields({
             />
           </div>
         </div>
-        <p className="text-xs text-slate-500">Use 0 para desabilitar. Cooldown de 4h entre mensagens.</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-purple-700">🔧 Nível de boia (%)</label>
+            <Input
+              type="number" min={0} max={100} placeholder="90"
+              value={form.alarm3BoiaPct}
+              onChange={(e) => setForm({ ...form, alarm3BoiaPct: e.target.value })}
+            />
+            <p className="text-xs text-slate-500">Alerta quando nível ficar acima deste valor — possível falha na boia</p>
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-700">📉 Alertas progressivos a cada (%) de queda</label>
+            <Input
+              type="number" min={1} max={50} placeholder="10"
+              value={form.dropStepPct}
+              onChange={(e) => setForm({ ...form, dropStepPct: e.target.value })}
+            />
+            <p className="text-xs text-slate-500">Notifica a cada X% que o nível cair dentro da faixa de alerta</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-500">Use 0 para desabilitar os limiares de alarme.</p>
       </div>
 
       {/* Calibração */}
@@ -320,6 +361,9 @@ export default function AdminWaterTanks() {
     deadVolumePct: parseInt(f.deadVolumePct) || 0,
     alarm1Pct: parseInt(f.alarm1Pct) || 30,
     alarm2Pct: parseInt(f.alarm2Pct) || 15,
+    alarm3BoiaPct: parseInt(f.alarm3BoiaPct) || 90,
+    dropStepPct: parseInt(f.dropStepPct) || 10,
+    tankType: (f.tankType || "superior") as "superior" | "inferior",
     alertPhone: f.alertPhone || null,
     distVazia: f.distVazia ? parseInt(f.distVazia) : null,
     distCheia: f.distCheia ? parseInt(f.distCheia) : null,
@@ -347,6 +391,9 @@ export default function AdminWaterTanks() {
       deadVolumePct: String(s.deadVolumePct ?? 0),
       alarm1Pct: String(s.alarm1Pct ?? 30),
       alarm2Pct: String(s.alarm2Pct ?? 15),
+      alarm3BoiaPct: String(s.alarm3BoiaPct ?? 90),
+      dropStepPct: String(s.dropStepPct ?? 10),
+      tankType: s.tankType ?? "superior",
       alertPhone: s.alertPhone ?? "",
       distVazia: s.distVazia?.toString() ?? "",
       distCheia: s.distCheia?.toString() ?? "",

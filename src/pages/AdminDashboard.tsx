@@ -4,11 +4,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat } from "lucide-react";
+import { FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat, Droplet, Bell, AlertTriangle, Flame } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+
+function timeAgo(date: Date | string | null) {
+  if (!date) return "—";
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "agora";
+  if (mins < 60) return `${mins} min atrás`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h atrás`;
+  return new Date(date).toLocaleDateString("pt-BR");
+}
+
+function alertIcon(type: string) {
+  if (type === "sci_reserve") return <Flame className="w-4 h-4 text-red-600" />;
+  if (type === "alarm2" || type === "boia_fault") return <AlertTriangle className="w-4 h-4 text-red-500" />;
+  if (type === "alarm1" || type === "drop_step") return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+  if (type === "alarm3_boia") return <Wrench className="w-4 h-4 text-purple-500" />;
+  if (type === "filling" || type === "level_restored") return <Droplet className="w-4 h-4 text-blue-500" />;
+  return <Bell className="w-4 h-4 text-slate-400" />;
+}
+
+const ALERT_LABELS: Record<string, string> = {
+  alarm1: "Alerta 1", alarm2: "Crítico", sci_reserve: "Emergência SCI",
+  alarm3_boia: "Nível de boia", drop_step: "Queda progressiva",
+  filling: "Enchendo", level_restored: "Nível restaurado", boia_fault: "Falha de boia",
+};
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
+  const [adminId, setAdminId] = useState<number | null>(null);
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     openWorkOrders: 0,
@@ -22,8 +49,20 @@ export default function AdminDashboard() {
       setLocation("/gestor/login");
       return;
     }
-    loadMetrics(parseInt(id));
+    const parsed = parseInt(id);
+    setAdminId(parsed);
+    loadMetrics(parsed);
   }, []);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: recentAlerts = [] } = (trpc as any).waterTankAdmin.listRecentAlerts.useQuery(
+    { adminId: adminId ?? 0, limit: 20 },
+    { enabled: !!adminId, refetchInterval: 60_000 },
+  ) as { data: any[] };
+
+  const alertsLast24h = (recentAlerts as any[]).filter(
+    (a) => Date.now() - new Date(a.sentAt).getTime() < 86_400_000,
+  ).length;
 
   const loadMetrics = async (id: number) => {
     try {
@@ -211,6 +250,64 @@ export default function AdminDashboard() {
             })}
           </div>
         </div>
+
+        {/* Alertas recentes — Caixa d'Água */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Droplet className="h-4 w-4 text-blue-500" />
+                <CardTitle className="text-sm">Alertas Recentes — Caixa d'Água</CardTitle>
+                {alertsLast24h > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                    {alertsLast24h} nas últimas 24h
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-slate-500 h-7"
+                onClick={() => setLocation("/gestor/sensores-agua")}
+              >
+                Ver sensores
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentAlerts.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-sm">
+                <Bell className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                Nenhum alerta recente.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {recentAlerts.slice(0, 10).map((a: any, i: number) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 py-2 cursor-pointer hover:bg-slate-50 rounded px-1 transition-colors"
+                    onClick={() => setLocation(`/gestor/sensores-agua/${a.sensorId}`)}
+                  >
+                    <div className="shrink-0">{alertIcon(a.alertType)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {a.tankName}
+                        <span className="font-normal text-slate-500 ml-1">— {a.clientName}</span>
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {ALERT_LABELS[a.alertType] ?? a.alertType} · {a.currentLevel}% no disparo
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap">
+                      {timeAgo(a.sentAt)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </DashboardLayout>
   );
