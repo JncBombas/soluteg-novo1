@@ -44,9 +44,13 @@ import {
   X,
   AlertTriangle,
   UserPlus,
+  BookOpen,
+  Search,
+  FileInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { LAUDO_TEMPLATES } from "@/lib/laudoTemplates";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +147,19 @@ export default function AdminLaudoForm() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ── Template
+  const [confirmTemplate, setConfirmTemplate] = useState<{ show: boolean; tipo: string }>({ show: false, tipo: "" });
+
+  // ── Biblioteca de normas
+  const [showBiblioteca, setShowBiblioteca] = useState(false);
+  const [bibliotecaSearch, setBibliotecaSearch] = useState("");
+  const [bibliotecaSelecionadas, setBibliotecaSelecionadas] = useState<Set<string>>(new Set());
+
+  // ── Importar de OS
+  const [showImportOS, setShowImportOS] = useState(false);
+  const [osSelecionada, setOsSelecionada] = useState<string>("none");
+  const [osPreview, setOsPreview] = useState<any>(null);
+
   // ── Técnicos atribuídos (somente admin)
   const isAdminView = !window.location.pathname.startsWith("/technician");
   const [tecnicoSelecionado, setTecnicoSelecionado] = useState<string>("none");
@@ -154,6 +171,14 @@ export default function AdminLaudoForm() {
   const { data: tecnicosList = [] } = (trpc as any).technicians.list.useQuery(
     { adminId: 1 },
     { enabled: isAdminView, staleTime: 60_000 }
+  );
+  const { data: normasBibliotecaData = [] } = (trpc as any).laudos.listNormasBiblioteca.useQuery(
+    {},
+    { staleTime: 300_000 }
+  );
+  const { data: workOrdersData } = (trpc as any).workOrders.list.useQuery(
+    { clientId: clienteId ?? undefined, page: 1, limit: 100 },
+    { enabled: showImportOS, staleTime: 60_000 }
   );
 
   // ── Carregar laudo existente
@@ -466,6 +491,82 @@ export default function AdminLaudoForm() {
     setConstatacoes((prev) => prev.filter((_, i) => i !== index));
   }
 
+  // ── Template ─────────────────────────────────────────────────────────────
+
+  function aplicarTemplate(tipoLaudo: string) {
+    const template = LAUDO_TEMPLATES[tipoLaudo];
+    if (!template) return;
+    setMetodologia(template.metodologia);
+    setEquipamentos(template.equipamentos);
+    setConstatacoes(template.constatacoes);
+    // Pré-preenche normas da biblioteca para esse tipo (sem duplicar)
+    const normasBibliotecaFiltradas = (normasBibliotecaData as any[]).filter((n: any) => {
+      try {
+        const tipos: string[] = JSON.parse(n.tiposLaudo);
+        return tipos.includes(tipoLaudo);
+      } catch { return false; }
+    });
+    const normasAdicionar = normasBibliotecaFiltradas.map((n: any) => ({
+      codigo: n.codigo,
+      titulo: n.titulo,
+    }));
+    setNormas(normasAdicionar);
+  }
+
+  function handleTipoChange(novoTipo: string) {
+    setTipo(novoTipo);
+    if (!isNew) return;
+    const camposVazios = !objeto && !metodologia && constatacoes.length === 0;
+    if (camposVazios) {
+      aplicarTemplate(novoTipo);
+    } else {
+      setConfirmTemplate({ show: true, tipo: novoTipo });
+    }
+  }
+
+  // ── Biblioteca de normas ─────────────────────────────────────────────────
+
+  function toggleBibliotecaNorma(codigo: string) {
+    setBibliotecaSelecionadas((prev) => {
+      const next = new Set(prev);
+      if (next.has(codigo)) next.delete(codigo);
+      else next.add(codigo);
+      return next;
+    });
+  }
+
+  function adicionarNormasBiblioteca() {
+    const jaAdicionadas = new Set(normas.map((n) => n.codigo));
+    const paraAdicionar = (normasBibliotecaData as any[])
+      .filter((n: any) => bibliotecaSelecionadas.has(n.codigo) && !jaAdicionadas.has(n.codigo))
+      .map((n: any) => ({ codigo: n.codigo, titulo: n.titulo }));
+    setNormas((prev) => [...prev, ...paraAdicionar]);
+    setBibliotecaSelecionadas(new Set());
+    setShowBiblioteca(false);
+  }
+
+  // ── Importar de OS ───────────────────────────────────────────────────────
+
+  async function handleImportarOS() {
+    if (!osPreview) return;
+    setClienteId(osPreview.clientId ?? null);
+    setOsId(osPreview.id);
+    // Converter tarefas do checklist em constatações (se houver)
+    if (osPreview.tasks && osPreview.tasks.length > 0) {
+      const novasConstatacoes = (osPreview.tasks as any[]).map((t: any) => ({
+        item: t.title ?? t.description ?? "Tarefa",
+        descricao: t.description ?? "",
+        status: t.completed ? "conforme" : "atencao",
+        referenciaNormativa: "",
+      }));
+      setConstatacoes(novasConstatacoes);
+    }
+    setShowImportOS(false);
+    setOsSelecionada("none");
+    setOsPreview(null);
+    toast.success("Dados da OS importados");
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!isNew && loadingLaudo) {
@@ -541,7 +642,7 @@ export default function AdminLaudoForm() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Tipo do Laudo *</Label>
-                    <Select value={tipo} onValueChange={setTipo} disabled={isFinalized}>
+                    <Select value={tipo} onValueChange={handleTipoChange} disabled={isFinalized}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {TIPOS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
@@ -570,6 +671,16 @@ export default function AdminLaudoForm() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {!isFinalized && (
+                      <button
+                        type="button"
+                        onClick={() => setShowImportOS(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1"
+                      >
+                        <FileInput className="h-3 w-3" />
+                        Importar dados de uma OS →
+                      </button>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Data da Inspeção</Label>
@@ -625,6 +736,15 @@ export default function AdminLaudoForm() {
                       />
                       <Button variant="outline" size="icon" onClick={addNorma} disabled={!normaCodigo.trim()}>
                         <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setBibliotecaSearch(""); setShowBiblioteca(true); }}
+                        className="gap-1 whitespace-nowrap"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Da biblioteca
                       </Button>
                     </div>
                   )}
@@ -1142,6 +1262,166 @@ export default function AdminLaudoForm() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog — Confirmar aplicação de template */}
+      <AlertDialog
+        open={confirmTemplate.show}
+        onOpenChange={(open) => !open && setConfirmTemplate({ show: false, tipo: "" })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aplicar template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso substituirá o contexto técnico e constatações já preenchidos pelo template padrão deste tipo de laudo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 mt-2">
+            <AlertDialogCancel onClick={() => setConfirmTemplate({ show: false, tipo: "" })}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                aplicarTemplate(confirmTemplate.tipo);
+                setConfirmTemplate({ show: false, tipo: "" });
+              }}
+            >
+              Aplicar Template
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialog — Biblioteca de normas */}
+      <Dialog open={showBiblioteca} onOpenChange={setShowBiblioteca}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Biblioteca de Normas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar normas..."
+                value={bibliotecaSearch}
+                onChange={(e) => setBibliotecaSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+              {(normasBibliotecaData as any[])
+                .filter((n: any) =>
+                  !bibliotecaSearch ||
+                  n.codigo.toLowerCase().includes(bibliotecaSearch.toLowerCase()) ||
+                  n.titulo.toLowerCase().includes(bibliotecaSearch.toLowerCase())
+                )
+                .map((n: any) => {
+                  const jaAdicionada = normas.some((x) => x.codigo === n.codigo);
+                  const selecionada = bibliotecaSelecionadas.has(n.codigo);
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      disabled={jaAdicionada}
+                      onClick={() => !jaAdicionada && toggleBibliotecaNorma(n.codigo)}
+                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm flex items-start gap-3 transition-colors ${
+                        jaAdicionada
+                          ? "bg-muted text-muted-foreground cursor-not-allowed border-transparent"
+                          : selecionada
+                          ? "bg-blue-50 border-blue-400 text-blue-900"
+                          : "hover:bg-secondary border-transparent"
+                      }`}
+                    >
+                      <span className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center text-xs ${
+                        jaAdicionada ? "bg-secondary border-border" : selecionada ? "bg-blue-600 border-blue-600 text-white" : "border-border"
+                      }`}>
+                        {(jaAdicionada || selecionada) && "✓"}
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="font-mono font-semibold">{n.codigo}</span>
+                        {n.ano && <span className="text-muted-foreground ml-1">({n.ano})</span>}
+                        <br />
+                        <span className="text-muted-foreground text-xs">{n.titulo}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+            <div className="flex justify-end gap-2 pt-1 border-t">
+              <Button variant="outline" onClick={() => setShowBiblioteca(false)}>Cancelar</Button>
+              <Button
+                disabled={bibliotecaSelecionadas.size === 0}
+                onClick={adicionarNormasBiblioteca}
+              >
+                Adicionar selecionadas ({bibliotecaSelecionadas.size})
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog — Importar de OS */}
+      <Dialog open={showImportOS} onOpenChange={setShowImportOS}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Importar de Ordem de Serviço</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Ordem de Serviço</Label>
+              <Select
+                value={osSelecionada}
+                onValueChange={(v) => {
+                  setOsSelecionada(v);
+                  if (v !== "none") {
+                    const os = ((workOrdersData as any)?.workOrders ?? []).find(
+                      (o: any) => o.id.toString() === v
+                    );
+                    setOsPreview(os ?? null);
+                  } else {
+                    setOsPreview(null);
+                  }
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecionar OS" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Selecione —</SelectItem>
+                  {((workOrdersData as any)?.workOrders ?? []).map((os: any) => (
+                    <SelectItem key={os.id} value={os.id.toString()}>
+                      {os.osNumber} — {os.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {osPreview && (
+              <div className="rounded-lg border p-3 space-y-1 text-sm">
+                <p><span className="font-medium">Cliente:</span> {osPreview.clientName ?? "—"}</p>
+                {osPreview.clientAddress && (
+                  <p><span className="font-medium">Endereço:</span> {osPreview.clientAddress}</p>
+                )}
+                {osPreview.scheduledDate && (
+                  <p><span className="font-medium">Data agendada:</span> {new Date(osPreview.scheduledDate).toLocaleDateString("pt-BR")}</p>
+                )}
+                {osPreview.tasks?.length > 0 && (
+                  <p className="text-muted-foreground text-xs">
+                    {osPreview.tasks.length} tarefa(s) serão convertidas em constatações
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 border-t pt-3">
+              <Button variant="outline" onClick={() => { setShowImportOS(false); setOsSelecionada("none"); setOsPreview(null); }}>
+                Cancelar
+              </Button>
+              <Button disabled={!osPreview} onClick={handleImportarOS}>
+                Importar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

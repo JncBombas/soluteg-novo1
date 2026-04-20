@@ -359,6 +359,21 @@ export const laudosRouter = router({
       };
     }),
 
+  // ── Biblioteca de normas ──────────────────────────────────────────────────
+  listNormasBiblioteca: adminLocalProcedure
+    .input(z.object({ tipoLaudo: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.listNormasBiblioteca(input.tipoLaudo);
+    }),
+
+  listNormasBibliotecaTecnico: protectedTechnicianProcedure
+    .input(z.object({ tipoLaudo: z.string().optional() }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.listNormasBiblioteca(input.tipoLaudo);
+    }),
+
   // ── Configurações do Técnico ───────────────────────────────────────────────
   getTecnico: adminLocalProcedure
     .query(async () => {

@@ -812,3 +812,18 @@ export const laudoTecnicos = mysqlTable("laudoTecnicos", {
 
 export type LaudoTecnico = typeof laudoTecnicos.$inferSelect;
 export type InsertLaudoTecnico = typeof laudoTecnicos.$inferInsert;
+
+/**
+ * Biblioteca de normas técnicas pré-cadastradas
+ */
+export const normasBiblioteca = mysqlTable("normasBiblioteca", {
+  id: int("id").autoincrement().primaryKey(),
+  codigo: varchar("codigo", { length: 100 }).notNull(),
+  titulo: text("titulo").notNull(),
+  ano: varchar("ano", { length: 10 }),
+  tiposLaudo: text("tiposLaudo").notNull(), // JSON array de tipos
+  ativa: tinyint("ativa").default(1).notNull(),
+});
+
+export type NormaBiblioteca = typeof normasBiblioteca.$inferSelect;
+export type InsertNormaBiblioteca = typeof normasBiblioteca.$inferInsert;

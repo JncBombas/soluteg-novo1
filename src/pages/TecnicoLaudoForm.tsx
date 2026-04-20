@@ -16,6 +16,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APP_LOGO } from "@/const";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Plus,
   Trash2,
   ChevronUp,
@@ -28,9 +43,13 @@ import {
   X,
   AlertTriangle,
   LogOut,
+  BookOpen,
+  Search,
+  FileInput,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { LAUDO_TEMPLATES } from "@/lib/laudoTemplates";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -92,6 +111,7 @@ export default function TecnicoLaudoForm() {
   const [tipo, setTipo] = useState("instalacao_eletrica");
   const [titulo, setTitulo] = useState("");
   const [clienteId, setClienteId] = useState<number | null>(null);
+  const [osId, setOsId] = useState<number | null>(null);
   const [dataInspecao, setDataInspecao] = useState("");
   const [validadeMeses, setValidadeMeses] = useState(12);
   const [normas, setNormas] = useState<Norma[]>([]);
@@ -125,10 +145,33 @@ export default function TecnicoLaudoForm() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // ── Template
+  const [confirmTemplate, setConfirmTemplate] = useState<{ show: boolean; tipo: string }>({ show: false, tipo: "" });
+
+  // ── Biblioteca de normas
+  const [showBiblioteca, setShowBiblioteca] = useState(false);
+  const [bibliotecaSearch, setBibliotecaSearch] = useState("");
+  const [bibliotecaSelecionadas, setBibliotecaSelecionadas] = useState<Set<string>>(new Set());
+
+  // ── Importar de OS
+  const [showImportOS, setShowImportOS] = useState(false);
+  const [osSelecionada, setOsSelecionada] = useState<string>("none");
+  const [osPreview, setOsPreview] = useState<any>(null);
+
   // ── Carregar laudo existente
   const { data: laudoData, isLoading: loadingLaudo } = (trpc as any).laudos.getByIdTecnico.useQuery(
     { id: laudoId! },
     { enabled: !isNew && laudoId !== null }
+  );
+
+  // ── Dados de suporte
+  const { data: normasBibliotecaData = [] } = (trpc as any).laudos.listNormasBibliotecaTecnico.useQuery(
+    {},
+    { staleTime: 300_000 }
+  );
+  const { data: workOrdersData } = (trpc as any).workOrders.list.useQuery(
+    { page: 1, limit: 100 },
+    { enabled: showImportOS, staleTime: 60_000 }
   );
 
   useEffect(() => {
@@ -136,6 +179,7 @@ export default function TecnicoLaudoForm() {
     setTipo(laudoData.tipo);
     setTitulo(laudoData.titulo);
     setClienteId(laudoData.clienteId ?? null);
+    setOsId(laudoData.osId ?? null);
     setDataInspecao(
       laudoData.dataInspecao ? new Date(laudoData.dataInspecao).toISOString().split("T")[0] : ""
     );
@@ -396,6 +440,75 @@ export default function TecnicoLaudoForm() {
     window.location.href = "/technician/login";
   }
 
+  // ── Template ─────────────────────────────────────────────────────────────
+
+  function aplicarTemplate(tipoLaudo: string) {
+    const template = LAUDO_TEMPLATES[tipoLaudo];
+    if (!template) return;
+    setMetodologia(template.metodologia);
+    setEquipamentos(template.equipamentos);
+    setConstatacoes(template.constatacoes);
+    const normasFiltradas = (normasBibliotecaData as any[]).filter((n: any) => {
+      try {
+        const tipos: string[] = JSON.parse(n.tiposLaudo);
+        return tipos.includes(tipoLaudo);
+      } catch { return false; }
+    });
+    setNormas(normasFiltradas.map((n: any) => ({ codigo: n.codigo, titulo: n.titulo })));
+  }
+
+  function handleTipoChange(novoTipo: string) {
+    setTipo(novoTipo);
+    if (!isNew) return;
+    const camposVazios = !objeto && !metodologia && constatacoes.length === 0;
+    if (camposVazios) {
+      aplicarTemplate(novoTipo);
+    } else {
+      setConfirmTemplate({ show: true, tipo: novoTipo });
+    }
+  }
+
+  // ── Biblioteca de normas ─────────────────────────────────────────────────
+
+  function toggleBibliotecaNorma(codigo: string) {
+    setBibliotecaSelecionadas((prev) => {
+      const next = new Set(prev);
+      if (next.has(codigo)) next.delete(codigo);
+      else next.add(codigo);
+      return next;
+    });
+  }
+
+  function adicionarNormasBiblioteca() {
+    const jaAdicionadas = new Set(normas.map((n) => n.codigo));
+    const paraAdicionar = (normasBibliotecaData as any[])
+      .filter((n: any) => bibliotecaSelecionadas.has(n.codigo) && !jaAdicionadas.has(n.codigo))
+      .map((n: any) => ({ codigo: n.codigo, titulo: n.titulo }));
+    setNormas((prev) => [...prev, ...paraAdicionar]);
+    setBibliotecaSelecionadas(new Set());
+    setShowBiblioteca(false);
+  }
+
+  // ── Importar de OS ───────────────────────────────────────────────────────
+
+  async function handleImportarOS() {
+    if (!osPreview) return;
+    setOsId(osPreview.id);
+    if (osPreview.tasks && osPreview.tasks.length > 0) {
+      const novasConstatacoes = (osPreview.tasks as any[]).map((t: any) => ({
+        item: t.title ?? t.description ?? "Tarefa",
+        descricao: t.description ?? "",
+        status: t.completed ? "conforme" : "atencao",
+        referenciaNormativa: "",
+      }));
+      setConstatacoes(novasConstatacoes);
+    }
+    setShowImportOS(false);
+    setOsSelecionada("none");
+    setOsPreview(null);
+    toast.success("Dados da OS importados");
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   if (!isNew && loadingLaudo) {
@@ -476,7 +589,7 @@ export default function TecnicoLaudoForm() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label>Tipo do Laudo *</Label>
-                    <Select value={tipo} onValueChange={setTipo} disabled={isFinalized}>
+                    <Select value={tipo} onValueChange={handleTipoChange} disabled={isFinalized}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {TIPOS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
@@ -517,6 +630,19 @@ export default function TecnicoLaudoForm() {
                   </div>
                 </div>
 
+                {!isFinalized && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setShowImportOS(true)}
+                      className="flex items-center gap-1.5 text-primary hover:underline"
+                    >
+                      <FileInput className="h-3.5 w-3.5" />
+                      Importar dados de uma OS →
+                    </button>
+                  </div>
+                )}
+
                 {/* Normas de referência */}
                 <div className="space-y-2">
                   <Label>Normas de Referência</Label>
@@ -551,6 +677,15 @@ export default function TecnicoLaudoForm() {
                       />
                       <Button variant="outline" size="icon" onClick={addNorma} disabled={!normaCodigo.trim()}>
                         <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setBibliotecaSelecionadas(new Set()); setShowBiblioteca(true); }}
+                        className="gap-1 whitespace-nowrap"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        Da biblioteca
                       </Button>
                     </div>
                   )}
@@ -975,6 +1110,153 @@ export default function TecnicoLaudoForm() {
           </div>
         )}
       </main>
+
+      {/* ── Dialog: confirmar aplicação de template ── */}
+      <AlertDialog
+        open={confirmTemplate.show}
+        onOpenChange={(open) => !open && setConfirmTemplate({ show: false, tipo: "" })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Aplicar template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso irá substituir a metodologia, equipamentos, constatações e normas pelo
+              template padrão para o tipo selecionado. As informações atuais serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 mt-4">
+            <AlertDialogCancel>Manter atual</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                aplicarTemplate(confirmTemplate.tipo);
+                setConfirmTemplate({ show: false, tipo: "" });
+              }}
+            >
+              Aplicar template
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Dialog: biblioteca de normas ── */}
+      <Dialog open={showBiblioteca} onOpenChange={setShowBiblioteca}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Biblioteca de Normas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar norma..."
+                value={bibliotecaSearch}
+                onChange={(e) => setBibliotecaSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
+              {(normasBibliotecaData as any[])
+                .filter((n: any) =>
+                  !bibliotecaSearch ||
+                  n.codigo.toLowerCase().includes(bibliotecaSearch.toLowerCase()) ||
+                  n.titulo.toLowerCase().includes(bibliotecaSearch.toLowerCase())
+                )
+                .map((n: any) => (
+                  <label
+                    key={n.codigo}
+                    className="flex items-start gap-2 p-2 rounded hover:bg-secondary cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={bibliotecaSelecionadas.has(n.codigo)}
+                      onChange={() => toggleBibliotecaNorma(n.codigo)}
+                      className="mt-0.5"
+                    />
+                    <div>
+                      <p className="text-sm font-mono font-medium">{n.codigo}</p>
+                      <p className="text-xs text-muted-foreground">{n.titulo}</p>
+                    </div>
+                  </label>
+                ))}
+              {(normasBibliotecaData as any[]).length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma norma na biblioteca.
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowBiblioteca(false)}>Cancelar</Button>
+              <Button onClick={adicionarNormasBiblioteca} disabled={bibliotecaSelecionadas.size === 0}>
+                Adicionar selecionadas ({bibliotecaSelecionadas.size})
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: importar de OS ── */}
+      <Dialog open={showImportOS} onOpenChange={setShowImportOS}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Importar dados de uma OS</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Selecionar Ordem de Serviço</Label>
+              <Select
+                value={osSelecionada}
+                onValueChange={(v) => {
+                  setOsSelecionada(v);
+                  if (v && v !== "none") {
+                    const os = ((workOrdersData as any)?.workOrders ?? []).find(
+                      (o: any) => String(o.id) === v
+                    );
+                    setOsPreview(os ?? null);
+                  } else {
+                    setOsPreview(null);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma OS..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">— Selecione —</SelectItem>
+                  {((workOrdersData as any)?.workOrders ?? []).map((os: any) => (
+                    <SelectItem key={os.id} value={String(os.id)}>
+                      {os.orderNumber ?? `OS #${os.id}`} — {os.clientName ?? ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {osPreview && (
+              <div className="border rounded-md p-3 text-sm space-y-1 bg-secondary/30">
+                <p><span className="font-medium">OS:</span> {osPreview.orderNumber}</p>
+                {osPreview.clientName && <p><span className="font-medium">Cliente:</span> {osPreview.clientName}</p>}
+                {osPreview.description && (
+                  <p><span className="font-medium">Descrição:</span> {osPreview.description}</p>
+                )}
+                {osPreview.tasks && osPreview.tasks.length > 0 && (
+                  <p className="text-muted-foreground text-xs">
+                    {osPreview.tasks.length} tarefa(s) serão importadas como constatações.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowImportOS(false); setOsSelecionada("none"); setOsPreview(null); }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleImportarOS} disabled={!osPreview}>
+                Importar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

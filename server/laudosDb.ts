@@ -1,7 +1,7 @@
-import { eq, desc, and, like, or, inArray } from "drizzle-orm";
+import { eq, desc, and, like, or, inArray, asc } from "drizzle-orm";
 import { getDb } from "./db";
 import {
-  laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos,
+  laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos, normasBiblioteca,
   InsertLaudo, InsertLaudoFoto, InsertLaudoMedicao, InsertConfiguracoesTecnico,
 } from "../drizzle/schema";
 
@@ -441,4 +441,28 @@ export async function upsertConfiguracoesTecnico(data: {
   } else {
     await db.insert(configuracoesTecnico).values(data as any);
   }
+}
+
+// ── Biblioteca de normas ─────────────────────────────────────────────────────
+
+export async function listNormasBiblioteca(tipoLaudo?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const rows = await db
+    .select()
+    .from(normasBiblioteca)
+    .where(eq(normasBiblioteca.ativa, 1 as any))
+    .orderBy(asc(normasBiblioteca.codigo));
+
+  if (!tipoLaudo) return rows;
+
+  return rows.filter((n) => {
+    try {
+      const tipos: string[] = JSON.parse(n.tiposLaudo);
+      return tipos.includes(tipoLaudo);
+    } catch {
+      return false;
+    }
+  });
 }
