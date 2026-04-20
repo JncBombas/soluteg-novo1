@@ -120,13 +120,14 @@ export default function AdminLaudoForm() {
   const [normaTitulo, setNormaTitulo] = useState("");
 
   // ── Aba 2: Contexto Técnico
+  const _tpl = isNew ? LAUDO_TEMPLATES["instalacao_eletrica"] : null;
   const [objeto, setObjeto] = useState("");
-  const [metodologia, setMetodologia] = useState("");
-  const [equipamentos, setEquipamentos] = useState("");
+  const [metodologia, setMetodologia] = useState(_tpl?.metodologia ?? "");
+  const [equipamentos, setEquipamentos] = useState(_tpl?.equipamentos ?? "");
   const [condicoes, setCondicoes] = useState("");
 
   // ── Aba 3: Constatações
-  const [constatacoes, setConstatacoes] = useState<Constatacao[]>([]);
+  const [constatacoes, setConstatacoes] = useState<Constatacao[]>(_tpl?.constatacoes ?? []);
 
   // ── Aba 4: Medições
   const [medicoes, setMedicoes] = useState<Medicao[]>([]);
@@ -229,6 +230,19 @@ export default function AdminLaudoForm() {
     setLaudoStatus(laudoData.status);
     setTecnicosAtribuidos((laudoData as any).tecnicos ?? []);
   }, [laudoData]);
+
+  // Para novo laudo: preenche normas da biblioteca assim que carregam
+  const normasIniciais = useRef(false);
+  useEffect(() => {
+    if (!isNew || normasIniciais.current) return;
+    if (!(normasBibliotecaData as any[]).length) return;
+    normasIniciais.current = true;
+    const normasFiltradas = (normasBibliotecaData as any[]).filter((n: any) => {
+      try { return JSON.parse(n.tiposLaudo).includes("instalacao_eletrica"); }
+      catch { return false; }
+    });
+    setNormas(normasFiltradas.map((n: any) => ({ codigo: n.codigo, titulo: n.titulo })));
+  }, [(normasBibliotecaData as any[]).length]);
 
   // ── Mutations
   const createMutation = trpc.laudos.create.useMutation({
