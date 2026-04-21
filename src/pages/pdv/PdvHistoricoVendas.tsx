@@ -143,14 +143,9 @@ export default function PdvHistoricoVendas() {
 
       <style>{`
         @media print {
-          @page { size: 80mm auto; margin: 0; }
           body * { visibility: hidden; }
           .print-receipt, .print-receipt * { visibility: visible; }
-          .print-receipt {
-            position: absolute; left: 0; top: 0;
-            width: 80mm; padding: 3mm 4mm;
-            box-sizing: border-box;
-          }
+          .print-receipt { position: absolute; left: 0; top: 0; right: 0; padding: 0; }
           .no-print { display: none !important; }
         }
       `}</style>
