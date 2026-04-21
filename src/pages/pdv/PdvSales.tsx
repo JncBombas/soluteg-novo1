@@ -319,13 +319,22 @@ export default function PdvSales() {
         </div>
       </div>
 
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          .print-receipt, .print-receipt * { visibility: visible; }
+          .print-receipt { position: fixed; left: 0; top: 0; width: 80mm; padding: 8px; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Venda Finalizada!</DialogTitle></DialogHeader>
           <div className="print-receipt">
             <div className="text-center mb-2">
-              <h2 className="text-sm font-bold" style={{ color: "#D4A15E" }}>SISTEMA SOLUTEG</h2>
-              <p className="text-[10px]">JNC Comércio e Serviços</p>
+              <img src="/logo-jnc-novo.webp" alt="JNC" className="h-12 mx-auto mb-1 object-contain" />
+              <p className="text-[10px] font-semibold">JNC Comércio e Serviços</p>
               <p className="text-[10px]">Av. Pres. Kennedy, 8566</p>
               <p className="text-[10px]">Mirim - Praia Grande/SP</p>
             </div>
@@ -377,6 +386,11 @@ export default function PdvSales() {
               <p className="font-medium">Obrigado pela preferência!</p>
               <p>Volte sempre!</p>
             </div>
+            <div className="mt-6 pt-2">
+              <div className="border-b border-black mt-8 mb-1 mx-4"></div>
+              <p className="text-[10px] text-center text-slate-600">Assinatura do Cliente</p>
+            </div>
+            <p className="text-[8px] text-center text-slate-400 mt-4">Sistema Soluteg de Vendas</p>
           </div>
           <div className="flex gap-2 no-print">
             <Button onClick={handlePrintReceipt} className="flex-1">
