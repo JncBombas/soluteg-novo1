@@ -321,9 +321,14 @@ export default function PdvSales() {
 
       <style>{`
         @media print {
+          @page { size: 80mm auto; margin: 0; }
           body * { visibility: hidden; }
           .print-receipt, .print-receipt * { visibility: visible; }
-          .print-receipt { position: fixed; left: 0; top: 0; width: 80mm; padding: 8px; }
+          .print-receipt {
+            position: absolute; left: 0; top: 0;
+            width: 80mm; padding: 3mm 4mm;
+            box-sizing: border-box;
+          }
           .no-print { display: none !important; }
         }
       `}</style>
@@ -333,7 +338,7 @@ export default function PdvSales() {
           <DialogHeader><DialogTitle>Venda Finalizada!</DialogTitle></DialogHeader>
           <div className="print-receipt">
             <div className="text-center mb-2">
-              <img src="/logo-jnc-novo.webp" alt="JNC" className="h-12 mx-auto mb-1 object-contain" />
+              <img src="/logo-jnc-novo.webp" alt="JNC" className="h-20 mx-auto mb-1 object-contain" />
               <p className="text-[10px] font-semibold">JNC Comércio e Serviços</p>
               <p className="text-[10px]">Av. Pres. Kennedy, 8566</p>
               <p className="text-[10px]">Mirim - Praia Grande/SP</p>
