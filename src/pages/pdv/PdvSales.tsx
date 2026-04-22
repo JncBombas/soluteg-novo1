@@ -321,9 +321,6 @@ export default function PdvSales() {
 
       <style>{`
         @media print {
-          body * { visibility: hidden; }
-          .print-receipt, .print-receipt * { visibility: visible; }
-          .print-receipt { position: absolute; left: 0; top: 0; right: 0; padding: 0; }
           .no-print { display: none !important; }
         }
       `}</style>
