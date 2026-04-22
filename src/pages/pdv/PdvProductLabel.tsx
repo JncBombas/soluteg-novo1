@@ -38,10 +38,10 @@ export default function PdvProductLabel() {
     <div className="space-y-6">
       <div className="flex items-center gap-4 no-print">
         <Link href="/pdv/produtos">
-          <Button variant="outline" size="sm"><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button>
+          <Button variant="outline" size="sm" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}><ArrowLeft className="mr-2 h-4 w-4" />Voltar</Button>
         </Link>
         <h1 className="text-2xl font-bold">Etiqueta: {product.name}</h1>
-        <Button onClick={() => window.print()} className="ml-auto bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+        <Button onClick={() => window.print()} className="ml-auto bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
           <Printer className="mr-2 h-4 w-4" />Imprimir
         </Button>
       </div>

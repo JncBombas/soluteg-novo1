@@ -137,11 +137,11 @@ export default function PdvReports() {
           <p className="text-muted-foreground">Gere e imprima relatórios do sistema</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={handleGenerateBackup} disabled={isGeneratingBackup} variant="outline">
+          <Button onClick={handleGenerateBackup} disabled={isGeneratingBackup} variant="outline" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>
             <Database className="mr-2 h-4 w-4" />
             {isGeneratingBackup ? "Gerando..." : "Gerar Backup"}
           </Button>
-          <Button onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
+          <Button onClick={() => window.print()} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
         </div>
       </div>
 

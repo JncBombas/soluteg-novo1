@@ -61,7 +61,7 @@ export default function PdvCategories() {
             <p className="text-muted-foreground">Organize os produtos por categoria</p>
           </div>
         </div>
-        <Button onClick={() => handleOpen()} className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+        <Button onClick={() => handleOpen()} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
           <Plus className="mr-2 h-4 w-4" />Nova Categoria
         </Button>
       </div>
@@ -88,8 +88,8 @@ export default function PdvCategories() {
                   <TableCell className="text-muted-foreground">{c.description || "—"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpen(c)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDelete(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" onClick={() => handleOpen(c)} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDelete(c.id, c.name)} style={{ borderColor: "#dc2626" }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -106,8 +106,8 @@ export default function PdvCategories() {
             <div><Label>Nome *</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Cabos e Fios" required /></div>
             <div><Label>Descrição</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Descrição opcional" /></div>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
-              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={create.isPending || update.isPending}>
+              <Button type="button" variant="outline" onClick={() => setShowDialog(false)} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Cancelar</Button>
+              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={create.isPending || update.isPending}>
                 {editing ? "Atualizar" : "Criar"}
               </Button>
             </div>

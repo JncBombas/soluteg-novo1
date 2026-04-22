@@ -215,7 +215,7 @@ export default function PdvImport() {
                   <AlertTriangle className="h-3 w-3" />Linhas com erro serão ignoradas
                 </span>
               )}
-              <Button onClick={handleImport} disabled={isImporting || validCount === 0} className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+              <Button onClick={handleImport} disabled={isImporting || validCount === 0} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
                 <Upload className="mr-2 h-4 w-4" />
                 {isImporting ? "Importando..." : `Importar ${validCount} produto(s)`}
               </Button>

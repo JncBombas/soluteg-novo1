@@ -185,9 +185,9 @@ export default function PdvProducts() {
             </Link>
           )}
           <Link href="/pdv/importar">
-            <Button variant="outline"><Upload className="mr-2 h-4 w-4" />Importar</Button>
+            <Button variant="outline" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}><Upload className="mr-2 h-4 w-4" />Importar</Button>
           </Link>
-          <Button onClick={handleOpenCreate} className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+          <Button onClick={handleOpenCreate} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
             <Plus className="mr-2 h-4 w-4" />Novo Produto
           </Button>
         </div>
@@ -417,8 +417,8 @@ export default function PdvProducts() {
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
-              <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>Cancelar</Button>
-              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={createProduct.isPending || updateProduct.isPending}>
+              <Button type="button" variant="outline" onClick={() => setShowDialog(false)} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Cancelar</Button>
+              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={createProduct.isPending || updateProduct.isPending}>
                 {editingProduct ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>

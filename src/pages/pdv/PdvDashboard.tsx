@@ -124,13 +124,13 @@ export default function PdvDashboard() {
           <CardHeader><CardTitle>Ações Rápidas</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <Link href="/pdv/vendas">
-              <Button className="w-full" size="lg">
+              <Button className="w-full bg-gradient-to-r from-slate-700 to-slate-800 text-white" size="lg" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 Nova Venda
               </Button>
             </Link>
             <Link href="/pdv/produtos">
-              <Button variant="outline" className="w-full" size="lg">
+              <Button variant="outline" className="w-full" size="lg" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>
                 <Package className="mr-2 h-4 w-4" />
                 Cadastrar Produto
               </Button>

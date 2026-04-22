@@ -70,7 +70,7 @@ export default function PdvCashFlow() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nova Transação</Button>
+            <Button className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}><Plus className="mr-2 h-4 w-4" />Nova Transação</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Nova Transação</DialogTitle></DialogHeader>
@@ -94,8 +94,8 @@ export default function PdvCashFlow() {
                 <Textarea name="description" placeholder="Descrição da transação" required />
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit">Registrar</Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)} style={{ borderColor: "#D4A15E" }}>Cancelar</Button>
+                <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>Registrar</Button>
               </div>
             </form>
           </DialogContent>

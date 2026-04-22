@@ -82,7 +82,7 @@ export default function PdvCustomers() {
           </h1>
           <p className="text-muted-foreground mt-1">Gerencie seus clientes cadastrados</p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+        <Button onClick={() => handleOpenDialog()} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
           <Plus className="mr-2 h-4 w-4" />Novo Cliente
         </Button>
       </div>
@@ -117,8 +117,8 @@ export default function PdvCustomers() {
                   <TableCell>{c.email || "-"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(c)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(c.id, c.name)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(c)} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(c.id, c.name)} className="text-red-600" style={{ borderColor: "#dc2626" }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -137,8 +137,8 @@ export default function PdvCustomers() {
             <div><Label>Telefone</Label><Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="(00) 00000-0000" maxLength={20} /></div>
             <div><Label>E-mail</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="email@exemplo.com" /></div>
             <div className="flex gap-2 justify-end">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
-              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={createCustomer.isPending || updateCustomer.isPending}>
+              <Button type="button" variant="outline" onClick={handleCloseDialog} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Cancelar</Button>
+              <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }} disabled={createCustomer.isPending || updateCustomer.isPending}>
                 {editingCustomer ? "Atualizar" : "Cadastrar"}
               </Button>
             </div>

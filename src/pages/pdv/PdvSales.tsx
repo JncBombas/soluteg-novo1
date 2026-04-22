@@ -153,7 +153,7 @@ export default function PdvSales() {
                     value={barcode} onChange={(e) => setBarcode(e.target.value.replace(/\D/g, ""))}
                     maxLength={13} autoFocus className="border-2" style={{ borderColor: "#D4A15E" }} />
                 </div>
-                <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 mt-5" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>Adicionar</Button>
+                <Button type="submit" className="bg-gradient-to-r from-slate-700 to-slate-800 text-white mt-5" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>Adicionar</Button>
               </form>
 
               <div className="relative">
@@ -312,7 +312,7 @@ export default function PdvSales() {
               </div>
 
               {cart.length > 0 && (
-                <Button variant="outline" className="w-full" onClick={() => setCart([])}>Limpar Carrinho</Button>
+                <Button variant="outline" className="w-full" onClick={() => setCart([])} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Limpar Carrinho</Button>
               )}
             </CardContent>
           </Card>
@@ -390,10 +390,10 @@ export default function PdvSales() {
             <p className="text-[8px] text-center text-slate-400 mt-4">Sistema Soluteg de Vendas</p>
           </div>
           <div className="flex gap-2 no-print">
-            <Button onClick={handlePrintReceipt} className="flex-1">
+            <Button onClick={handlePrintReceipt} className="flex-1 bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
               <Printer className="mr-2 h-4 w-4" />Imprimir Cupom
             </Button>
-            <Button variant="outline" onClick={() => { setShowReceipt(false); setLastSale(null); barcodeInputRef.current?.focus(); }} className="flex-1">
+            <Button variant="outline" onClick={() => { setShowReceipt(false); setLastSale(null); barcodeInputRef.current?.focus(); }} className="flex-1" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>
               Fechar
             </Button>
           </div>

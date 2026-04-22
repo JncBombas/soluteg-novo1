@@ -80,7 +80,7 @@ export default function PdvHistoricoVendas() {
               <Input type="text" placeholder="Digite o número..." value={searchId} onChange={(e) => setSearchId(e.target.value)} className="border-2" style={{ borderColor: "#D4A15E" }} />
             </div>
           </div>
-          <Button variant="outline" className="mt-4" onClick={() => { setStartDate(""); setEndDate(""); setPaymentMethod("all"); setSearchId(""); }}>Limpar Filtros</Button>
+          <Button variant="outline" className="mt-4" onClick={() => { setStartDate(""); setEndDate(""); setPaymentMethod("all"); setSearchId(""); }} style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Limpar Filtros</Button>
         </CardContent>
       </Card>
 
@@ -118,7 +118,7 @@ export default function PdvHistoricoVendas() {
                     <TableCell>{sale.change && parseFloat(sale.change) > 0 ? <span className="text-green-600 font-semibold">R$ {parseFloat(sale.change).toFixed(2)}</span> : "-"}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button size="sm" onClick={() => { setSelectedSale(sale); setShowReceipt(true); }} className="bg-gradient-to-r from-slate-700 to-slate-800" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
+                        <Button size="sm" onClick={() => { setSelectedSale(sale); setShowReceipt(true); }} className="bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}>
                           <Printer className="h-4 w-4 mr-1" />Cupom
                         </Button>
                         {!sale.canceled && (
@@ -197,8 +197,8 @@ export default function PdvHistoricoVendas() {
             <p className="text-[8px] text-center text-slate-400 mt-4">Sistema Soluteg de Vendas</p>
           </div>
           <div className="flex gap-2 no-print">
-            <Button onClick={handlePrint} className="flex-1"><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
-            <Button variant="outline" onClick={() => setShowReceipt(false)} className="flex-1">Fechar</Button>
+            <Button onClick={handlePrint} className="flex-1 bg-gradient-to-r from-slate-700 to-slate-800 text-white" style={{ borderColor: "#D4A15E", borderWidth: "2px" }}><Printer className="mr-2 h-4 w-4" />Imprimir</Button>
+            <Button variant="outline" onClick={() => setShowReceipt(false)} className="flex-1" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Fechar</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -224,7 +224,7 @@ export default function PdvHistoricoVendas() {
               <Button variant="destructive" onClick={confirmCancel} disabled={cancelSaleMutation.isPending} className="flex-1">
                 {cancelSaleMutation.isPending ? "Cancelando..." : "Confirmar Cancelamento"}
               </Button>
-              <Button variant="outline" onClick={() => { setShowCancelModal(false); setCancelReason(""); setSaleToCancel(null); }} className="flex-1">Voltar</Button>
+              <Button variant="outline" onClick={() => { setShowCancelModal(false); setCancelReason(""); setSaleToCancel(null); }} className="flex-1" style={{ borderColor: "#D4A15E", color: "#D4A15E" }}>Voltar</Button>
             </div>
           </div>
         </DialogContent>
