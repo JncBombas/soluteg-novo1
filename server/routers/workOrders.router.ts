@@ -61,7 +61,7 @@ export const workOrdersRouter = router({
 
       const cliente = await db.getClientById(input.clientId);
       const nomeCliente = cliente?.name || `ID ${input.clientId}`;
-      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
+      const portalUrl = `https://app.soluteg.com.br/gestor/work-orders/${osId}`;
 
       const msg =
         `🚨 *NOVA OS - PORTAL JNC SOLUTEG* 🚨\n\n` +
@@ -618,7 +618,7 @@ export const workOrdersRouter = router({
 
       const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
       const portalLinha = cliente.type === "com_portal"
-        ? `\n🔗 *Acesse seu portal:*\nhttps://jnc.soluteg.com.br/client/portal`
+        ? `\n🔗 *Acesse seu portal:*\nhttps://app.soluteg.com.br/client/portal`
         : "";
 
       const msg =
@@ -647,7 +647,7 @@ export const workOrdersRouter = router({
       const wo = await workOrdersDb.getWorkOrderById(input.id);
       if (!wo) throw new Error("OS não encontrada");
 
-      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${input.id}`;
+      const portalUrl = `https://app.soluteg.com.br/gestor/work-orders/${input.id}`;
       const msg =
         `📋 *${wo.osNumber}* - ${wo.title}\n\n` +
         `🏢 Cliente: ${wo.clientName}\n` +
@@ -694,7 +694,7 @@ export const workOrdersRouter = router({
 
       const cliente = clientePortal;
       if (cliente?.phone) {
-        const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
+        const portalUrl = `https://app.soluteg.com.br/client/portal`;
         const tabLabel: Record<string, string> = {
           vistoria: "Vistoria",
           visita: "Visita",

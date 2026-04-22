@@ -32,7 +32,7 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
 export async function sendInviteEmail(
   email: string,
   inviteCode: string,
-  appUrl: string = "https://soluteg.manus.space"
+  appUrl: string = "https://app.soluteg.com.br"
 ): Promise<boolean> {
   const acceptLink = `${appUrl}/accept-invite?code=${inviteCode}`;
 
@@ -91,7 +91,7 @@ export async function sendInviteEmail(
 export async function sendPasswordResetEmail(
   email: string,
   resetToken: string,
-  appUrl: string = "https://soluteg.manus.space"
+  appUrl: string = "https://app.soluteg.com.br"
 ): Promise<boolean> {
   const resetLink = `${appUrl}/reset-password?token=${resetToken}`;
 

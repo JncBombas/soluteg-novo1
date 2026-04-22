@@ -108,7 +108,7 @@ export const technicianPortalRouter = router({
 
       const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
       const portalLinha = cliente.type === "com_portal"
-        ? `\n🔗 *Acesse seu portal:*\nhttps://jnc.soluteg.com.br/client/portal`
+        ? `\n🔗 *Acesse seu portal:*\nhttps://app.soluteg.com.br/client/portal`
         : "";
       const msg =
         `${saudacao}\n\n` +
@@ -134,7 +134,7 @@ export const technicianPortalRouter = router({
       const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
       if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
 
-      const portalUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${input.workOrderId}`;
+      const portalUrl = `https://app.soluteg.com.br/gestor/work-orders/${input.workOrderId}`;
       const msg =
         `📋 *${os.osNumber}* - ${os.title}\n\n` +
         `🏢 Cliente: ${os.clientName}\n` +
@@ -201,7 +201,7 @@ export const technicianPortalRouter = router({
       await workOrdersDb.shareWorkOrderToPortal(input.workOrderId, portalTab);
 
       if (cliente?.phone) {
-        const portalUrl = `https://jnc.soluteg.com.br/client/portal`;
+        const portalUrl = `https://app.soluteg.com.br/client/portal`;
         const tabLabel: Record<string, string> = { vistoria: "Vistoria", visita: "Visita", servico: "Serviços" };
         const saudacao = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
         const msg =

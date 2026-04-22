@@ -56,7 +56,7 @@ export const budgetsRouter = router({
 
       const cliente = await db.getClientById(input.clientId);
       const nomeCliente = cliente?.name || `ID ${input.clientId}`;
-      const adminUrl = `https://jnc.soluteg.com.br/gestor/orcamentos/${result.id}`;
+      const adminUrl = `https://app.soluteg.com.br/gestor/orcamentos/${result.id}`;
       const msg =
         `📝 *NOVO ORÇAMENTO - JNC SOLUTEG*\n\n` +
         `🏢 *Cliente:* ${nomeCliente}\n` +
@@ -138,7 +138,7 @@ export const budgetsRouter = router({
       if (budget) {
         const cliente = await db.getClientById(budget.clientId);
         if (cliente?.phone) {
-          const approvalUrl = `https://jnc.soluteg.com.br/orcamento/${result.token}`;
+          const approvalUrl = `https://app.soluteg.com.br/orcamento/${result.token}`;
           const msg =
             `📋 *JNC Soluteg – Orçamento Disponível*\n\n` +
             `Olá, ${cliente.name}!\n\n` +
@@ -204,7 +204,7 @@ export const budgetsRouter = router({
             } as any);
           }
 
-          const adminUrl = `https://jnc.soluteg.com.br/gestor/work-orders/${osId}`;
+          const adminUrl = `https://app.soluteg.com.br/gestor/work-orders/${osId}`;
           const msg =
             `✅ *ORÇAMENTO APROVADO – OS GERADA*\n\n` +
             `📋 Orçamento: ${budget.budgetNumber}\n` +
@@ -358,7 +358,7 @@ export const budgetsRouter = router({
       if (input.target === "client") {
         if (!budget.clientPhone) throw new TRPCError({ code: "BAD_REQUEST", message: "Cliente sem telefone cadastrado" });
         const approvalUrl = budget.approvalToken
-          ? `https://jnc.soluteg.com.br/orcamento/${budget.approvalToken}`
+          ? `https://app.soluteg.com.br/orcamento/${budget.approvalToken}`
           : null;
         const msg =
           `📄 *Orçamento ${budget.budgetNumber}*\n\n` +

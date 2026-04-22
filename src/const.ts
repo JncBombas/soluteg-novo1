@@ -14,7 +14,7 @@ export const getLoginUrl = () => {
     return "/gestor/login";
   }
 
-  const redirectUri = `https://jnc.soluteg.com.br/api/oauth/callback`;
+  const redirectUri = `https://app.soluteg.com.br/api/oauth/callback`;
   const state = btoa(redirectUri);
 
   const url = new URL(`${oauthPortalUrl}/app-auth`);
