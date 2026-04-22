@@ -217,7 +217,7 @@ export default function AdminLogin() {
             <p className="text-xs text-slate-400 text-center">
               Não tem acesso? Contate o administrador do sistema.
             </p>
-            <a href="/">
+            <a href={import.meta.env.VITE_LANDING_URL}>
               <Button
                 variant="ghost"
                 size="sm"

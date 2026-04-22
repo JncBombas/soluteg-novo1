@@ -96,7 +96,7 @@ export default function ClientLogin() {
               <div className="text-xs text-gray-400">(Soluteg)</div>
             </div>
           </div>
-          <a href="/">
+          <a href={import.meta.env.VITE_LANDING_URL}>
             <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-1.5">
               <ArrowLeft className="w-4 h-4" />
               Voltar ao site

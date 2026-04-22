@@ -1,9 +1,16 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+
+function RedirectToClientLogin() {
+  const [, setLocation] = useLocation();
+  useEffect(() => { setLocation("/client/login"); }, []);
+  return null;
+}
 import Home from "./pages/Home";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -62,7 +69,7 @@ function PdvRoute({ component: Component }: { component: React.ComponentType }) 
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={RedirectToClientLogin} />
       <Route path={"/gestor/login"} component={AdminLogin} />
       <Route path={"/gestor/dashboard"} component={AdminDashboard} />
         <Route path="/gestor/profile" component={AdminProfile} />

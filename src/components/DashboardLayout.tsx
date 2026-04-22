@@ -607,14 +607,14 @@ function DashboardLayoutContent({
             )}
 
             {/* Link "Início" que leva para a home do site */}
-            <Link
-              href="/"
+            <a
+              href={import.meta.env.VITE_LANDING_URL}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <Home className="h-4 w-4" />
               {/* hidden sm:inline = oculto no mobile, visível a partir de telas médias */}
               <span className="hidden sm:inline">Início</span>
-            </Link>
+            </a>
 
             {/* Breadcrumb: mostra o nome da página atual depois de "Início /"
                 Só aparece se o item ativo foi encontrado na lista de navegação */}
