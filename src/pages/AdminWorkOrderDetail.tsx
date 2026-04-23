@@ -27,7 +27,12 @@ import {
   ChevronDown,
   HardHat,
   UserCog,
+  PenLine,
+  ShieldCheck,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import SignaturePad from "@/components/SignaturePad";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
@@ -62,6 +67,14 @@ export default function AdminWorkOrderDetail() {
   const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Assinaturas standalone
+  const [collabName, setCollabName] = useState("");
+  const [collabSig, setCollabSig] = useState<string | null>(null);
+  const [editingCollabSig, setEditingCollabSig] = useState(false);
+  const [sigClientName, setSigClientName] = useState("");
+  const [sigClientSig, setSigClientSig] = useState<string | null>(null);
+  const [editingClientSig, setEditingClientSig] = useState(false);
   const workOrderId = Number(params.id);
   const adminId = parseInt(localStorage.getItem("adminId") || "1");
 
@@ -131,6 +144,28 @@ export default function AdminWorkOrderDetail() {
     onSuccess: () => { toast.success("OS deletada com sucesso!"); navigate("/gestor/work-orders"); },
     onError: (error) => toast.error(`Erro ao deletar OS: ${error.message}`),
   });
+
+  const saveSignaturesMutation = (trpc as any).workOrders.saveSignatures.useMutation({
+    onSuccess: () => {
+      toast.success("Assinatura salva!");
+      setEditingCollabSig(false);
+      setEditingClientSig(false);
+      setCollabSig(null);
+      setSigClientSig(null);
+      refetch();
+    },
+    onError: (e: any) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const handleSaveCollabSig = () => {
+    if (!collabSig || !collabName.trim()) return;
+    saveSignaturesMutation.mutate({ id: workOrderId, collaboratorName: collabName.trim(), collaboratorSignature: collabSig });
+  };
+
+  const handleSaveClientSig = () => {
+    if (!sigClientSig || !sigClientName.trim()) return;
+    saveSignaturesMutation.mutate({ id: workOrderId, clientName: sigClientName.trim(), clientSignature: sigClientSig });
+  };
 
   const handleStatusChange = (newStatus: string) => {
     updateStatusMutation.mutate({
@@ -475,13 +510,14 @@ export default function AdminWorkOrderDetail() {
       {/* ── ABAS ─────────────────────────────────────────────────── */}
       <Tabs defaultValue="details" className="space-y-4">
         <div className="overflow-x-auto">
-          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-7">
+          <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-8">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="tasks">Tarefas</TabsTrigger>
             <TabsTrigger value="inspections">Inspeções</TabsTrigger>
             <TabsTrigger value="materials">Materiais</TabsTrigger>
             <TabsTrigger value="attachments">Anexos</TabsTrigger>
             <TabsTrigger value="comments">Comentários</TabsTrigger>
+            <TabsTrigger value="signatures">Assinaturas</TabsTrigger>
             <TabsTrigger value="timeline">Histórico</TabsTrigger>
           </TabsList>
         </div>
@@ -508,6 +544,147 @@ export default function AdminWorkOrderDetail() {
         <TabsContent value="materials"><WorkOrderMaterials workOrderId={workOrderId} /></TabsContent>
         <TabsContent value="attachments"><WorkOrderAttachments workOrderId={workOrderId} /></TabsContent>
         <TabsContent value="comments"><WorkOrderComments workOrderId={workOrderId} /></TabsContent>
+        <TabsContent value="signatures" className="space-y-4">
+
+          {/* Assinatura do Técnico (somente leitura) */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <HardHat className="h-4 w-4 text-slate-400" />
+                Técnico
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {(workOrder as any).technicianSignature ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Assinado por: <span className="font-semibold text-foreground">{(workOrder as any).technicianName || "Técnico"}</span>
+                  </p>
+                  <img
+                    src={(workOrder as any).technicianSignature}
+                    alt="Assinatura do técnico"
+                    className="max-h-28 border rounded-lg bg-white"
+                  />
+                  {(workOrder as any).technicianSignedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      {new Date((workOrder as any).technicianSignedAt).toLocaleString("pt-BR")}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Não assinado ainda pelo técnico.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Assinatura do Responsável (editável) */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-slate-400" />
+                Responsável / Colaborador
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(workOrder as any).collaboratorSignature && !editingCollabSig ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Assinado por: <span className="font-semibold text-foreground">{(workOrder as any).collaboratorName}</span>
+                  </p>
+                  <img
+                    src={(workOrder as any).collaboratorSignature}
+                    alt="Assinatura do responsável"
+                    className="max-h-28 border rounded-lg bg-white"
+                  />
+                  <Button size="sm" variant="outline" onClick={() => setEditingCollabSig(true)} className="gap-1.5">
+                    <PenLine className="h-3.5 w-3.5" /> Reassinar
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Nome do responsável *</Label>
+                    <Input
+                      value={collabName}
+                      onChange={(e) => setCollabName(e.target.value)}
+                      placeholder="Nome completo"
+                    />
+                  </div>
+                  <SignaturePad onSave={setCollabSig} />
+                  <div className="flex gap-2">
+                    {editingCollabSig && (
+                      <Button variant="outline" size="sm" onClick={() => setEditingCollabSig(false)}>Cancelar</Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                      onClick={handleSaveCollabSig}
+                      disabled={!collabSig || !collabName.trim() || saveSignaturesMutation.isPending}
+                    >
+                      {saveSignaturesMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Salvar Assinatura
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Assinatura do Cliente (editável) */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <User className="h-4 w-4 text-slate-400" />
+                Cliente / Acompanhante
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(workOrder as any).clientSignature && !editingClientSig ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Assinado por: <span className="font-semibold text-foreground">{(workOrder as any).clientSignerName || "Cliente"}</span>
+                  </p>
+                  <img
+                    src={(workOrder as any).clientSignature}
+                    alt="Assinatura do cliente"
+                    className="max-h-28 border rounded-lg bg-white"
+                  />
+                  <Button size="sm" variant="outline" onClick={() => setEditingClientSig(true)} className="gap-1.5">
+                    <PenLine className="h-3.5 w-3.5" /> Reassinar
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Nome do assinante *</Label>
+                    <Input
+                      value={sigClientName}
+                      onChange={(e) => setSigClientName(e.target.value)}
+                      placeholder="Nome de quem acompanhou"
+                    />
+                  </div>
+                  <SignaturePad onSave={setSigClientSig} />
+                  <div className="flex gap-2">
+                    {editingClientSig && (
+                      <Button variant="outline" size="sm" onClick={() => setEditingClientSig(false)}>Cancelar</Button>
+                    )}
+                    <Button
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                      onClick={handleSaveClientSig}
+                      disabled={!sigClientSig || !sigClientName.trim() || saveSignaturesMutation.isPending}
+                    >
+                      {saveSignaturesMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                      Salvar Assinatura
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </TabsContent>
+
         <TabsContent value="timeline"><WorkOrderTimeline workOrderId={workOrderId} history={history || []} /></TabsContent>
       </Tabs>
 
@@ -517,6 +694,7 @@ export default function AdminWorkOrderDetail() {
         onOpenChange={setCompleteModalOpen}
         onComplete={(data) => completeWorkOrderMutation.mutate({ id: workOrderId, ...data })}
         isLoading={completeWorkOrderMutation.isPending}
+        isEmergency={isEmergencial}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

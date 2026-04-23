@@ -97,6 +97,8 @@ export async function getWorkOrderById(id: number) {
       collaboratorSignature: workOrders.collaboratorSignature,
       collaboratorName: workOrders.collaboratorName,
       clientSignature: workOrders.clientSignature,
+      clientSignerName: workOrders.clientName,
+      signedAt: workOrders.signedAt,
       technicianSignature: workOrders.technicianSignature,
       technicianSignedAt: workOrders.technicianSignedAt,
       technicianId: workOrders.technicianId,

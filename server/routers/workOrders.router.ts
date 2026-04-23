@@ -205,6 +205,28 @@ export const workOrdersRouter = router({
       return { success: true, message: "OS concluida com sucesso" };
     }),
 
+  saveSignatures: adminLocalProcedure
+    .input(z.object({
+      id: z.number(),
+      collaboratorName: z.string().optional(),
+      collaboratorSignature: z.string().optional(),
+      clientName: z.string().optional(),
+      clientSignature: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const workOrdersDb = await import("../workOrdersDb");
+      const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
+      const updateData: Partial<any> = {};
+      if (collaboratorName)    updateData.collaboratorName    = collaboratorName;
+      if (collaboratorSignature) updateData.collaboratorSignature = collaboratorSignature;
+      if (clientName)          updateData.clientName          = clientName;
+      if (clientSignature)     updateData.clientSignature     = clientSignature;
+      if (Object.keys(updateData).length > 0) {
+        await workOrdersDb.updateWorkOrder(id, updateData as any);
+      }
+      return { success: true };
+    }),
+
   cancelRecurrence: adminLocalProcedure
     .input(z.object({
       id: z.number(),

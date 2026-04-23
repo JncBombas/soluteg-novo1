@@ -5,6 +5,7 @@ import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -74,6 +75,7 @@ export default function TechnicianWorkOrderDetail() {
   // Diálogo: Assinar (cliente)
   const [clientSignOpen, setClientSignOpen] = useState(false);
   const [pendingClientSignature, setPendingClientSignature] = useState<string | null>(null);
+  const [pendingClientName, setPendingClientName] = useState("");
 
   // Comentários
   const [newComment, setNewComment] = useState("");
@@ -169,6 +171,7 @@ export default function TechnicianWorkOrderDetail() {
       toast.success("Assinatura do cliente salva!");
       setClientSignOpen(false);
       setPendingClientSignature(null);
+      setPendingClientName("");
       refetch();
     },
     onError: (e: any) => toast.error(e.message),
@@ -239,7 +242,15 @@ export default function TechnicianWorkOrderDetail() {
 
   function handleSaveClientSignature() {
     if (!workOrderId || !pendingClientSignature) return;
-    saveClientSignatureMutation.mutate({ workOrderId, clientSignature: pendingClientSignature });
+    if (!pendingClientName.trim()) {
+      toast.error("Nome do assinante é obrigatório");
+      return;
+    }
+    saveClientSignatureMutation.mutate({
+      workOrderId,
+      clientSignature: pendingClientSignature,
+      clientName: pendingClientName.trim(),
+    });
   }
 
   function handleConcluir() {
@@ -860,19 +871,30 @@ export default function TechnicianWorkOrderDetail() {
       </Dialog>
 
       {/* Modal: Assinar (cliente) */}
-      <Dialog open={clientSignOpen} onOpenChange={(v) => { setClientSignOpen(v); if (!v) setPendingClientSignature(null); }}>
+      <Dialog open={clientSignOpen} onOpenChange={(v) => { setClientSignOpen(v); if (!v) { setPendingClientSignature(null); setPendingClientName(""); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Assinatura do Cliente</DialogTitle>
             <DialogDescription>O cliente assina aqui confirmando o serviço realizado.</DialogDescription>
           </DialogHeader>
-          <SignaturePad onSave={setPendingClientSignature} />
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="client-signer-name">Nome do assinante *</Label>
+              <Input
+                id="client-signer-name"
+                placeholder="Nome de quem está assinando"
+                value={pendingClientName}
+                onChange={(e) => setPendingClientName(e.target.value)}
+              />
+            </div>
+            <SignaturePad onSave={setPendingClientSignature} />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setClientSignOpen(false); setPendingClientSignature(null); }}>Cancelar</Button>
+            <Button variant="outline" onClick={() => { setClientSignOpen(false); setPendingClientSignature(null); setPendingClientName(""); }}>Cancelar</Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleSaveClientSignature}
-              disabled={!pendingClientSignature || saveClientSignatureMutation.isPending}
+              disabled={!pendingClientSignature || !pendingClientName.trim() || saveClientSignatureMutation.isPending}
             >
               <PenLine className="w-4 h-4 mr-2" />
               Salvar Assinatura
