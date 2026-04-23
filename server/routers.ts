@@ -19,6 +19,7 @@ import { waterTankMonitoringRouter } from "./routers/waterTankMonitoring.router"
 import { waterTankAdminRouter } from "./routers/waterTankAdmin.router";
 import { pdvRouter } from "./routers/pdv.router";
 import { laudosRouter } from "./routers/laudos.router";
+import { whatsappRouter } from "./routers/whatsapp.router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -40,6 +41,7 @@ export const appRouter = router({
   waterTankAdmin: waterTankAdminRouter,
   pdv: pdvRouter,
   laudos: laudosRouter,
+  whatsapp: whatsappRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,6 +1,7 @@
 import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth, MessageMedia } = pkg as any;
 import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 
 // Configuração do Cliente Puppeteer para VPS
 const client = new Client({
@@ -18,17 +19,24 @@ const client = new Client({
 });
 
 let isReady = false;
+let lastQrDataUrl: string | null = null; // Último QR code como imagem (data URL)
 const meuNumero = "551381301010@c.us"; // Formato ID para o litoral (13)
 
-// Evento: Gerar QR Code no Terminal
-client.on('qr', (qr) => {
+// Evento: Gerar QR Code no Terminal + armazenar como imagem
+client.on('qr', async (qr) => {
     console.log('--- LEIA O QR CODE PARA CONECTAR O ZAP DA JNC ---');
     qrcode.generate(qr, { small: true });
+    try {
+        lastQrDataUrl = await QRCode.toDataURL(qr);
+    } catch (err: any) {
+        console.error('Erro ao gerar QR como imagem:', err?.message);
+    }
 });
 
 // Evento: Conexão Estabelecida
 client.on('ready', async () => {
     isReady = true;
+    lastQrDataUrl = null; // QR não é mais necessário após conectar
     console.log('✅ WHATSAPP DA JNC ELÉTRICA e BOMBAS ON!');
 
     // Aguarda 8s para garantir que o client está estável antes de enviar
@@ -82,6 +90,32 @@ client.on('disconnected', async (reason) => {
 
 // Inicia o serviço
 client.initialize();
+
+/**
+ * Retorna o status atual da conexão WhatsApp
+ */
+export const getWhatsappStatus = () => ({
+    isReady,
+    qrCodeDataUrl: lastQrDataUrl,
+});
+
+/**
+ * Reconecta o cliente WhatsApp manualmente (útil pelo painel admin)
+ */
+export const reconnectWhatsapp = async () => {
+    console.log('🔄 Reconexão manual solicitada via painel...');
+    isReady = false;
+    lastQrDataUrl = null;
+    try {
+        await client.destroy();
+    } catch (_) { /* ignora */ }
+    setTimeout(() => {
+        console.log('🔄 Reinicializando cliente WhatsApp...');
+        client.initialize().catch((err: any) => {
+            console.error('❌ Erro ao reinicializar WhatsApp:', err.message);
+        });
+    }, 2000);
+};
 
 /**
  * Envia mensagem para um número específico (ex: cliente)

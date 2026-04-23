@@ -55,6 +55,21 @@ export default function AdminDashboard() {
   }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: waStatus, refetch: refetchWa } = (trpc as any).whatsapp.getStatus.useQuery(
+    undefined,
+    { enabled: !!adminId, refetchInterval: 30_000 },
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reconnectMutation = (trpc as any).whatsapp.reconnect.useMutation({
+    onSuccess: () => {
+      toast.success("Reconexão iniciada. Aguarde alguns segundos...");
+      setTimeout(() => refetchWa(), 5000);
+    },
+    onError: () => toast.error("Erro ao reconectar WhatsApp."),
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: recentAlerts = [] } = (trpc as any).waterTankAdmin.listRecentAlerts.useQuery(
     { adminId: adminId ?? 0, limit: 20 },
     { enabled: !!adminId, refetchInterval: 60_000 },
@@ -220,6 +235,50 @@ export default function AdminDashboard() {
               ))}
             </div>
           </CardContent>
+        </Card>
+
+        {/* WhatsApp */}
+        <Card className={waStatus?.isReady ? "border-green-200" : "border-red-200"}>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-2">
+              <MessageSquare className={`h-4 w-4 ${waStatus?.isReady ? "text-green-600" : "text-red-500"}`} />
+              <CardTitle className="text-sm">WhatsApp</CardTitle>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  waStatus?.isReady
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${waStatus?.isReady ? "bg-green-500" : "bg-red-500"}`} />
+                {waStatus?.isReady ? "Conectado" : "Desconectado"}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              disabled={reconnectMutation.isLoading}
+              onClick={() => reconnectMutation.mutate()}
+            >
+              {reconnectMutation.isLoading ? "Reconectando..." : "Reconectar"}
+            </Button>
+          </CardHeader>
+          {!waStatus?.isReady && waStatus?.qrCodeDataUrl && (
+            <CardContent className="pt-2">
+              <p className="text-xs text-slate-500 mb-2">Escaneie o QR Code com o WhatsApp para reconectar:</p>
+              <img
+                src={waStatus.qrCodeDataUrl}
+                alt="QR Code WhatsApp"
+                className="w-48 h-48 rounded-lg border border-slate-200"
+              />
+            </CardContent>
+          )}
+          {!waStatus?.isReady && !waStatus?.qrCodeDataUrl && (
+            <CardContent className="pt-0 pb-3">
+              <p className="text-xs text-slate-500">Clique em "Reconectar" para iniciar a reconexão.</p>
+            </CardContent>
+          )}
         </Card>
 
         {/* Acesso rápido */}

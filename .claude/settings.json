@@ -27,7 +27,8 @@
       "Read(//var/www/soluteg/**)",
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(grep -r \"upload\" /c/Users/thiag/OneDrive/Documentos/GitHub/soluteg-novo1/server/routers/*.ts --include=\"*.ts\" -l)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(npm list:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\.claude\\projects\\c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1\\memory"
