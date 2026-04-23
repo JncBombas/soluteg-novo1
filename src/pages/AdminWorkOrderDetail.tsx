@@ -132,7 +132,7 @@ export default function AdminWorkOrderDetail() {
 
   const completeWorkOrderMutation = trpc.workOrders.complete.useMutation({
     onSuccess: () => { toast.success("OS concluída com sucesso!"); refetch(); setCompleteModalOpen(false); },
-    onError: (error) => toast.error(`Erro: ${error.message}`),
+    onError: (error: any) => toast.error(`Erro: ${error.message}`),
   });
 
   const assignTechnicianMutation = (trpc as any).workOrders.assignTechnician.useMutation({
@@ -692,9 +692,10 @@ export default function AdminWorkOrderDetail() {
       <CompleteWorkOrderModal
         open={completeModalOpen}
         onOpenChange={setCompleteModalOpen}
-        onComplete={(data) => completeWorkOrderMutation.mutate({ id: workOrderId, ...data })}
+        onComplete={() => completeWorkOrderMutation.mutate({ id: workOrderId })}
         isLoading={completeWorkOrderMutation.isPending}
         isEmergency={isEmergencial}
+        workOrder={workOrder}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

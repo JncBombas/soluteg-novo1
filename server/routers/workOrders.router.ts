@@ -171,38 +171,14 @@ export const workOrdersRouter = router({
     }),
 
   complete: adminLocalProcedure
-    .input(z.object({
-      id: z.number(),
-      collaboratorName: z.string().min(1),
-      collaboratorSignature: z.string().min(1),
-      clientName: z.string().optional(),
-      clientSignature: z.string().optional(),
-    }))
+    .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
-      const { id, collaboratorName, collaboratorSignature, clientName, clientSignature } = input;
-
-      console.log("[workOrders.complete] Recebido:", {
-        id,
-        collaboratorName,
-        collaboratorSignatureSize: collaboratorSignature?.length,
-        clientName,
-        clientSignatureSize: clientSignature?.length,
-      });
-
-      const updateData: Partial<any> = {
+      await workOrdersDb.updateWorkOrder(input.id, {
         status: "concluida" as const,
         completedAt: new Date(),
-        collaboratorName,
-        collaboratorSignature,
-        clientName: clientName || undefined,
-        clientSignature: clientSignature || undefined,
-        signedAt: new Date(),
-      };
-
-      await workOrdersDb.updateWorkOrder(id, updateData as any);
-      console.log("[workOrders.complete] OS atualizada com sucesso");
-      return { success: true, message: "OS concluida com sucesso" };
+      } as any);
+      return { success: true, message: "OS concluída com sucesso" };
     }),
 
   saveSignatures: adminLocalProcedure
