@@ -306,6 +306,7 @@ export const technicianPortalRouter = router({
         fileUrl:     z.string().min(1),
         fileType:    z.string().optional(),
         fileSize:    z.number().optional(),
+        caption:     z.string().optional(),
         category:    z.enum(["before", "during", "after", "document", "other"]).default("during"),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -319,6 +320,31 @@ export const technicianPortalRouter = router({
           ...input,
           uploadedBy: `tecnico-${ctx.technicianId}`,
         });
+        return { success: true };
+      }),
+
+    // Editar a legenda (descrição) de uma foto já enviada
+    updateCaption: protectedTechnicianProcedure
+      .input(z.object({
+        workOrderId:  z.number(),
+        attachmentId: z.number(),
+        caption:      z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // Verifica que a OS pertence ao técnico
+        const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
+        if (!os) throw new TRPCError({ code: "NOT_FOUND", message: "OS não encontrada ou acesso negado" });
+        if (os.status !== "em_andamento" && os.status !== "pausada") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para editar legendas." });
+        }
+        const auxDb = await import("../workOrdersAuxDb");
+        // Busca o anexo para confirmar que ele pertence a esta OS
+        const attachments = await auxDb.getAttachmentsByWorkOrderId(input.workOrderId);
+        const attachment = attachments.find((a: any) => a.id === input.attachmentId);
+        if (!attachment) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Foto não encontrada nesta OS" });
+        }
+        await auxDb.updateAttachment(input.attachmentId, { caption: input.caption });
         return { success: true };
       }),
   }),

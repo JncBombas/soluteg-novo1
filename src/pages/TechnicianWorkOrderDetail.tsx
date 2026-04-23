@@ -84,6 +84,11 @@ export default function TechnicianWorkOrderDetail() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Diálogo: editar legenda da foto
+  const [captionEditOpen, setCaptionEditOpen] = useState(false);
+  const [captionEditAttachmentId, setCaptionEditAttachmentId] = useState<number | null>(null);
+  const [captionEditValue, setCaptionEditValue] = useState("");
+
   // Checklists
   const [savingChecklistId, setSavingChecklistId] = useState<number | null>(null);
 
@@ -219,6 +224,32 @@ export default function TechnicianWorkOrderDetail() {
     onSuccess: () => refetchAttachments(),
     onError: (e: any) => toast.error(e.message),
   });
+
+  const updateCaptionMutation = (trpc as any).technicianPortal.attachments.updateCaption.useMutation({
+    onSuccess: () => {
+      toast.success("Legenda salva!");
+      setCaptionEditOpen(false);
+      setCaptionEditAttachmentId(null);
+      setCaptionEditValue("");
+      refetchAttachments();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  function openCaptionEdit(attachmentId: number, currentCaption: string) {
+    setCaptionEditAttachmentId(attachmentId);
+    setCaptionEditValue(currentCaption);
+    setCaptionEditOpen(true);
+  }
+
+  function handleSaveCaption() {
+    if (!workOrderId || captionEditAttachmentId === null) return;
+    updateCaptionMutation.mutate({
+      workOrderId,
+      attachmentId: captionEditAttachmentId,
+      caption: captionEditValue,
+    });
+  }
 
   function handleIniciar() {
     if (!workOrderId) return;
@@ -576,30 +607,45 @@ export default function TechnicianWorkOrderDetail() {
                 </h2>
 
                 {attachments && attachments.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {attachments.map((a: any) => (
-                      <a
-                        key={a.id}
-                        href={a.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block rounded-lg overflow-hidden border bg-slate-100 dark:bg-slate-800 aspect-square"
-                      >
-                        {a.fileType?.startsWith("image/") ? (
-                          <img
-                            src={a.fileUrl}
-                            alt={a.fileName}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
-                            <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground text-center truncate w-full">
-                              {a.fileName}
-                            </span>
-                          </div>
-                        )}
-                      </a>
+                      <div key={a.id} className="rounded-lg overflow-hidden border bg-slate-100 dark:bg-slate-800">
+                        {/* Miniatura clicável */}
+                        <a
+                          href={a.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block aspect-square"
+                        >
+                          {a.fileType?.startsWith("image/") ? (
+                            <img
+                              src={a.fileUrl}
+                              alt={a.caption || a.fileName}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-2">
+                              <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground text-center truncate w-full">
+                                {a.fileName}
+                              </span>
+                            </div>
+                          )}
+                        </a>
+                        {/* Legenda + botão editar */}
+                        <div className="px-2 py-1.5 flex items-center gap-1 bg-white dark:bg-gray-900 min-h-[28px]">
+                          <span className={`text-xs flex-1 truncate ${a.caption ? "text-slate-700 dark:text-slate-200" : "text-muted-foreground italic"}`}>
+                            {a.caption || "Sem legenda"}
+                          </span>
+                          <button
+                            onClick={() => openCaptionEdit(a.id, a.caption || "")}
+                            className="shrink-0 text-muted-foreground hover:text-blue-600 transition-colors p-0.5"
+                            title="Editar legenda"
+                          >
+                            <PenLine className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -898,6 +944,34 @@ export default function TechnicianWorkOrderDetail() {
             >
               <PenLine className="w-4 h-4 mr-2" />
               Salvar Assinatura
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal: Editar legenda da foto */}
+      <Dialog open={captionEditOpen} onOpenChange={(v) => { setCaptionEditOpen(v); if (!v) { setCaptionEditAttachmentId(null); setCaptionEditValue(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Legenda da Foto</DialogTitle>
+            <DialogDescription>Adicione uma descrição para identificar esta foto.</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={captionEditValue}
+            onChange={(e) => setCaptionEditValue(e.target.value)}
+            placeholder="Ex: Quadro elétrico após manutenção"
+            onKeyDown={(e) => { if (e.key === "Enter") handleSaveCaption(); }}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCaptionEditOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={handleSaveCaption}
+              disabled={updateCaptionMutation.isPending}
+            >
+              {updateCaptionMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
