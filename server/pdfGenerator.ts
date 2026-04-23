@@ -446,6 +446,11 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   });
 
                   if (technicalFields.length > 0) {
+                    // Garante espaço para cabeçalho + pelo menos 2 linhas de dados
+                    // antes de renderizar "DADOS TÉCNICOS", evitando cabeçalho órfão
+                    const minDadosTecH = 16 + 28 * 2; // separador+rótulo + 2 linhas
+                    if (currentY > doc.page.height - minDadosTecH - 10) { doc.addPage(); currentY = 40; }
+
                     doc.strokeColor('#E0E0E0').lineWidth(0.5)
                        .moveTo(cardX + 10, currentY).lineTo(cardX + cardW - 10, currentY).stroke();
                     currentY += 6;
@@ -501,12 +506,12 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // ================================================
                   const obsContent = responses.observations || responses.observacoes;
                   if (obsContent && obsContent.trim() !== '') {
-                    if (currentY > doc.page.height - 120) { doc.addPage(); currentY = 40; }
-
                     const cleanObs   = obsContent.trim();
                     const obsW       = cardW - 30;
                     const textH      = doc.heightOfString(cleanObs, { width: obsW - 16, align: 'justify' });
                     const blockH     = textH + 20;
+                    // Checa com base na altura real do bloco, não um limiar fixo
+                    if (currentY + blockH + 12 > doc.page.height - 40) { doc.addPage(); currentY = 40; }
 
                     // Borda dourada à esquerda (estilo blockquote)
                     doc.strokeColor(goldColor).lineWidth(3)
