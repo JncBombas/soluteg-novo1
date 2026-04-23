@@ -367,7 +367,8 @@ export default function AdminBudgetDetail() {
     navigator.clipboard.writeText(url).then(() => toast.success("Link copiado!"));
   };
 
-  const isEditable = !budget || budget.status === "pendente";
+  // Permite edição tanto no status "pendente" quanto em "finalizado" (para revisar antes de re-finalizar)
+  const isEditable = !budget || ["pendente", "finalizado"].includes(budget.status);
   const canFinalize = budget && ["pendente", "finalizado"].includes(budget.status);
   const canApprove = budget?.status === "finalizado";
   const canReject = budget?.status === "finalizado";
