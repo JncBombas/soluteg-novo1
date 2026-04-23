@@ -608,41 +608,43 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
         currentY += maxRowHeight + 35;
       }
 
-      // ── ASSINATURAS (3 colunas independentes) ─────────────────
-      const posRodape = doc.page.height - 170;
+      // ── ASSINATURAS ───────────────────────────────────────────
+      const posRodape = doc.page.height - 160;
       if (currentY > posRodape - 20) { doc.addPage(); currentY = 40; }
 
-      const techSig        = (workOrder as any).technicianSignature   as string | null;
-      const collabSig      = (workOrder as any).collaboratorSignature as string | null;
-      const clientSig      = (workOrder as any).clientSignature       as string | null;
-      const techName       = (workOrder as any).technicianName   || '—';
-      const collabName     = (workOrder as any).collaboratorName || '—';
-      const clientSignerNm = (workOrder as any).clientSignerName || '—';
+      // Monta apenas as assinaturas que existem (ordem: técnico, responsável, cliente)
+      type SigEntry = { sig: string; label: string; name: string };
+      const sigsToShow: SigEntry[] = [];
 
-      const gutter  = 20;
-      const colW    = (contentWidth - gutter * 2) / 3;
-      const sigC1X  = leftMargin;
-      const sigC2X  = leftMargin + colW + gutter;
-      const sigC3X  = leftMargin + (colW + gutter) * 2;
-      const imageY  = posRodape;
-      const sigLineY = imageY + 48;
+      const rawTechSig   = (workOrder as any).technicianSignature   as string | null | undefined;
+      const rawCollabSig = (workOrder as any).collaboratorSignature as string | null | undefined;
+      const rawClientSig = (workOrder as any).clientSignature       as string | null | undefined;
 
-      const drawSigCol = (x: number, sig: string | null | undefined, label: string, name: string) => {
-        if (sig && sig.length > 50) {
+      if (rawTechSig   && rawTechSig.length   > 50) sigsToShow.push({ sig: rawTechSig,   label: 'Assinatura do Técnico',     name: (workOrder as any).technicianName   || '—' });
+      if (rawCollabSig && rawCollabSig.length > 50) sigsToShow.push({ sig: rawCollabSig, label: 'Assinatura do Responsável', name: (workOrder as any).collaboratorName || '—' });
+      if (rawClientSig && rawClientSig.length > 50) sigsToShow.push({ sig: rawClientSig, label: 'Assinatura do Cliente',     name: (workOrder as any).clientSignerName || '—' });
+
+      if (sigsToShow.length > 0) {
+        const count    = sigsToShow.length;
+        const sigGap   = count > 1 ? 30 : 0;
+        const sigColW  = count === 1 ? 250 : (contentWidth - sigGap * (count - 1)) / count;
+        const totalSigW = sigColW * count + sigGap * (count - 1);
+        const sigStartX = count === 1 ? (doc.page.width - totalSigW) / 2 : leftMargin;
+        const imageY    = posRodape;
+        const sigLineY  = imageY + 45;
+
+        sigsToShow.forEach((item, i) => {
+          const x = sigStartX + i * (sigColW + sigGap);
           try {
-            const b64 = sig.includes(',') ? sig.split(',')[1] : sig;
-            doc.image(Buffer.from(b64, 'base64'), x + colW / 4, imageY, { width: colW / 2, height: 42 });
+            const b64 = item.sig.includes(',') ? item.sig.split(',')[1] : item.sig;
+            doc.image(Buffer.from(b64, 'base64'), x + sigColW / 4, imageY, { width: sigColW / 2, height: 40 });
           } catch (e) { console.error('Erro ao renderizar assinatura', e); }
-        }
-        doc.strokeColor('#333333').lineWidth(0.5).moveTo(x, sigLineY).lineTo(x + colW, sigLineY).stroke();
-        doc.fontSize(7.5).fillColor('#666666').font('Helvetica')
-           .text(label,          x, sigLineY + 4,  { width: colW, align: 'center' })
-           .text(`Nome: ${name}`, x, sigLineY + 14, { width: colW, align: 'center' });
-      };
-
-      drawSigCol(sigC1X, techSig,   'Assinatura do Técnico',     techName);
-      drawSigCol(sigC2X, collabSig, 'Assinatura do Responsável', collabName);
-      drawSigCol(sigC3X, clientSig, 'Assinatura do Cliente',     clientSignerNm);
+          doc.strokeColor('#333333').lineWidth(0.5).moveTo(x, sigLineY).lineTo(x + sigColW, sigLineY).stroke();
+          doc.fontSize(8).fillColor('#666666').font('Helvetica')
+             .text(item.label,          x, sigLineY + 5,  { width: sigColW, align: 'center' })
+             .text(`Nome: ${item.name}`, x, sigLineY + 15, { width: sigColW, align: 'center' });
+        });
+      }
 
       // ── RODAPÉ ────────────────────────────────────────────────
       const footerText = 'Este documento foi gerado eletronicamente pelo sistema Soluteg';
