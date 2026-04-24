@@ -1,0 +1,5 @@
+/* Ponto de entrada do Tailwind CSS para o NativeWind.
+   Este arquivo é processado pelo Metro bundler via metro.config.js. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

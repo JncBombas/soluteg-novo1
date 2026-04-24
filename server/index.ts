@@ -177,6 +177,8 @@ async function startServer() {
       res.json({
         success: true,
         token: `client-${client.id}`,
+        // jwt: enviado para o app mobile usar como Bearer token
+        jwt: clientJwt,
         clientId: client.id,
         name: client.name,
       });
@@ -238,6 +240,8 @@ async function startServer() {
       res.json({
         success:      true,
         token:        `technician-${technician.id}`,
+        // jwt: enviado para o app mobile usar como Bearer token
+        jwt:          techJwt,
         technicianId: technician.id,
         name:         technician.name,
       });

@@ -65,6 +65,35 @@ export async function createContext(
     technicianId = null;
   }
 
+  // ── Suporte a Bearer token para o app mobile ──────────────────
+  // O app mobile não usa cookies HttpOnly; envia o JWT como
+  // "Authorization: Bearer <token>" em vez disso.
+  // Verificamos apenas se o id ainda não foi preenchido pelo cookie,
+  // para não sobrescrever a autenticação web existente.
+  const authHeader = opts.req.headers.authorization ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (bearerToken) {
+    if (!technicianId) {
+      try {
+        const payload = verifyTechnicianToken(bearerToken);
+        if (payload?.technicianId) technicianId = payload.technicianId;
+      } catch {
+        // Token inválido ou de outro tipo — ignora silenciosamente
+      }
+    }
+    if (!clientId) {
+      try {
+        const payload = verifyClientToken(bearerToken);
+        if (payload?.clientId) clientId = payload.clientId;
+      } catch {
+        // Token inválido ou de outro tipo — ignora silenciosamente
+      }
+    }
+  }
+
   return {
     req: opts.req,
     res: opts.res,
