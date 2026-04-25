@@ -316,9 +316,18 @@ export const technicianPortalRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "A OS precisa estar em andamento para adicionar anexos." });
         }
         const auxDb = await import("../workOrdersAuxDb");
+        // A coluna no banco é 'description', não 'caption' — mapeamos aqui para não depender
+        // de spread que ignoraria campos desconhecidos no Drizzle.
         await auxDb.createAttachment({
-          ...input,
-          uploadedBy: `tecnico-${ctx.technicianId}`,
+          workOrderId: input.workOrderId,
+          fileName:    input.fileName,
+          fileKey:     input.fileKey,
+          fileUrl:     input.fileUrl,
+          fileType:    input.fileType,
+          fileSize:    input.fileSize,
+          category:    input.category,
+          description: input.caption,   // caption do frontend → description no banco
+          uploadedBy:  `tecnico-${ctx.technicianId}`,
         });
         return { success: true };
       }),
@@ -344,7 +353,8 @@ export const technicianPortalRouter = router({
         if (!attachment) {
           throw new TRPCError({ code: "NOT_FOUND", message: "Foto não encontrada nesta OS" });
         }
-        await auxDb.updateAttachment(input.attachmentId, { caption: input.caption });
+        // description é a coluna real no banco (o frontend chama de caption)
+        await auxDb.updateAttachment(input.attachmentId, { description: input.caption });
         return { success: true };
       }),
   }),

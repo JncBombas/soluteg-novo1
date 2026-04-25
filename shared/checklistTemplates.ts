@@ -57,13 +57,28 @@ const inspecaoVisualGerador: ChecklistItem[] = [
   { id: 'painel_controle', label: 'Painel de Controle', type: 'ok_nok_na', required: true },
 ];
 
-// Template: Bomba de Recalque (até 4 bombas)
-export const bombaRecalqueTemplate: ChecklistTemplateStructure = {
+// Template unificado de Bomba — cobre Recalque, Dreno, Piscina e Incêndio.
+// O tipo é selecionado como primeiro campo do formulário, eliminando a necessidade
+// de 4 templates separados praticamente idênticos.
+export const bombaTemplate: ChecklistTemplateStructure = {
   sections: [
+    {
+      id: 'identificacao',
+      title: 'Identificação',
+      fields: [
+        {
+          id: 'tipo_bomba',
+          label: 'Tipo de Bomba',
+          type: 'select',
+          options: ['Recalque', 'Dreno', 'Piscina', 'Incêndio'],
+          required: true,
+        },
+      ],
+    },
     {
       id: 'inspecao_visual',
       title: 'Inspeção Visual',
-      items: [...inspecaoVisualBombasPadrao]
+      items: [...inspecaoVisualBombasPadrao],
     },
     {
       id: 'dados_tecnicos',
@@ -76,108 +91,28 @@ export const bombaRecalqueTemplate: ChecklistTemplateStructure = {
         { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
         { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
         { id: 'corrente_bomba_4', label: 'Corrente Bomba 4', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 4 } },
-      ]
+      ],
     },
     {
       id: 'observacoes',
       title: 'Observações',
       fields: [
-        { id: 'observacoes', label: 'Observações', type: 'text', required: false }
-      ]
-    }
-  ]
+        { id: 'observacoes', label: 'Observações', type: 'text', required: false },
+      ],
+    },
+  ],
 };
 
-// Template: Bomba de Dreno (até 4 bombas)
-export const bombaDrenoTemplate: ChecklistTemplateStructure = {
-  sections: [
-    {
-      id: 'inspecao_visual',
-      title: 'Inspeção Visual',
-      items: [...inspecaoVisualBombasPadrao]
-    },
-    {
-      id: 'dados_tecnicos',
-      title: 'Dados Técnicos',
-      fields: [
-        { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
-        { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
-        { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
-        { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
-        { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
-        { id: 'corrente_bomba_4', label: 'Corrente Bomba 4', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 4 } },
-      ]
-    },
-    {
-      id: 'observacoes',
-      title: 'Observações',
-      fields: [
-        { id: 'observacoes', label: 'Observações', type: 'text', required: false }
-      ]
-    }
-  ]
-};
-
-// Template: Bomba de Piscina (até 4 bombas)
-export const bombaPiscinaTemplate: ChecklistTemplateStructure = {
-  sections: [
-    {
-      id: 'inspecao_visual',
-      title: 'Inspeção Visual',
-      items: [...inspecaoVisualBombasPadrao]
-    },
-    {
-      id: 'dados_tecnicos',
-      title: 'Dados Técnicos',
-      fields: [
-        { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
-        { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2', '3', '4'], required: true },
-        { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
-        { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 2 } },
-        { id: 'corrente_bomba_3', label: 'Corrente Bomba 3', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 3 } },
-        { id: 'corrente_bomba_4', label: 'Corrente Bomba 4', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'gte', value: 4 } },
-      ]
-    },
-    {
-      id: 'observacoes',
-      title: 'Observações',
-      fields: [
-        { id: 'observacoes', label: 'Observações', type: 'text', required: false }
-      ]
-    }
-  ]
-};
-
-// Template: Bomba de Incêndio (até 2 bombas, SEM campo Pressão)
-export const bombaIncendioTemplate: ChecklistTemplateStructure = {
-  sections: [
-    {
-      id: 'inspecao_visual',
-      title: 'Inspeção Visual',
-      items: [...inspecaoVisualBombasPadrao]
-    },
-    {
-      id: 'dados_tecnicos',
-      title: 'Dados Técnicos',
-      fields: [
-        { id: 'tensao', label: 'Tensão', type: 'select', options: ['127V', '220V', '380V', '440V'], required: true },
-        { id: 'fases', label: 'Fases', type: 'select', options: ['Monofásico', 'Bifásico', 'Trifásico'], required: true },
-        { id: 'num_bombas', label: 'Quantidade de Bombas', type: 'select', options: ['1', '2'], required: true },
-        { id: 'corrente_bomba_1', label: 'Corrente Bomba 1', type: 'number', unit: 'A', required: true },
-        { id: 'corrente_bomba_2', label: 'Corrente Bomba 2', type: 'number', unit: 'A', required: false, conditional: { field: 'num_bombas', operator: 'eq', value: '2' } },
-      ]
-    },
-    {
-      id: 'observacoes',
-      title: 'Observações',
-      fields: [
-        { id: 'observacoes', label: 'Observações', type: 'text', required: false }
-      ]
-    }
-  ]
-};
+// Mantidos apenas como referência — não são mais usados em novos checklists.
+// Os 4 templates abaixo foram desativados no banco (active=0) e substituídos por bombaTemplate.
+/** @deprecated use bombaTemplate */
+export const bombaRecalqueTemplate = bombaTemplate;
+/** @deprecated use bombaTemplate */
+export const bombaDrenoTemplate = bombaTemplate;
+/** @deprecated use bombaTemplate */
+export const bombaPiscinaTemplate = bombaTemplate;
+/** @deprecated use bombaTemplate */
+export const bombaIncendioTemplate = bombaTemplate;
 
 // Template: Gerador (16 campos técnicos específicos)
 export const geradorTemplate: ChecklistTemplateStructure = {
@@ -261,38 +196,22 @@ export const geradorTemplate: ChecklistTemplateStructure = {
   ]
 };
 
-// Mapa de todos os templates
+// Mapa de templates ativos — apenas 2 após a unificação das bombas.
+// Os slugs bomba_recalque/dreno/piscina/incendio foram desativados no banco
+// e existem só para não quebrar instâncias históricas.
 export const checklistTemplatesMap = {
-  bomba_recalque: {
-    name: 'Bomba de Recalque',
-    slug: 'bomba_recalque',
-    description: 'Checklist para inspeção de bombas de recalque',
-    structure: bombaRecalqueTemplate
-  },
-  bomba_dreno: {
-    name: 'Bomba de Dreno',
-    slug: 'bomba_dreno',
-    description: 'Checklist para inspeção de bombas de dreno',
-    structure: bombaDrenoTemplate
-  },
-  bomba_piscina: {
-    name: 'Bomba de Piscina',
-    slug: 'bomba_piscina',
-    description: 'Checklist para inspeção de bombas de piscina',
-    structure: bombaPiscinaTemplate
-  },
-  bomba_incendio: {
-    name: 'Bomba de Incêndio',
-    slug: 'bomba_incendio',
-    description: 'Checklist para inspeção de bombas de incêndio',
-    structure: bombaIncendioTemplate
+  bomba: {
+    name: 'Bomba',
+    slug: 'bomba',
+    description: 'Checklist unificado para inspeção de bombas (Recalque, Dreno, Piscina, Incêndio)',
+    structure: bombaTemplate,
   },
   gerador: {
     name: 'Gerador',
     slug: 'gerador',
     description: 'Checklist para inspeção de geradores',
-    structure: geradorTemplate
-  }
+    structure: geradorTemplate,
+  },
 };
 
 export type ChecklistTemplateSlug = keyof typeof checklistTemplatesMap;

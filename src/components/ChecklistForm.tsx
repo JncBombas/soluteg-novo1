@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, X, Minus, Save, Loader2 } from "lucide-react";
+import { Camera, Check, X, Minus, Save, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ConditionalRule {
@@ -55,6 +62,14 @@ interface ChecklistFormProps {
   onSave: (responses: Record<string, unknown>, isComplete: boolean) => void;
   isSaving?: boolean;
   readOnly?: boolean;
+  /**
+   * Chamado quando o usuário captura uma foto em um item do checklist.
+   * O pai faz o upload e cria o anexo na OS — o ChecklistForm só coleta
+   * o arquivo e a legenda.
+   * caption = texto da legenda (pode ser editado pelo usuário)
+   * file    = arquivo de imagem selecionado
+   */
+  onAddPhoto?: (caption: string, file: File) => Promise<void>;
 }
 
 // ✅ FIX: Clicar no botão já selecionado agora DESSEleciona (toggle)
@@ -193,8 +208,58 @@ export default function ChecklistForm({
   onSave,
   isSaving = false,
   readOnly = false,
+  onAddPhoto,
 }: ChecklistFormProps) {
   const [responses, setResponses] = useState<Record<string, unknown>>(initialResponses);
+
+  // ── Estado do dialog de foto por item ──────────────────────────────────────
+  // Armazena qual item está com a câmera aberta, o arquivo selecionado e a legenda.
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [pendingPhotoItem, setPendingPhotoItem] = useState<{ id: string; label: string } | null>(null);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
+  const [pendingPhotoPreview, setPendingPhotoPreview] = useState<string | null>(null);
+  const [pendingPhotoCaption, setPendingPhotoCaption] = useState("");
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  function handleCameraClick(itemId: string, itemLabel: string) {
+    setPendingPhotoItem({ id: itemId, label: itemLabel });
+    photoInputRef.current?.click();
+  }
+
+  function handlePhotoFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingPhotoFile(file);
+    setPendingPhotoCaption(pendingPhotoItem?.label ?? "");
+    setPendingPhotoPreview(URL.createObjectURL(file));
+    setPhotoDialogOpen(true);
+    // Limpa o input para permitir selecionar o mesmo arquivo novamente se precisar
+    e.target.value = "";
+  }
+
+  function resetPhotoDialog() {
+    setPhotoDialogOpen(false);
+    setPendingPhotoFile(null);
+    setPendingPhotoItem(null);
+    if (pendingPhotoPreview) URL.revokeObjectURL(pendingPhotoPreview);
+    setPendingPhotoPreview(null);
+    setPendingPhotoCaption("");
+  }
+
+  async function handleSavePhoto() {
+    if (!pendingPhotoFile || !onAddPhoto) return;
+    setIsUploadingPhoto(true);
+    try {
+      await onAddPhoto(pendingPhotoCaption, pendingPhotoFile);
+      resetPhotoDialog();
+    } catch {
+      // Erro tratado pelo pai via toast
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   let parsedFormStructure: FormStructure | null = formStructure as any;
   if (typeof formStructure === "string") {
@@ -205,8 +270,16 @@ export default function ChecklistForm({
     }
   }
 
+  // ✅ FIX: só reseta o formulário quando o CONTEÚDO das respostas muda de verdade (ex: após salvar e refetch).
+  // Antes, qualquer re-render do componente pai criava um novo objeto `{}`, o que disparava o
+  // useEffect e apagava tudo que o técnico havia digitado mas ainda não tinha salvo.
+  const prevResponsesJsonRef = useRef<string>(JSON.stringify(initialResponses));
   useEffect(() => {
-    setResponses(initialResponses);
+    const nextJson = JSON.stringify(initialResponses);
+    if (nextJson !== prevResponsesJsonRef.current) {
+      prevResponsesJsonRef.current = nextJson;
+      setResponses(initialResponses);
+    }
   }, [initialResponses]);
 
   const isComplete = useMemo(
@@ -398,12 +471,25 @@ export default function ChecklistForm({
                 key={item.id}
                 className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
               >
-                <Label className="text-sm flex-1 pr-4">{item.label}</Label>
-                <OkNokNaButtons
-                  value={responses[item.id] as string}
-                  onChange={(val) => handleChange(item.id, val)}
-                  disabled={readOnly}
-                />
+                <Label className="text-sm flex-1 pr-2">{item.label}</Label>
+                <div className="flex items-center gap-2">
+                  <OkNokNaButtons
+                    value={responses[item.id] as string}
+                    onChange={(val) => handleChange(item.id, val)}
+                    disabled={readOnly}
+                  />
+                  {/* Botão de câmera — só aparece quando o pai fornece onAddPhoto e o form não está em readOnly */}
+                  {!readOnly && onAddPhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleCameraClick(item.id, item.label)}
+                      title={`Adicionar foto — ${item.label}`}
+                      className="shrink-0 text-muted-foreground hover:text-blue-600 transition-colors p-1 rounded"
+                    >
+                      <Camera className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
 
@@ -437,6 +523,64 @@ export default function ChecklistForm({
           </Button>
         </div>
       )}
+
+      {/* Input de arquivo oculto — acionado pelo botão de câmera de cada item */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handlePhotoFileSelected}
+      />
+
+      {/* Dialog: preview + legenda da foto capturada */}
+      <Dialog open={photoDialogOpen} onOpenChange={(open) => { if (!open) resetPhotoDialog(); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Foto do Item</DialogTitle>
+          </DialogHeader>
+
+          {pendingPhotoPreview && (
+            <img
+              src={pendingPhotoPreview}
+              alt="Preview"
+              className="w-full max-h-52 object-cover rounded-lg border"
+            />
+          )}
+
+          <div className="space-y-1.5">
+            <Label>Legenda (opcional)</Label>
+            <Input
+              value={pendingPhotoCaption}
+              onChange={(e) => setPendingPhotoCaption(e.target.value)}
+              placeholder={`Ex: ${pendingPhotoItem?.label ?? "descrição"} com problema`}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSavePhoto(); }}
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              A foto será salva na aba <strong>Anexos</strong> da OS.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={resetPhotoDialog} disabled={isUploadingPhoto}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSavePhoto}
+              disabled={!pendingPhotoFile || isUploadingPhoto}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isUploadingPhoto ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>
+              ) : (
+                <><Camera className="h-4 w-4 mr-2" />Salvar nos Anexos</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

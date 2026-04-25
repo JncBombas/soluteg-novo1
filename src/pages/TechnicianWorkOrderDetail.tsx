@@ -251,6 +251,45 @@ export default function TechnicianWorkOrderDetail() {
     });
   }
 
+  /**
+   * Upload de foto tirada dentro de um item do checklist.
+   * O arquivo é enviado ao Cloudinary e depois criado como anexo da OS,
+   * aparecendo na seção de Fotos e Anexos desta mesma página.
+   */
+  async function handleAddPhotoFromChecklist(caption: string, file: File) {
+    if (!workOrderId) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("files", file);
+
+      const res = await fetch("/api/work-orders/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Erro no upload");
+
+      const uploaded = data.urls[0];
+      await createAttachmentMutation.mutateAsync({
+        workOrderId,
+        fileName: uploaded.fileName,
+        fileKey:  uploaded.key,
+        fileUrl:  uploaded.url,
+        fileType: uploaded.fileType,
+        fileSize: uploaded.fileSize,
+        category: "during",
+        caption:  caption || undefined,
+      });
+
+      toast.success("Foto salva em Fotos e Anexos!");
+      refetchAttachments();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar foto");
+      throw err; // propaga para o ChecklistForm fechar/manter o dialog
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function handleIniciar() {
     if (!workOrderId) return;
     updateStatusMutation.mutate({ workOrderId, newStatus: "em_andamento" });
@@ -510,6 +549,8 @@ export default function TechnicianWorkOrderDetail() {
                       } catch { /* ignore */ }
                     }
                     const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
+                    // tipo_bomba vem das respostas salvas no template unificado de Bomba
+                    const tipoBomba = responses?.tipo_bomba as string | undefined;
                     const isSaving = savingChecklistId === checklist.id && updateResponsesMutation.isPending;
 
                     return (
@@ -517,9 +558,9 @@ export default function TechnicianWorkOrderDetail() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-medium">{checklist.customTitle}</p>
-                            {(checklist.brand || checklist.power) && (
+                            {(tipoBomba || checklist.brand || checklist.power) && (
                               <p className="text-xs text-muted-foreground">
-                                {[checklist.brand, checklist.power].filter(Boolean).join(" · ")}
+                                {[tipoBomba, checklist.brand, checklist.power].filter(Boolean).join(" · ")}
                               </p>
                             )}
                           </div>
@@ -537,6 +578,7 @@ export default function TechnicianWorkOrderDetail() {
                             }}
                             isSaving={isSaving}
                             readOnly={!!checklist.isComplete}
+                            onAddPhoto={handleAddPhotoFromChecklist}
                           />
                         )}
                       </div>
@@ -620,7 +662,7 @@ export default function TechnicianWorkOrderDetail() {
                           {a.fileType?.startsWith("image/") ? (
                             <img
                               src={a.fileUrl}
-                              alt={a.caption || a.fileName}
+                              alt={a.description || a.fileName}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -634,11 +676,11 @@ export default function TechnicianWorkOrderDetail() {
                         </a>
                         {/* Legenda + botão editar */}
                         <div className="px-2 py-1.5 flex items-center gap-1 bg-white dark:bg-gray-900 min-h-[28px]">
-                          <span className={`text-xs flex-1 truncate ${a.caption ? "text-slate-700 dark:text-slate-200" : "text-muted-foreground italic"}`}>
-                            {a.caption || "Sem legenda"}
+                          <span className={`text-xs flex-1 truncate ${a.description ? "text-slate-700 dark:text-slate-200" : "text-muted-foreground italic"}`}>
+                            {a.description || "Sem legenda"}
                           </span>
                           <button
-                            onClick={() => openCaptionEdit(a.id, a.caption || "")}
+                            onClick={() => openCaptionEdit(a.id, a.description || "")}
                             className="shrink-0 text-muted-foreground hover:text-blue-600 transition-colors p-0.5"
                             title="Editar legenda"
                           >

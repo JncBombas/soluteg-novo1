@@ -368,6 +368,7 @@ export const workOrdersRouter = router({
         fileSize: z.number().optional(),
         category: z.enum(["before", "during", "after", "document", "other"]).default("other"),
         uploadedBy: z.string().optional(),
+        description: z.string().optional(), // legenda/caption da foto
       }))
       .mutation(async ({ input }) => {
         const auxDb = await import("../workOrdersAuxDb");

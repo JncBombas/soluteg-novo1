@@ -106,6 +106,40 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
     },
   });
 
+  // Mutation para criar anexo a partir de foto tirada no checklist
+  const createAttachmentMutation = trpc.workOrders.attachments.create.useMutation({
+    onError: (err: { message: string }) => {
+      toast.error(`Erro ao salvar foto: ${err.message}`);
+    },
+  });
+
+  /**
+   * Faz upload da foto para o Cloudinary e cria o anexo na OS.
+   * Chamado pelo ChecklistForm quando o usuário tira foto de um item.
+   */
+  async function handleAddPhoto(caption: string, file: File) {
+    const formData = new FormData();
+    formData.append("files", file);
+
+    const res = await fetch("/api/work-orders/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || "Erro no upload");
+
+    const uploaded = data.urls[0];
+    await createAttachmentMutation.mutateAsync({
+      workOrderId,
+      fileName:    uploaded.fileName,
+      fileKey:     uploaded.key,
+      fileUrl:     uploaded.url,
+      fileType:    uploaded.fileType,
+      fileSize:    uploaded.fileSize,
+      category:    "during",
+      description: caption || undefined,
+    });
+
+    toast.success("Foto salva na aba Anexos!");
+  }
+
   const handleOpenAddChecklist = () => {
     if (!inspectionTasks || inspectionTasks.length === 0) {
       createTaskMutation.mutate({
@@ -186,6 +220,8 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
             }
 
             const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
+            // tipo_bomba vem das respostas salvas (campo dentro do template unificado de Bomba)
+            const tipoBomba = responses?.tipo_bomba as string | undefined;
             const isSaving = savingChecklistId === checklist.id && updateResponsesMutation.isPending;
             const isEditing = editingChecklistId === checklist.id;
 
@@ -196,7 +232,8 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
                     <div>
                       <CardTitle className="text-base">{checklist.customTitle}</CardTitle>
                       <CardDescription className="text-xs">
-                        {template?.name}
+                        {/* Para o template unificado de Bomba, mostra o tipo selecionado */}
+                        {template?.name}{tipoBomba ? ` de ${tipoBomba}` : ""}
                         {checklist.brand && ` • ${checklist.brand}`}
                         {checklist.power && ` • ${checklist.power}`}
                       </CardDescription>
@@ -275,6 +312,7 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
                       }}
                       isSaving={isSaving}
                       readOnly={!!checklist.isComplete && !isEditing}
+                      onAddPhoto={handleAddPhoto}
                     />
                   )}
                 </CardContent>
@@ -324,9 +362,11 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
             </div>
 
             <div className="space-y-2">
-              <Label>Título Personalizado *</Label>
+              {/* O tipo de equipamento (ex: Recalque, Dreno) é selecionado dentro do checklist.
+                  Aqui identifica-se apenas a localização/subtítulo para diferenciar instâncias. */}
+              <Label>Subtítulo / Localização *</Label>
               <Input
-                placeholder="Ex: Bomba de Recalque Bloco 1"
+                placeholder="Ex: Torre 1, Bloco A, Subsolo"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
                 className="h-11"
