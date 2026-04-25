@@ -4,27 +4,41 @@ const { withNativeWind } = require("nativewind/metro");
 const projectRoot = __dirname;
 const config = getDefaultConfig(projectRoot);
 
-// ── Bloqueia imports do servidor Node.js ──────────────────────────
-// O arquivo mobile/lib/trpc.ts usa "import type { AppRouter }" do servidor.
-// "import type" é apagado pelo Babel antes do bundle — não vai para o runtime.
-// Mas o Metro tenta resolver todos os módulos antes da transformação Babel,
-// então sem este bloco ele tentaria fazer bundle do código Node.js (mysql2, express...)
-// e falharia com erro 500.
+// ── Intercepta imports problemáticos via resolveRequest ──────────
+// 1. VirtualViewExperimentalNativeComponent (RN 0.79 bug de codegen):
+//    VirtualView.js importa esse arquivo, que tem um tipo Flow que o
+//    @react-native/codegen não consegue parsear. Como o componente é
+//    privado/experimental e não é usado no app, devolvemos módulo vazio.
+//    NOTA: blockList não funciona aqui — o Metro tenta resolver o import
+//    antes de aplicar a blocklist, causando UnableToResolveError.
+//
+// 2. Imports relativos do servidor Node.js (../server/ ou ../../server/):
+//    mobile/lib/trpc.ts usa "import type { AppRouter } from ../../server/routers"
+//    O "import type" é apagado pelo Babel, mas o Metro tenta resolver antes
+//    da transformação TypeScript — devolvemos módulo vazio para esses caminhos.
+//    (Não afeta o pacote npm @trpc/server, que não começa com ../)
 const originalResolve = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Qualquer import que venha do diretório server/ é type-only — retorna módulo vazio
+  // Módulo vazio para os dois componentes VirtualView com bug de codegen no RN 0.79:
+  //   VirtualViewExperimentalNativeComponent — onModeChange sem args de evento
+  //   VirtualViewNativeComponent              — mesmo bug, mesmo arquivo privado
+  // Ambos são componentes privados/experimentais não usados em produção.
   if (
-    moduleName.includes("/server/") ||
-    /^\.\.\/server/.test(moduleName) ||
-    /^\.\.\/\.\.\/server/.test(moduleName)
+    moduleName.includes("VirtualViewExperimentalNativeComponent") ||
+    moduleName.includes("VirtualViewNativeComponent")
   ) {
     return { type: "empty" };
   }
-  // Mantém o comportamento padrão para todos os outros módulos
+  // Módulo vazio para imports do servidor Node.js
+  if (
+    /^\.\.\/server(\/|$)/.test(moduleName) ||
+    /^\.\.\/\.\.\/server(\/|$)/.test(moduleName)
+  ) {
+    return { type: "empty" };
+  }
   return originalResolve
     ? originalResolve(context, moduleName, platform)
     : context.resolveRequest(context, moduleName, platform);
 };
 
-// withNativeWind integra o compilador Tailwind CSS ao Metro bundler
 module.exports = withNativeWind(config, { input: "./global.css" });
