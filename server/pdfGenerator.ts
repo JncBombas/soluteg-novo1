@@ -45,10 +45,16 @@ function formatLabel(raw: string): string {
     tensao:            'Tensão',
     fases:             'Fases',
     quantidade_bombas: 'Qtd. bombas',
+    num_bombas:        'Qtd. Bombas',
     corrente_1:        'Corrente 1',
     corrente_2:        'Corrente 2',
     corrente_3:        'Corrente 3',
     corrente_4:        'Corrente 4',
+    // Aliases do template unificado de Bomba
+    corrente_bomba_1:  'Corrente 1',
+    corrente_bomba_2:  'Corrente 2',
+    corrente_bomba_3:  'Corrente 3',
+    corrente_bomba_4:  'Corrente 4',
     potencia:          'Potência',
     marca:             'Marca',
     modelo:            'Modelo',
@@ -306,42 +312,112 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
               doc.strokeColor(goldColor).lineWidth(3).moveTo(cardX, currentY).lineTo(cardX + cardW, currentY).stroke();
               currentY += 8;
 
-              // Header do card
-              doc.rect(cardX, currentY, cardW, 22).fill('#F5F5F5');
+              // ── PRÉ-PARSE das respostas (necessário para o header) ──────────
+              // Feito aqui fora para que tipo_bomba esteja disponível no header mesmo
+              // antes de entrar no bloco de detalhes.
+              const okNokNaLabels: Record<string, string> = {
+                tubos:           'Tubos',       acionamento:     'Acionamento',
+                boias:           'Boias',        painel:          'Painel',
+                sala:            'Sala',         ruido:           'Ruído',
+                vazamentos:      'Vazamentos',   corrosao:        'Corrosão',
+                conexoes_soltas: 'Conexões Soltas', radiador:     'Radiador',
+                mangueiras:      'Mangueiras',   bateria_visual:  'Bateria (Visual)',
+                cabos_eletricos: 'Cabos Elétricos', escapamento:  'Escapamento',
+                filtros:         'Filtros',      painel_controle: 'Painel de Controle',
+              };
+
+              let tipoBomba: string | undefined;
+              let okNokNaKeys = new Set<string>();
+              let parsedResponses: Record<string, unknown> = {};
+
+              if (checklist.responses) {
+                try {
+                  parsedResponses = typeof checklist.responses === 'string'
+                    ? JSON.parse(checklist.responses) : checklist.responses;
+                  tipoBomba   = parsedResponses.tipo_bomba as string | undefined;
+                  okNokNaKeys = new Set(Object.keys(parsedResponses).filter(k => {
+                    const v = String(parsedResponses[k]).toLowerCase();
+                    return v === 'ok' || v === 'nok' || v === 'na';
+                  }));
+                } catch { /* falha silenciosa — header ainda será renderizado */ }
+              }
+
+              // ── HEADER DO CARD (sempre renderizado) ─────────────────────
+              // Se há tipo_bomba, o header cresce para acomodar o subtítulo.
+              const headerH = tipoBomba ? 36 : 22;
+              doc.rect(cardX, currentY, cardW, headerH).fill('#F5F5F5');
               doc.fontSize(10).fillColor(goldColor).font('Helvetica-Bold')
                  .text(checklist.customTitle, cardX + 10, currentY + 5, { width: cardW - 20 });
-              currentY += 28;
+              if (tipoBomba) {
+                doc.fontSize(8).fillColor('#777777').font('Helvetica')
+                   .text(`Bomba de ${tipoBomba}`, cardX + 10, currentY + 21, { width: cardW - 20 });
+              }
+              currentY += headerH + 6;
 
               // Marca e Potência
               if (checklist.brand || checklist.power) {
                 doc.fontSize(8).fillColor('#888888').font('Helvetica');
-                doc.text(`Marca: ${checklist.brand || 'N/A'}`,    cardX + 10,            currentY, { width: cardW / 2 - 10 });
-                doc.text(`Potência: ${checklist.power || 'N/A'}`, cardX + cardW / 2,     currentY, { width: cardW / 2 - 10 });
+                doc.text(`Marca: ${checklist.brand || 'N/A'}`,    cardX + 10,        currentY, { width: cardW / 2 - 10 });
+                doc.text(`Potência: ${checklist.power || 'N/A'}`, cardX + cardW / 2, currentY, { width: cardW / 2 - 10 });
                 currentY += 16;
               }
               currentY += 4;
 
-              if (checklist.responses) {
+              // ── DETALHES (visual, dados técnicos, observações) ───────────
+              if (checklist.responses && Object.keys(parsedResponses).length > 0) {
                 try {
-                  const responses = typeof checklist.responses === 'string'
-                    ? JSON.parse(checklist.responses) : checklist.responses;
+                  const responses = parsedResponses;
 
                   // ================================================
                   // ✅ INSPEÇÃO VISUAL — 2 COLUNAS COM BADGES
                   //
-                  // Dados chegam como chaves planas:
-                  //   "visual_items_Tubos_OK": "Sim"  (ou true, "1", etc.)
+                  // Suporta dois formatos de resposta:
+                  //
+                  // FORMATO ANTIGO (checkbox_table):
+                  //   "visual_items_Tubos_OK": "Sim"
                   //   "visual_items_Sala_N/A": "Sim"
                   //
-                  // ⚠️ CORREÇÃO nos badges: usa isMarcado() em vez de
-                  // comparar === 'sim', para aceitar qualquer variação
-                  // de case e tipo que o banco possa mandar.
+                  // FORMATO NOVO (ok_nok_na — template unificado de Bomba):
+                  //   "tubos":      "ok"
+                  //   "acionamento":"nok"
+                  //   "sala":       "na"
                   // ================================================
+
+                  // — Formato antigo (visual_items_*) ——————————————
                   const visualKeys = Object.keys(responses).filter(k =>
                     k.toLowerCase().startsWith('visual_items_')
                   );
 
-                  if (visualKeys.length > 0) {
+                  // — Formato novo (ok/nok/na direto) ——————————————
+                  // Constrói itemMap tanto do formato antigo quanto do novo.
+                  const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
+
+                  for (const key of visualKeys) {
+                    const semPrefixo  = key.replace(/^visual_items_/i, '');
+                    const ultimoUnder = semPrefixo.lastIndexOf('_');
+                    if (ultimoUnder === -1) continue;
+                    const itemName = semPrefixo.substring(0, ultimoUnder);
+                    const estado   = semPrefixo.substring(ultimoUnder + 1).toUpperCase().replace(/\s/g, '');
+                    const marcado  = isMarcado(responses[key]);
+
+                    if (!itemMap[itemName]) itemMap[itemName] = { ok: false, nok: false, na: false };
+                    if      (estado === 'OK')                               itemMap[itemName].ok  = marcado;
+                    else if (estado === 'NOK')                              itemMap[itemName].nok = marcado;
+                    else if (estado.includes('N') && estado.includes('A')) itemMap[itemName].na  = marcado;
+                  }
+
+                  for (const key of okNokNaKeys) {
+                    const label = okNokNaLabels[key.toLowerCase()] ?? key;
+                    const val   = String(responses[key]).toLowerCase();
+                    if (!itemMap[label]) itemMap[label] = { ok: false, nok: false, na: false };
+                    if      (val === 'ok')  itemMap[label].ok  = true;
+                    else if (val === 'nok') itemMap[label].nok = true;
+                    else if (val === 'na')  itemMap[label].na  = true;
+                  }
+
+                  const hasVisualItems = Object.keys(itemMap).length > 0;
+
+                  if (hasVisualItems) {
                     doc.fontSize(8).fillColor('#888888').font('Helvetica-Bold')
                        .text('INSPEÇÃO VISUAL', cardX + 10, currentY);
                     currentY += 10;
@@ -349,24 +425,13 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                        .moveTo(cardX + 10, currentY).lineTo(cardX + cardW - 10, currentY).stroke();
                     currentY += 8;
 
-                    // Agrupa por nome do item
-                    const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
-                    for (const key of visualKeys) {
-                      const semPrefixo   = key.replace(/^visual_items_/i, '');
-                      const ultimoUnder  = semPrefixo.lastIndexOf('_');
-                      if (ultimoUnder === -1) continue;
-                      const itemName = semPrefixo.substring(0, ultimoUnder);
-                      const estado   = semPrefixo.substring(ultimoUnder + 1).toUpperCase().replace(/\s/g, '');
-                      const marcado  = isMarcado(responses[key]); // ← usa isMarcado
-
-                      if (!itemMap[itemName]) itemMap[itemName] = { ok: false, nok: false, na: false };
-                      if      (estado === 'OK')                               itemMap[itemName].ok  = marcado;
-                      else if (estado === 'NOK')                              itemMap[itemName].nok = marcado;
-                      else if (estado.includes('N') && estado.includes('A')) itemMap[itemName].na  = marcado;
-                    }
-
-                    // Filtra N/A e mantém ordem conhecida
-                    const ordemConhecida = ['Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído'];
+                    // Filtra N/A e mantém ordem conhecida (bomba + gerador)
+                    const ordemConhecida = [
+                      'Tubos', 'Acionamento', 'Boias', 'Painel', 'Sala', 'Ruído',
+                      'Vazamentos', 'Corrosão', 'Conexões Soltas', 'Radiador',
+                      'Mangueiras', 'Bateria (Visual)', 'Cabos Elétricos',
+                      'Escapamento', 'Filtros', 'Painel de Controle',
+                    ];
                     const itensVisiveis  = [
                       ...ordemConhecida.filter(i => itemMap[i] && !itemMap[i].na),
                       ...Object.keys(itemMap).filter(i => !ordemConhecida.includes(i) && !itemMap[i].na)
@@ -440,7 +505,9 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // ================================================
                   const technicalFields = Object.entries(responses).filter(([key]) => {
                     const k = key.toLowerCase();
-                    return !k.startsWith('visual_items_') &&
+                    return !k.startsWith('visual_items_') &&  // formato antigo de inspeção visual
+                           !okNokNaKeys.has(key) &&           // formato novo de inspeção visual
+                           k !== 'tipo_bomba' &&              // mostrado no cabeçalho do card
                            k !== 'observations' && k !== 'observacoes' &&
                            k !== 'notes'        && k !== 'comments';
                   });
