@@ -14,13 +14,15 @@ import {
 export async function getAllTemplates(): Promise<ChecklistTemplate[]> {
   const db = await getDb();
   if (!db) return [];
-  
+
+  // Retorna TODOS os templates (incluindo inativos com active=0).
+  // O filtro de "apenas ativos no dropdown de criação" é feito no frontend,
+  // para que instâncias antigas ainda consigam encontrar seu template e renderizar.
   const result = await db
     .select()
     .from(checklistTemplates)
-    .where(eq(checklistTemplates.active, 1))
     .orderBy(checklistTemplates.name);
-  
+
   return result;
 }
 

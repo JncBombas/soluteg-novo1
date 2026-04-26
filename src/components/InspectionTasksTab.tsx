@@ -353,7 +353,8 @@ export default function InspectionTasksTab({ workOrderId }: InspectionTasksTabPr
                 className="w-full h-11 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >
                 <option value="" disabled>Selecione o tipo</option>
-                {templates.map((template: { id: number; name: string }) => (
+                {/* Mostra apenas templates ativos no dropdown de criação */}
+                {templates.filter((t: { id: number; name: string; active: number }) => t.active !== 0).map((template: { id: number; name: string }) => (
                   <option key={template.id} value={template.id.toString()}>
                     {template.name}
                   </option>
