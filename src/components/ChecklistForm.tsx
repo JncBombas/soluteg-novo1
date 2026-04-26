@@ -466,7 +466,36 @@ export default function ChecklistForm({
           </CardHeader>
           <CardContent className="p-4 space-y-3">
             {/* ✅ Items Ok/NOk/NA — renderizados UMA VEZ apenas aqui */}
-            {section.items?.map((item) => (
+            {section.items?.map((item) => {
+              // Chaves no formato visual_items_* (compatível com o PDF e com instâncias antigas)
+              const okKey  = `visual_items_${item.label}_OK`;
+              const nokKey = `visual_items_${item.label}_NOK`;
+              const naKey  = `visual_items_${item.label}_N/A`;
+
+              // Leitura: prioriza item.id (formato novo) e recai em visual_items_* (instâncias antigas)
+              const currentValue =
+                (responses[item.id] as string) ||
+                (responses[okKey]  ? 'ok'  :
+                 responses[nokKey] ? 'nok' :
+                 responses[naKey]  ? 'na'  : undefined);
+
+              // Escrita: salva AMBOS os formatos para garantir compatibilidade com o PDF
+              const handleItemChange = (val: string | null) => {
+                setResponses(prev => {
+                  const next = { ...prev };
+                  if (val === null) {
+                    delete next[item.id];
+                  } else {
+                    next[item.id] = val;          // formato novo (para checkCompletion)
+                  }
+                  next[okKey]  = val === 'ok';   // formato PDF (visual_items_*)
+                  next[nokKey] = val === 'nok';
+                  next[naKey]  = val === 'na';
+                  return next;
+                });
+              };
+
+              return (
               <div
                 key={item.id}
                 className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
@@ -474,8 +503,8 @@ export default function ChecklistForm({
                 <Label className="text-sm flex-1 pr-2">{item.label}</Label>
                 <div className="flex items-center gap-2">
                   <OkNokNaButtons
-                    value={responses[item.id] as string}
-                    onChange={(val) => handleChange(item.id, val)}
+                    value={currentValue}
+                    onChange={handleItemChange}
                     disabled={readOnly}
                   />
                   {/* Botão de câmera — só aparece quando o pai fornece onAddPhoto e o form não está em readOnly */}
@@ -491,7 +520,8 @@ export default function ChecklistForm({
                   )}
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* Fields com avaliação de conditional centralizada */}
             {section.fields?.map((field) => renderField(field))}

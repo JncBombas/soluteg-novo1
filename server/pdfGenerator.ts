@@ -383,13 +383,14 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   //   "sala":       "na"
                   // ================================================
 
-                  // — Formato antigo (visual_items_*) ——————————————
+                  // ── INSPEÇÃO VISUAL ─────────────────────────────────
+                  // Lê apenas chaves no formato visual_items_* (gerado pelo
+                  // ChecklistForm tanto em templates antigos via checkbox_table
+                  // quanto em templates novos via ok_nok_na com dual-write).
                   const visualKeys = Object.keys(responses).filter(k =>
                     k.toLowerCase().startsWith('visual_items_')
                   );
 
-                  // — Formato novo (ok/nok/na direto) ——————————————
-                  // Constrói itemMap tanto do formato antigo quanto do novo.
                   const itemMap: Record<string, { ok: boolean; nok: boolean; na: boolean }> = {};
 
                   for (const key of visualKeys) {
@@ -404,15 +405,6 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     if      (estado === 'OK')                               itemMap[itemName].ok  = marcado;
                     else if (estado === 'NOK')                              itemMap[itemName].nok = marcado;
                     else if (estado.includes('N') && estado.includes('A')) itemMap[itemName].na  = marcado;
-                  }
-
-                  for (const key of okNokNaKeys) {
-                    const label = okNokNaLabels[key.toLowerCase()] ?? key;
-                    const val   = String(responses[key]).toLowerCase();
-                    if (!itemMap[label]) itemMap[label] = { ok: false, nok: false, na: false };
-                    if      (val === 'ok')  itemMap[label].ok  = true;
-                    else if (val === 'nok') itemMap[label].nok = true;
-                    else if (val === 'na')  itemMap[label].na  = true;
                   }
 
                   const hasVisualItems = Object.keys(itemMap).length > 0;
