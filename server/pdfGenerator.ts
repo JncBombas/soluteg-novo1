@@ -384,9 +384,20 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                   // ================================================
 
                   // ── INSPEÇÃO VISUAL ─────────────────────────────────
-                  // Lê apenas chaves no formato visual_items_* (gerado pelo
-                  // ChecklistForm tanto em templates antigos via checkbox_table
-                  // quanto em templates novos via ok_nok_na com dual-write).
+                  // Suporta TRÊS gerações de instâncias:
+                  //
+                  // 1. Templates antigos (checkbox_table):
+                  //    Chaves visual_items_* armazenadas diretamente, ex:
+                  //    "visual_items_Tubos_OK": "Sim"
+                  //
+                  // 2. Instâncias do período de migração (ok_nok_na sem dual-write):
+                  //    Apenas chaves curtas, sem prefixo visual_items_*, ex:
+                  //    "tubos": "ok", "acionamento": "nok"
+                  //
+                  // 3. Instâncias novas (ok_nok_na com dual-write):
+                  //    Ambos os formatos simultâneos — visual_items_* e chaves curtas.
+
+                  // Formato 1 e 3: lê chaves visual_items_*
                   const visualKeys = Object.keys(responses).filter(k =>
                     k.toLowerCase().startsWith('visual_items_')
                   );
@@ -405,6 +416,18 @@ export async function generateWorkOrderPDF(workOrderId: number): Promise<Buffer>
                     if      (estado === 'OK')                               itemMap[itemName].ok  = marcado;
                     else if (estado === 'NOK')                              itemMap[itemName].nok = marcado;
                     else if (estado.includes('N') && estado.includes('A')) itemMap[itemName].na  = marcado;
+                  }
+
+                  // Formato 2 e 3: lê chaves ok/nok/na curtas (ex: "tubos": "ok").
+                  // Em instâncias do tipo 3, os itens já foram populados pelo loop acima;
+                  // o `if (!itemMap[label])` garante que não sobrescrevemos o que existe.
+                  for (const key of okNokNaKeys) {
+                    const label = okNokNaLabels[key.toLowerCase()] ?? key;
+                    const val   = String(responses[key]).toLowerCase();
+                    if (!itemMap[label]) itemMap[label] = { ok: false, nok: false, na: false };
+                    if      (val === 'ok')  itemMap[label].ok  = true;
+                    else if (val === 'nok') itemMap[label].nok = true;
+                    else if (val === 'na')  itemMap[label].na  = true;
                   }
 
                   const hasVisualItems = Object.keys(itemMap).length > 0;
