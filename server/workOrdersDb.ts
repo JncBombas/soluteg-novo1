@@ -1,4 +1,4 @@
-import { eq, desc, and, gte, lte, like, sql, inArray } from "drizzle-orm";
+import { eq, asc, desc, and, gte, lte, like, sql, inArray } from "drizzle-orm";
 import { getDb } from "./db";
 import { workOrders, workOrderHistory, InsertWorkOrder, InsertWorkOrderHistory, technicians } from "../drizzle/schema";
 
@@ -185,14 +185,19 @@ export async function listWorkOrders(filters: {
     .leftJoin(technicians, eq(workOrders.technicianId, technicians.id))
     .where(whereClause);
 
-  // Ordenação dinâmica
+  // Ordenação dinâmica (asc ou desc na coluna correta)
   const orderColumn = filters.sortBy === "title" ? workOrders.title : workOrders.createdAt;
-  const orderDir = filters.sortOrder === "asc" ? sql`asc` : desc(orderColumn);
-  
+  const orderDir = filters.sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
+
   // 3. Executar as duas operações (Contagem e Busca)
+  // IMPORTANTE: o count também precisa do JOIN com clients, pois o whereClause
+  // pode referenciar clients.name (quando há busca por texto)
   const [result, totalResult] = await Promise.all([
     query.limit(limit).offset(offset).orderBy(orderDir),
-    db.select({ count: sql<number>`count(*)` }).from(workOrders).where(whereClause)
+    db.select({ count: sql<number>`count(*)` })
+      .from(workOrders)
+      .leftJoin(clients, eq(workOrders.clientId, clients.id))
+      .where(whereClause)
   ]);
 
   return {
