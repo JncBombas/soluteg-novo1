@@ -254,6 +254,11 @@ export const laudosRouter = router({
       comentario: z.string().optional(),
       classificacao: z.enum(["conforme", "nao_conforme", "atencao"]).optional(),
       ordem: z.number().optional(),
+      // Campos do editor avançado (Etapa 3)
+      urlAnotada: z.string().url().optional(),
+      urlRecorte: z.string().url().optional(),
+      modoLayout: z.enum(["normal", "destaque", "destaque_duplo", "original_zoom", "anotada"]).optional(),
+      anotacoesJson: z.string().max(200000).optional(),
     }))
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
@@ -269,6 +274,11 @@ export const laudosRouter = router({
       comentario: z.string().optional(),
       classificacao: z.enum(["conforme", "nao_conforme", "atencao"]).optional(),
       ordem: z.number().optional(),
+      // Campos do editor avançado (Etapa 3)
+      urlAnotada: z.string().url().optional(),
+      urlRecorte: z.string().url().optional(),
+      modoLayout: z.enum(["normal", "destaque", "destaque_duplo", "original_zoom", "anotada"]).optional(),
+      anotacoesJson: z.string().max(200000).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;

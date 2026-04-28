@@ -749,6 +749,7 @@ export type InsertLaudo = typeof laudos.$inferInsert;
 
 /**
  * Fotos dos laudos
+ * Inclui campos do editor avançado (anotações Fabric.js, recorte Cropper.js, modo de layout no PDF)
  */
 export const laudoFotos = mysqlTable("laudoFotos", {
   id: int("id").autoincrement().primaryKey(),
@@ -758,6 +759,14 @@ export const laudoFotos = mysqlTable("laudoFotos", {
   comentario: text("comentario"),
   classificacao: mysqlEnum("classificacao", ["conforme", "nao_conforme", "atencao"]),
   ordem: int("ordem").default(0).notNull(),
+  // Imagem original com as anotações sobrepostas salvas no Cloudinary
+  urlAnotada: text("url_anotada"),
+  // Versão recortada/ampliada para o modo original_zoom
+  urlRecorte: text("url_recorte"),
+  // Como a foto é renderizada no PDF: normal | destaque | destaque_duplo | original_zoom | anotada
+  modoLayout: varchar("modo_layout", { length: 30 }).default("normal").notNull(),
+  // Objetos Fabric.js serializados em JSON (permite reedição futura das anotações)
+  anotacoesJson: text("anotacoes_json"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

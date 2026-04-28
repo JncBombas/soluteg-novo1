@@ -47,10 +47,12 @@ import {
   BookOpen,
   Search,
   FileInput,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { LAUDO_TEMPLATES } from "@/lib/laudoTemplates";
+import FotoEditor, { type FotoEditorFoto } from "@/components/laudo/FotoEditor";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,11 @@ interface Foto {
   comentario: string;
   classificacao: "conforme" | "nao_conforme" | "atencao" | "";
   ordem: number;
+  // Campos do editor avançado (Etapa 3)
+  urlAnotada?: string | null;
+  urlRecorte?: string | null;
+  modoLayout?: string;
+  anotacoesJson?: string | null;
 }
 
 // ── Constantes ─────────────────────────────────────────────────────────────
@@ -222,6 +229,10 @@ export default function AdminLaudoForm() {
         comentario: f.comentario ?? "",
         classificacao: f.classificacao ?? "",
         ordem: f.ordem ?? 0,
+        urlAnotada: f.urlAnotada ?? null,
+        urlRecorte: f.urlRecorte ?? null,
+        modoLayout: f.modoLayout ?? "normal",
+        anotacoesJson: f.anotacoesJson ?? null,
       }))
     );
     setParecer((laudoData.conclusaoParecer as any) ?? "");
@@ -305,6 +316,9 @@ export default function AdminLaudoForm() {
   const removeFotoMutation = trpc.laudos.removeFoto.useMutation();
   const updateFotoAdminMutation = trpc.laudos.updateFoto.useMutation();
   const updateFotoTecnicoMutation = trpc.laudos.updateFotoTecnico.useMutation();
+
+  // ── Editor avançado de fotos ─────────────────────────────────────────────
+  const [fotoEditando, setFotoEditando] = useState<Foto | null>(null);
   const addMedicaoMutation = trpc.laudos.addMedicao.useMutation();
   const removeMedicaoMutation = trpc.laudos.removeMedicao.useMutation();
 
@@ -417,6 +431,37 @@ export default function AdminLaudoForm() {
       comentario: foto.comentario || undefined,
       classificacao: foto.classificacao as any || undefined,
     });
+  }
+
+  /** Chamado pelo FotoEditor ao salvar — salva no banco e atualiza state local */
+  async function handleSalvarEditor(resultado: {
+    urlAnotada?: string;
+    urlRecorte?: string;
+    modoLayout: string;
+    anotacoesJson?: string;
+  }) {
+    if (!fotoEditando?.id) return;
+    await updateFotoAdminMutation.mutateAsync({
+      id: fotoEditando.id,
+      urlAnotada: resultado.urlAnotada,
+      urlRecorte: resultado.urlRecorte,
+      modoLayout: resultado.modoLayout as any,
+      anotacoesJson: resultado.anotacoesJson,
+    });
+    // Atualiza o state local para refletir na miniatura imediatamente
+    setFotos((prev) =>
+      prev.map((f) =>
+        f.id === fotoEditando.id
+          ? {
+              ...f,
+              urlAnotada: resultado.urlAnotada ?? f.urlAnotada,
+              urlRecorte: resultado.urlRecorte ?? f.urlRecorte,
+              modoLayout: resultado.modoLayout,
+              anotacoesJson: resultado.anotacoesJson ?? f.anotacoesJson,
+            }
+          : f
+      )
+    );
   }
 
   function moveFoto(index: number, direction: -1 | 1) {
@@ -1094,12 +1139,30 @@ export default function AdminLaudoForm() {
                   {fotos.map((foto, i) => (
                     <div key={i} className="border rounded-lg overflow-hidden">
                       <div className="relative aspect-video bg-muted">
+                        {/* Exibe a imagem anotada se existir, caso contrário a original */}
                         <img
-                          src={foto.url}
+                          src={foto.urlAnotada || foto.url}
                           alt={foto.legenda || `Foto ${i + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
+                        {/* Badge indicando o modo de layout no PDF */}
+                        {foto.modoLayout && foto.modoLayout !== "normal" && (
+                          <div className="absolute top-2 left-2">
+                            <Badge
+                              className={`text-[10px] px-1.5 py-0.5 ${
+                                foto.modoLayout === "destaque" ? "bg-blue-600 text-white" :
+                                foto.modoLayout === "destaque_duplo" ? "bg-indigo-600 text-white" :
+                                foto.modoLayout === "original_zoom" ? "bg-purple-600 text-white" :
+                                "bg-orange-500 text-white"
+                              }`}
+                            >
+                              {foto.modoLayout === "destaque" ? "Destaque" :
+                               foto.modoLayout === "destaque_duplo" ? "Duplo" :
+                               foto.modoLayout === "original_zoom" ? "Zoom" : "Anotada"}
+                            </Badge>
+                          </div>
+                        )}
                         {!isFinalized && (
                           <div className="absolute top-2 right-2 flex gap-1">
                             <button
@@ -1126,6 +1189,18 @@ export default function AdminLaudoForm() {
                         )}
                       </div>
                       <div className="p-3 space-y-2">
+                        {/* Botão para abrir o editor avançado */}
+                        {!isFinalized && foto.id && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1"
+                            onClick={() => setFotoEditando(foto)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Editar / Anotar
+                          </Button>
+                        )}
                         <Input
                           value={foto.legenda}
                           onChange={(e) => handleFotoChange(i, "legenda", e.target.value)}
@@ -1436,6 +1511,18 @@ export default function AdminLaudoForm() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ── Editor avançado de fotos ─────────────────────────────────────── */}
+      {fotoEditando && (
+        <FotoEditor
+          open={!!fotoEditando}
+          onClose={() => setFotoEditando(null)}
+          foto={fotoEditando as FotoEditorFoto}
+          onSave={async (resultado) => {
+            await handleSalvarEditor(resultado);
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }

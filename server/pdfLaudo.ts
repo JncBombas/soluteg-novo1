@@ -362,59 +362,184 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
       }
 
       // 6. Registros Fotográficos
+      // Cada foto pode ter um modo_layout diferente que altera sua renderização no PDF:
+      //  normal        → 2 fotos por linha (padrão)
+      //  destaque      → foto única ocupando largura total
+      //  destaque_duplo→ original à esquerda + versão anotada à direita
+      //  original_zoom → original à esquerda + recorte ampliado à direita
+      //  anotada       → usa url_anotada no lugar da url original
       const fotos = laudoRef.fotos as Array<{
         url: string; legenda?: string; comentario?: string; classificacao?: string;
+        urlAnotada?: string | null; urlRecorte?: string | null;
+        modoLayout?: string;
       }>;
+
+      // Função auxiliar para desenhar uma imagem no PDF
+      const drawPhoto = async (
+        url: string,
+        x: number, y: number,
+        w: number, h: number
+      ) => {
+        const buf = await fetchImageBuffer(url);
+        if (buf) {
+          try {
+            doc.image(buf, x, y, { width: w, height: h, cover: [w, h] });
+          } catch {
+            doc.rect(x, y, w, h).stroke("#e2e8f0");
+            doc.fontSize(7).fillColor(MUTED)
+              .text("Imagem indisponivel", x, y + h / 2 - 5, { width: w, align: "center" });
+          }
+        } else {
+          doc.rect(x, y, w, h).stroke("#e2e8f0");
+          doc.fontSize(7).fillColor(MUTED)
+            .text("Imagem indisponivel", x, y + h / 2 - 5, { width: w, align: "center" });
+        }
+      };
+
+      // Função auxiliar para badge de classificação
+      const drawClassBadge = (fotoClassif: string | undefined, x: number, y: number, w: number) => {
+        if (!fotoClassif) return;
+        const badgeColor = statusConstatacaoColor(fotoClassif);
+        doc.rect(x + w - 70, y + 4, 66, 14).fill(badgeColor);
+        doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#ffffff")
+          .text(statusConstatacaoLabel(fotoClassif), x + w - 68, y + 8, { width: 62, align: "center" });
+      };
+
       if (fotos && fotos.length > 0) {
         sectionTitle("6. Registros Fotograficos");
 
-        const photoW = (CW - 12) / 2;
-        const photoH = 130;
+        let fi = 0;
+        while (fi < fotos.length) {
+          const foto = fotos[fi];
+          const modo = foto.modoLayout ?? "normal";
 
-        for (let fi = 0; fi < fotos.length; fi += 2) {
-          checkPageBreak(photoH + 50);
-          const rowY = doc.y;
-
-          for (let fj = 0; fj < 2; fj++) {
-            const foto = fotos[fi + fj];
-            if (!foto) continue;
-            const xPos = L + fj * (photoW + 12);
-
-            const imgBuf = await fetchImageBuffer(foto.url);
-            if (imgBuf) {
-              try {
-                doc.image(imgBuf, xPos, rowY, { width: photoW, height: photoH, cover: [photoW, photoH] });
-              } catch {
-                doc.rect(xPos, rowY, photoW, photoH).stroke("#e2e8f0");
-                doc.fontSize(7).fillColor(MUTED)
-                  .text("Imagem indisponivel", xPos, rowY + photoH / 2 - 5, { width: photoW, align: "center" });
-              }
-            } else {
-              doc.rect(xPos, rowY, photoW, photoH).stroke("#e2e8f0");
-              doc.fontSize(7).fillColor(MUTED)
-                .text("Imagem indisponivel", xPos, rowY + photoH / 2 - 5, { width: photoW, align: "center" });
-            }
-
-            if (foto.classificacao) {
-              const badgeColor = statusConstatacaoColor(foto.classificacao);
-              doc.rect(xPos + photoW - 70, rowY + 4, 66, 14).fill(badgeColor);
-              doc.fontSize(6.5).font("Helvetica-Bold").fillColor("#ffffff")
-                .text(statusConstatacaoLabel(foto.classificacao), xPos + photoW - 68, rowY + 8, { width: 62, align: "center" });
-            }
-
-            const legendY = rowY + photoH + 4;
+          // ── Modo DESTAQUE — foto única em largura total ──────────────────
+          if (modo === "destaque") {
+            const h = 220;
+            checkPageBreak(h + 50);
+            const y0 = doc.y;
+            await drawPhoto(foto.urlAnotada || foto.url, L, y0, CW, h);
+            drawClassBadge(foto.classificacao, L, y0, CW);
+            const legendY = y0 + h + 4;
             if (foto.legenda) {
               doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
-                .text(foto.legenda, xPos, legendY, { width: photoW });
+                .text(foto.legenda, L, legendY, { width: CW });
             }
             if (foto.comentario) {
               doc.fontSize(7).font("Helvetica").fillColor(MUTED)
-                .text(foto.comentario, xPos, legendY + (foto.legenda ? 11 : 0), { width: photoW });
+                .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
             }
-          }
+            doc.y = legendY + 30;
+            fi += 1;
 
-          doc.y = rowY + photoH + 45;
-          doc.moveDown(0.3);
+          // ── Modo DESTAQUE_DUPLO — original à esq + anotada à dir ─────────
+          } else if (modo === "destaque_duplo") {
+            const half = (CW - 12) / 2;
+            const h = 160;
+            checkPageBreak(h + 50);
+            const y0 = doc.y;
+            // Original
+            await drawPhoto(foto.url, L, y0, half, h);
+            doc.fontSize(6.5).font("Helvetica").fillColor(MUTED)
+              .text("Original", L, y0 + h + 2, { width: half, align: "center" });
+            // Anotada
+            if (foto.urlAnotada) {
+              await drawPhoto(foto.urlAnotada, L + half + 12, y0, half, h);
+              doc.fontSize(6.5).font("Helvetica").fillColor(MUTED)
+                .text("Com anotacoes", L + half + 12, y0 + h + 2, { width: half, align: "center" });
+            } else {
+              doc.rect(L + half + 12, y0, half, h).stroke("#e2e8f0");
+              doc.fontSize(7).fillColor(MUTED)
+                .text("(sem anotacoes)", L + half + 12, y0 + h / 2 - 5, { width: half, align: "center" });
+            }
+            drawClassBadge(foto.classificacao, L, y0, half);
+            const legendY = y0 + h + 14;
+            if (foto.legenda) {
+              doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
+                .text(foto.legenda, L, legendY, { width: CW });
+            }
+            if (foto.comentario) {
+              doc.fontSize(7).font("Helvetica").fillColor(MUTED)
+                .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
+            }
+            doc.y = legendY + 30;
+            fi += 1;
+
+          // ── Modo ORIGINAL_ZOOM — original à esq + recorte à dir ──────────
+          } else if (modo === "original_zoom") {
+            const half = (CW - 12) / 2;
+            const h = 160;
+            checkPageBreak(h + 50);
+            const y0 = doc.y;
+            // Original
+            await drawPhoto(foto.url, L, y0, half, h);
+            doc.fontSize(6.5).font("Helvetica").fillColor(MUTED)
+              .text("Original", L, y0 + h + 2, { width: half, align: "center" });
+            // Recorte ampliado
+            if (foto.urlRecorte) {
+              await drawPhoto(foto.urlRecorte, L + half + 12, y0, half, h);
+              // Borda vermelha para destacar o detalhe
+              doc.rect(L + half + 12, y0, half, h).stroke("#ef4444");
+              doc.fontSize(6.5).font("Helvetica").fillColor("#ef4444")
+                .text("Detalhe ampliado", L + half + 12, y0 + h + 2, { width: half, align: "center" });
+            } else {
+              doc.rect(L + half + 12, y0, half, h).stroke("#e2e8f0");
+              doc.fontSize(7).fillColor(MUTED)
+                .text("(recorte nao definido)", L + half + 12, y0 + h / 2 - 5, { width: half, align: "center" });
+            }
+            drawClassBadge(foto.classificacao, L, y0, half);
+            const legendY = y0 + h + 14;
+            if (foto.legenda) {
+              doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
+                .text(foto.legenda, L, legendY, { width: CW });
+            }
+            if (foto.comentario) {
+              doc.fontSize(7).font("Helvetica").fillColor(MUTED)
+                .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
+            }
+            doc.y = legendY + 30;
+            fi += 1;
+
+          // ── Modo NORMAL ou ANOTADA — 2 fotos por linha ───────────────────
+          } else {
+            const photoW = (CW - 12) / 2;
+            const photoH = 130;
+            checkPageBreak(photoH + 50);
+            const rowY = doc.y;
+
+            for (let fj = 0; fj < 2; fj++) {
+              const fotoRow = fotos[fi + fj];
+              // Para na próxima foto que não seja de 2 colunas
+              if (!fotoRow) continue;
+              const modoRow = fotoRow.modoLayout ?? "normal";
+              if (modoRow !== "normal" && modoRow !== "anotada") continue;
+
+              const xPos = L + fj * (photoW + 12);
+              // Usa url_anotada para o modo "anotada", senão a original
+              const srcUrl = (modoRow === "anotada" && fotoRow.urlAnotada)
+                ? fotoRow.urlAnotada
+                : fotoRow.url;
+
+              await drawPhoto(srcUrl, xPos, rowY, photoW, photoH);
+              drawClassBadge(fotoRow.classificacao, xPos, rowY, photoW);
+
+              const legendY = rowY + photoH + 4;
+              if (fotoRow.legenda) {
+                doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
+                  .text(fotoRow.legenda, xPos, legendY, { width: photoW });
+              }
+              if (fotoRow.comentario) {
+                doc.fontSize(7).font("Helvetica").fillColor(MUTED)
+                  .text(fotoRow.comentario, xPos, legendY + (fotoRow.legenda ? 11 : 0), { width: photoW });
+              }
+            }
+
+            doc.y = rowY + photoH + 45;
+            doc.moveDown(0.3);
+            // Avança 1 ou 2 fotos dependendo de quantas foram consumidas nesta linha
+            const proxModo = fotos[fi + 1]?.modoLayout ?? "normal";
+            fi += (proxModo === "normal" || proxModo === "anotada") ? 2 : 1;
+          }
         }
       }
 

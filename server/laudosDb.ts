@@ -308,6 +308,11 @@ export async function updateLaudoFoto(id: number, data: Partial<{
   comentario: string;
   classificacao: "conforme" | "nao_conforme" | "atencao";
   ordem: number;
+  // Campos do editor avançado de fotos (Etapa 3)
+  urlAnotada: string;
+  urlRecorte: string;
+  modoLayout: string;
+  anotacoesJson: string;
 }>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

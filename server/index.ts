@@ -114,6 +114,46 @@ async function startServer() {
  
  
   // ============================================================
+  // 🖊️ ROTA: Upload de imagem anotada/recortada do editor de fotos dos laudos
+  // Endereço: POST /api/laudos/upload-anotada
+  //
+  // Recebe a imagem em base64 (gerada pelo Fabric.js ou Cropper.js no frontend),
+  // converte para Buffer e salva no Cloudinary na pasta "laudo_anotadas".
+  // Retorna a URL pública para ser salva no banco (url_anotada ou url_recorte).
+  // ============================================================
+  app.post("/api/laudos/upload-anotada", async (req, res) => {
+    try {
+      const { base64, filename } = req.body as { base64?: string; filename?: string };
+
+      if (!base64 || typeof base64 !== "string") {
+        return res.status(400).json({ success: false, message: "Campo base64 obrigatório" });
+      }
+      if (!filename || typeof filename !== "string") {
+        return res.status(400).json({ success: false, message: "Campo filename obrigatório" });
+      }
+
+      // Limite de ~10 MB para evitar DoS (base64 de 10 MB ≈ 7,5 MB de imagem)
+      if (base64.length > 14_000_000) {
+        return res.status(413).json({ success: false, message: "Imagem muito grande (máx 10 MB)" });
+      }
+
+      // Remove o prefixo "data:image/...;base64," se presente
+      const base64Data = base64.includes(",") ? base64.split(",")[1] : base64;
+      const buffer = Buffer.from(base64Data, "base64");
+
+      const { storagePut } = await import("./storage");
+      const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const { url } = await storagePut(safeName, buffer, "image/jpeg", "laudo_anotadas");
+
+      res.json({ success: true, url });
+    } catch (error: any) {
+      console.error("Erro ao salvar imagem anotada:", error);
+      res.status(500).json({ success: false, message: error.message || "Erro ao processar imagem" });
+    }
+  });
+
+
+  // ============================================================
   // 🔑 ROTA: Login do Cliente (Portal do Cliente)
   // Endereço: POST /api/client-login
   //
