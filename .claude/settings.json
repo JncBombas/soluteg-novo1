@@ -30,7 +30,8 @@
       "Bash(npx vite:*)",
       "Bash(npm list:*)",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(npm show:*)"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\.claude\\projects\\c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1\\memory"
