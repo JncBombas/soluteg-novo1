@@ -586,13 +586,13 @@ export default function TecnicoLaudoForm() {
 
         {/* Abas */}
         <Tabs defaultValue="identificacao">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full">
-            <TabsTrigger value="identificacao">Identificação</TabsTrigger>
-            <TabsTrigger value="contexto">Contexto</TabsTrigger>
-            <TabsTrigger value="constatacoes">Constatações</TabsTrigger>
-            <TabsTrigger value="medicoes">Medições</TabsTrigger>
-            <TabsTrigger value="fotos">Fotos</TabsTrigger>
-            <TabsTrigger value="conclusao">Conclusão</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 flex-nowrap sm:flex-wrap">
+            <TabsTrigger value="identificacao" className="shrink-0 sm:shrink">Identificação</TabsTrigger>
+            <TabsTrigger value="contexto" className="shrink-0 sm:shrink">Contexto</TabsTrigger>
+            <TabsTrigger value="constatacoes" className="shrink-0 sm:shrink">Constatações</TabsTrigger>
+            <TabsTrigger value="medicoes" className="shrink-0 sm:shrink">Medições</TabsTrigger>
+            <TabsTrigger value="fotos" className="shrink-0 sm:shrink">Fotos</TabsTrigger>
+            <TabsTrigger value="conclusao" className="shrink-0 sm:shrink">Conclusão</TabsTrigger>
           </TabsList>
 
           {/* ── ABA 1: Identificação ─────────────────────────────────── */}
