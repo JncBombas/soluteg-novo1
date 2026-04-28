@@ -6,7 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { APP_LOGO } from "@/const";
-import { Eye, EyeOff, Lock, User, ArrowLeft, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Lock, User, Loader2 } from "lucide-react";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -213,20 +213,10 @@ export default function AdminLogin() {
             </Button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-200 space-y-3">
+          <div className="mt-8 pt-6 border-t border-slate-200">
             <p className="text-xs text-slate-400 text-center">
               Não tem acesso? Contate o administrador do sistema.
             </p>
-            <a href={import.meta.env.VITE_LANDING_URL}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-slate-500 hover:text-slate-700 gap-1.5"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Voltar para o site
-              </Button>
-            </a>
           </div>
         </div>
       </div>

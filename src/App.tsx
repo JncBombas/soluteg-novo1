@@ -11,7 +11,6 @@ function RedirectToClientLogin() {
   useEffect(() => { setLocation("/client/login"); }, []);
   return null;
 }
-import Home from "./pages/Home";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProfile from "./pages/AdminProfile";

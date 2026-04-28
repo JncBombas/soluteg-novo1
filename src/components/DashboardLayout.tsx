@@ -606,9 +606,9 @@ function DashboardLayoutContent({
               <SidebarTrigger className="h-8 w-8 rounded-lg" />
             )}
 
-            {/* Link "Início" que leva para a home do site */}
+            {/* Ícone de casa — leva para o dashboard principal */}
             <a
-              href={import.meta.env.VITE_LANDING_URL}
+              href="/gestor/dashboard"
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <Home className="h-4 w-4" />

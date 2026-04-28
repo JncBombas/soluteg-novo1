@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LogIn, AlertCircle, ArrowLeft } from "lucide-react";
+import { LogIn, AlertCircle } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { toast } from "sonner";
 
@@ -96,12 +96,6 @@ export default function ClientLogin() {
               <div className="text-xs text-gray-400">(Soluteg)</div>
             </div>
           </div>
-          <a href={import.meta.env.VITE_LANDING_URL}>
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-1.5">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar ao site
-            </Button>
-          </a>
         </div>
       </header>
 
