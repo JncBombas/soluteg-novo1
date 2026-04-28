@@ -385,6 +385,15 @@ export default function AdminMassMessage() {
                       </button>
                     ))}
                   </div>
+                  {/* Legenda das variáveis */}
+                  <div className="rounded border border-slate-100 bg-slate-50 divide-y divide-slate-100">
+                    {MERGE_TAGS.map(({ tag, desc }) => (
+                      <div key={tag} className="flex items-baseline gap-2 px-2 py-1">
+                        <span className="font-mono text-[11px] text-orange-600 shrink-0 w-28">{tag}</span>
+                        <span className="text-[11px] text-slate-500">{desc}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <Textarea
