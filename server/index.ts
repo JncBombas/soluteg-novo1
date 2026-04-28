@@ -154,6 +154,34 @@ async function startServer() {
 
 
   // ============================================================
+  // 🗑️ ROTA: Apagar imagem do Cloudinary (usada pelo FotoEditor ao salvar nova versão)
+  // Endereço: POST /api/laudos/delete-cloudinary
+  //
+  // Recebe a URL pública de uma imagem do Cloudinary, extrai o public_id e deleta.
+  // Chamada pelo frontend antes de fazer upload de nova versão anotada/recortada,
+  // para evitar acúmulo de imagens órfãs no Cloudinary.
+  // ============================================================
+  app.post("/api/laudos/delete-cloudinary", async (req, res) => {
+    try {
+      const { url } = req.body as { url?: string };
+      if (!url || typeof url !== "string") {
+        return res.json({ success: false });
+      }
+      // Extrai o public_id da URL do Cloudinary
+      // Formato: https://res.cloudinary.com/{cloud}/image/upload/v{ver}/{public_id}.{ext}
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+      if (match?.[1]) {
+        const { v2: cloudinary } = await import("cloudinary");
+        await cloudinary.uploader.destroy(match[1]);
+      }
+      res.json({ success: true });
+    } catch (e: any) {
+      // Retorna sucesso mesmo em falha — o frontend não deve bloquear por isso
+      res.json({ success: false, message: e.message });
+    }
+  });
+
+  // ============================================================
   // 🔑 ROTA: Login do Cliente (Portal do Cliente)
   // Endereço: POST /api/client-login
   //

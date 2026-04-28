@@ -21,6 +21,15 @@
  *  - Bug 3: modo original_zoom usa dois passos ("anotar" → "recortar") com canvas
  *            sempre montado (oculto via CSS), não desmontado — evita destruir as
  *            anotações ao alternar para o Cropper
+ *
+ * CORREÇÕES (v4):
+ *  - Bug 1 (revisão): enterEditing() no Fabric v5 precisa de setTimeout(50ms) + foco
+ *            no .upper-canvas para funcionar corretamente (rAF insuficiente)
+ *  - Bug 2a/2b: canvasModificadoRef rastreia se houve mudanças reais no canvas;
+ *            handleSalvar reutiliza URLs existentes e apaga versões antigas do Cloudinary
+ *            antes de criar novas (evita acúmulo de imagens órfãs)
+ *  - Bug 4: Cropper inicializa via evento onload da imagem (base64 grande demora a
+ *            decodificar — polling baseado em naturalWidth era insuficiente)
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -59,6 +68,8 @@ export interface FotoEditorFoto {
   url: string;
   /** URL da versão anotada gerada por uma edição anterior (exibida como miniatura no formulário) */
   urlAnotada?: string | null;
+  /** URL do recorte/zoom gerado no modo original_zoom */
+  urlRecorte?: string | null;
   /** JSON das formas Fabric do último save (usado apenas para restaurar — não como base da imagem) */
   anotacoesJson?: string | null;
   modoLayout?: string;
@@ -108,10 +119,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   const canvasDimsRef      = useRef({ w: 600, h: 400 });
   // Histórico de estados JSON das formas para desfazer
   const historyRef         = useRef<string[]>([]);
-  // Controla cleanup de polling
+  // Controla cleanup de polling de inicialização do canvas
   const pollingTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Guarda o base64 da imagem anotada gerada antes de ir para o passo de recorte
   const imagemAnotadaParaRecorteRef = useRef<string>("");
+  // Rastreia se o usuário fez alguma alteração no canvas desde que o editor foi aberto.
+  // Quando false, handleSalvar reutiliza as URLs já salvas no banco sem fazer novo upload.
+  const canvasModificadoRef = useRef(false);
 
   const [modo, setModo]             = useState(foto.modoLayout ?? "normal");
   const [cor, setCor]               = useState(CORES[0].value);
@@ -230,6 +244,8 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     }
 
     salvarHistorico(canvas);
+    // Canvas acabou de ser carregado com o estado salvo no banco — ainda não foi modificado
+    canvasModificadoRef.current = false;
     canvas.renderAll();
 
     // Libera memória do object URL após o canvas já ter carregado a imagem
@@ -282,13 +298,21 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       fabricRef.current = canvas;
       historyRef.current = [];
 
-      // Bug 1b: duplo clique sobre um IText existente reabre o modo de edição de texto
+      // Bug 1 (revisão): duplo clique sobre IText existente reabre edição.
+      // setTimeout(50ms) + foco no .upper-canvas é necessário no Fabric v5 porque
+      // enterEditing() falha silenciosamente se chamado antes do canvas ter foco no DOM.
       canvas.on("mouse:dblclick", (e: fabric.IEvent) => {
         const target = e.target;
         if (target && (target as any).type === "i-text") {
           canvas.setActiveObject(target);
-          (target as fabric.IText).enterEditing();
-          canvas.renderAll();
+          setTimeout(() => {
+            (target as fabric.IText).enterEditing();
+            canvas.renderAll();
+            const upperCanvas = document
+              .getElementById("foto-editor-canvas")
+              ?.parentElement?.querySelector(".upper-canvas") as HTMLCanvasElement | null;
+            upperCanvas?.focus();
+          }, 50);
         }
       });
 
@@ -318,21 +342,19 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   }, [open]);
 
   // ── Inicializar Cropper.js (modo original_zoom, passo recortar) ───────────
-  // Usa cropSrc (base64 da imagem anotada exportada do Fabric) como fonte.
+  // Usa cropSrc (base64 exportado do canvas Fabric) como fonte da imagem.
+  // Bug 4: cropSrc é um base64 grande — a tag <img> pode demorar para decodificar,
+  // então o Cropper deve ser inicializado no evento "load" da imagem, não via polling
+  // de naturalWidth (que retorna 0 enquanto o browser ainda decodifica o base64).
 
   useEffect(() => {
     if (!open || !mostraCropper) return;
 
-    let timer: ReturnType<typeof setTimeout>;
+    const imgEl = cropImgRef.current;
+    if (!imgEl) return;
 
-    function tentarCropper() {
-      const imgEl = cropImgRef.current;
-      if (!imgEl || cropperRef.current) return;
-      // Aguarda a imagem ter dimensões naturais
-      if (imgEl.naturalWidth === 0) {
-        timer = setTimeout(tentarCropper, 100);
-        return;
-      }
+    function inicializarCropper() {
+      if (cropperRef.current || !imgEl) return;
       cropperRef.current = new Cropper(imgEl, {
         aspectRatio: NaN,   // recorte livre
         viewMode: 1,
@@ -344,14 +366,16 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       });
     }
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        timer = setTimeout(tentarCropper, 150);
-      });
-    });
+    // Se a imagem já está em cache (complete + naturalWidth > 0), inicializa direto.
+    // Caso contrário, aguarda o evento "load" — isso cobre o caso do base64 grande.
+    if (imgEl.complete && imgEl.naturalWidth > 0) {
+      inicializarCropper();
+    } else {
+      imgEl.addEventListener("load", inicializarCropper, { once: true });
+    }
 
     return () => {
-      clearTimeout(timer);
+      imgEl.removeEventListener("load", inicializarCropper);
       if (cropperRef.current) {
         cropperRef.current.destroy();
         cropperRef.current = null;
@@ -420,6 +444,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       });
     }
     canvas.renderAll();
+    canvasModificadoRef.current = true;
   }
 
   function limparAnotacoes() {
@@ -431,6 +456,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.renderAll();
     historyRef.current = [];
     salvarHistorico(canvas);
+    canvasModificadoRef.current = true;
   }
 
   // ── Ferramentas de anotação ───────────────────────────────────────────────
@@ -461,6 +487,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.setActiveObject(grupo);
     canvas.renderAll();
     salvarHistorico(canvas);
+    canvasModificadoRef.current = true;
   }
 
   function addCirculo() {
@@ -474,6 +501,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.setActiveObject(circulo);
     canvas.renderAll();
     salvarHistorico(canvas);
+    canvasModificadoRef.current = true;
   }
 
   function addRetangulo() {
@@ -487,6 +515,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.setActiveObject(rect);
     canvas.renderAll();
     salvarHistorico(canvas);
+    canvasModificadoRef.current = true;
   }
 
   function addTexto() {
@@ -498,17 +527,24 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     });
     canvas.add(texto);
     canvas.setActiveObject(texto);
-    // Bug 1a: renderAll() primeiro, enterEditing() em rAF para garantir que o canvas
-    // já renderizou o objeto antes de ativar o modo de edição de texto
+    // Bug 1 (revisão): setTimeout(50ms) + foco no .upper-canvas para garantir que
+    // o Fabric v5 ative o modo de edição corretamente após o canvas ter foco no DOM.
     canvas.renderAll();
-    requestAnimationFrame(() => {
+    setTimeout(() => {
+      canvas.setActiveObject(texto);
       (texto as fabric.IText).enterEditing();
       canvas.renderAll();
-    });
+      const canvasEl = document.getElementById("foto-editor-canvas");
+      const upperCanvas = canvasEl?.parentElement?.querySelector(
+        ".upper-canvas"
+      ) as HTMLCanvasElement | null;
+      upperCanvas?.focus();
+    }, 50);
     salvarHistorico(canvas);
+    canvasModificadoRef.current = true;
   }
 
-  // ── Upload de imagem para o Cloudinary ────────────────────────────────────
+  // ── Upload / deleção de imagens no Cloudinary ────────────────────────────
 
   async function uploadBase64(base64: string, prefixo: string): Promise<string> {
     const filename = `${prefixo}-${foto.id}-${Date.now()}.jpg`;
@@ -522,6 +558,22 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     return data.url as string;
   }
 
+  /**
+   * Sinaliza ao backend para apagar uma imagem do Cloudinary.
+   * Falha silenciosamente — não bloqueia o fluxo de salvar.
+   */
+  async function deletarCloudinaryUrl(url: string): Promise<void> {
+    try {
+      await fetch("/api/laudos/delete-cloudinary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+    } catch {
+      // Falha silenciosa
+    }
+  }
+
   // ── Salvar ────────────────────────────────────────────────────────────────
 
   async function handleSalvar() {
@@ -533,35 +585,57 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
       if (modo === "original_zoom") {
         if (etapaZoom === "recortar" && cropperRef.current) {
-          // Passo 2: o usuário definiu o recorte
-          // Faz upload da imagem anotada (já exportada ao clicar em "Definir recorte →")
+          // Passo 2: usuário definiu o recorte.
+          // Apaga versões anteriores antes de criar novas para não acumular no Cloudinary.
+          if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
+          if (foto.urlRecorte) await deletarCloudinaryUrl(foto.urlRecorte as string);
+
+          // Sobe a imagem anotada exportada no passo de anotação
           if (imagemAnotadaParaRecorteRef.current) {
             urlAnotada = await uploadBase64(imagemAnotadaParaRecorteRef.current, "laudo-anotada");
           }
-          // Faz upload do recorte selecionado no Cropper
+          // Sobe o recorte selecionado no Cropper
           const cropCanvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1200, maxHeight: 900 });
           if (!cropCanvas) throw new Error("Nenhum recorte definido");
           urlRecorte = await uploadBase64(cropCanvas.toDataURL("image/jpeg", 0.9), "laudo-zoom");
+
         } else {
-          // Passo 1: salvou sem passar pelo recorte — salva só as anotações
+          // Passo 1: salvou sem definir recorte — aplica mesma lógica dos outros modos
           const canvas = fabricRef.current;
           if (!canvas) throw new Error("Canvas não inicializado");
-          const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
-          urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
-          const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
-          if (formas.length > 0) {
-            anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
+
+          if (canvasModificadoRef.current) {
+            if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
+            const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+            urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+            const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
+            if (formas.length > 0) {
+              anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
+            }
+          } else {
+            // Canvas não modificado — reutiliza URLs existentes
+            urlAnotada = foto.urlAnotada ?? undefined;
+            anotacoesJson = foto.anotacoesJson ?? undefined;
           }
         }
       } else {
         // Todos os outros modos: exporta canvas com anotações
         const canvas = fabricRef.current;
         if (!canvas) throw new Error("Canvas não inicializado");
-        const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
-        urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
-        const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
-        if (formas.length > 0) {
-          anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
+
+        if (canvasModificadoRef.current) {
+          // Apaga versão anterior antes de criar nova
+          if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
+          const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+          urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+          const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
+          if (formas.length > 0) {
+            anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
+          }
+        } else {
+          // Canvas não modificado — só modoLayout pode ter mudado
+          urlAnotada = foto.urlAnotada ?? undefined;
+          anotacoesJson = foto.anotacoesJson ?? undefined;
         }
       }
 

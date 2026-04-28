@@ -292,23 +292,18 @@ export async function deleteLaudo(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Busca todas as fotos do laudo para deletar do Cloudinary antes de remover do banco
+  // Deleta cada foto individualmente via removeLaudoFoto, que já cuida de
+  // limpar todas as versões (url, urlAnotada, urlRecorte) do Cloudinary antes
+  // de deletar a linha do banco — evita duplicação de lógica de cleanup.
   const fotosDoLaudo = await db
-    .select()
+    .select({ id: laudoFotos.id })
     .from(laudoFotos)
     .where(eq(laudoFotos.laudoId, id));
 
-  if (fotosDoLaudo.length > 0) {
-    const urlsParaDeletar: string[] = [];
-    for (const f of fotosDoLaudo) {
-      if (f.url)                    urlsParaDeletar.push(f.url);
-      if ((f as any).urlAnotada)    urlsParaDeletar.push((f as any).urlAnotada);
-      if ((f as any).urlRecorte)    urlsParaDeletar.push((f as any).urlRecorte);
-    }
-    await Promise.all(urlsParaDeletar.map(deletarDoCloudinary));
+  for (const f of fotosDoLaudo) {
+    await removeLaudoFoto(f.id);
   }
 
-  await db.delete(laudoFotos).where(eq(laudoFotos.laudoId, id));
   await db.delete(laudoMedicoes).where(eq(laudoMedicoes.laudoId, id));
   await db.delete(laudoTecnicos).where(eq(laudoTecnicos.laudoId, id));
   await db.delete(laudos).where(eq(laudos.id, id));
