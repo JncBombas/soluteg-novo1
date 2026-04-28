@@ -1,9 +1,38 @@
 import { eq, desc, and, like, or, inArray, asc } from "drizzle-orm";
+import { v2 as cloudinary } from "cloudinary";
 import { getDb } from "./db";
 import {
   laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos, normasBiblioteca,
   InsertLaudo, InsertLaudoFoto, InsertLaudoMedicao, InsertConfiguracoesTecnico,
 } from "../drizzle/schema";
+
+// ── Cloudinary ────────────────────────────────────────────────────────────────
+
+// Configuração reutilizada de server/storage.ts
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+/**
+ * Extrai o public_id de uma URL do Cloudinary e deleta o arquivo.
+ * Ex: https://res.cloudinary.com/xxx/image/upload/v123/laudo_fotos/abc.jpg
+ *  → public_id = laudo_fotos/abc
+ *
+ * Não lança erro se falhar — evita bloquear a deleção do banco.
+ */
+async function deletarDoCloudinary(url: string): Promise<void> {
+  try {
+    // Remove parâmetros de transformação (ex: /c_fill,w_200/) antes do public_id
+    const match = url.match(/\/upload\/(?:[^/]+\/)*(?:v\d+\/)?(.+)\.[a-z]+$/i);
+    if (match?.[1]) {
+      await cloudinary.uploader.destroy(match[1]);
+    }
+  } catch {
+    // Falha silenciosa — não bloqueia deleção do registro no banco
+  }
+}
 
 // ── Número automático ────────────────────────────────────────────────────────
 
@@ -263,6 +292,22 @@ export async function deleteLaudo(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  // Busca todas as fotos do laudo para deletar do Cloudinary antes de remover do banco
+  const fotosDoLaudo = await db
+    .select()
+    .from(laudoFotos)
+    .where(eq(laudoFotos.laudoId, id));
+
+  if (fotosDoLaudo.length > 0) {
+    const urlsParaDeletar: string[] = [];
+    for (const f of fotosDoLaudo) {
+      if (f.url)                    urlsParaDeletar.push(f.url);
+      if ((f as any).urlAnotada)    urlsParaDeletar.push((f as any).urlAnotada);
+      if ((f as any).urlRecorte)    urlsParaDeletar.push((f as any).urlRecorte);
+    }
+    await Promise.all(urlsParaDeletar.map(deletarDoCloudinary));
+  }
+
   await db.delete(laudoFotos).where(eq(laudoFotos.laudoId, id));
   await db.delete(laudoMedicoes).where(eq(laudoMedicoes.laudoId, id));
   await db.delete(laudoTecnicos).where(eq(laudoTecnicos.laudoId, id));
@@ -323,6 +368,24 @@ export async function updateLaudoFoto(id: number, data: Partial<{
 export async function removeLaudoFoto(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // Busca a foto antes de deletar para obter as URLs do Cloudinary
+  const [foto] = await db
+    .select()
+    .from(laudoFotos)
+    .where(eq(laudoFotos.id, id))
+    .limit(1);
+
+  if (foto) {
+    // Deleta todas as versões da foto no Cloudinary em paralelo
+    const urlsParaDeletar = [
+      foto.url,
+      (foto as any).urlAnotada,
+      (foto as any).urlRecorte,
+    ].filter(Boolean) as string[];
+
+    await Promise.all(urlsParaDeletar.map(deletarDoCloudinary));
+  }
 
   await db.delete(laudoFotos).where(eq(laudoFotos.id, id));
 }
