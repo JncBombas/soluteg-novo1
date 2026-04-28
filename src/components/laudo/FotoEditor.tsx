@@ -6,12 +6,21 @@
  *  - Escolher cor das anotações (vermelho, amarelo, verde)
  *  - Desfazer e limpar anotações
  *  - Definir modo de layout no PDF (normal, destaque, zoom, anotada)
- *  - Recortar uma região da foto para gerar um "detalhe ampliado" (Cropper.js)
+ *  - Recortar uma região da foto anotada para gerar um "detalhe ampliado" (Cropper.js)
  *
  * CORREÇÕES (v2):
  *  - Canvas responsivo: mede o container real após o Dialog terminar de animar
  *  - Carregamento de imagem via fetch/blob para evitar erros de CORS do Cloudinary
  *  - Layout mobile: painel de ferramentas horizontal; canvas ocupa a largura toda
+ *
+ * CORREÇÕES (v3):
+ *  - Bug 1a: enterEditing() agora é chamado dentro de requestAnimationFrame, após renderAll()
+ *  - Bug 1b: duplo clique sobre texto existente reabre edição (listener mouse:dblclick)
+ *  - Bug 2: canvas sempre carrega foto.url como base (nunca urlAnotada) para evitar
+ *            duplicar anotações antigas ao reeditar
+ *  - Bug 3: modo original_zoom usa dois passos ("anotar" → "recortar") com canvas
+ *            sempre montado (oculto via CSS), não desmontado — evita destruir as
+ *            anotações ao alternar para o Cropper
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -36,6 +45,8 @@ import {
   Square,
   Type,
   CropIcon,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,8 +55,11 @@ import { toast } from "sonner";
 /** Dados da foto que será editada */
 export interface FotoEditorFoto {
   id: number;
+  /** URL original da foto no Cloudinary (sempre usada como base do canvas) */
   url: string;
+  /** URL da versão anotada gerada por uma edição anterior (exibida como miniatura no formulário) */
   urlAnotada?: string | null;
+  /** JSON das formas Fabric do último save (usado apenas para restaurar — não como base da imagem) */
   anotacoesJson?: string | null;
   modoLayout?: string;
 }
@@ -96,12 +110,29 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   const historyRef         = useRef<string[]>([]);
   // Controla cleanup de polling
   const pollingTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guarda o base64 da imagem anotada gerada antes de ir para o passo de recorte
+  const imagemAnotadaParaRecorteRef = useRef<string>("");
 
-  const [modo, setModo]         = useState(foto.modoLayout ?? "normal");
-  const [cor, setCor]           = useState(CORES[0].value);
-  const [salvando, setSalvando] = useState(false);
-  // Quando modo é original_zoom, mostramos o Cropper em vez do Fabric canvas
-  const mostraCropper = modo === "original_zoom";
+  const [modo, setModo]             = useState(foto.modoLayout ?? "normal");
+  const [cor, setCor]               = useState(CORES[0].value);
+  const [salvando, setSalvando]     = useState(false);
+  // Fluxo de dois passos para o modo original_zoom: "anotar" → "recortar"
+  const [etapaZoom, setEtapaZoom]   = useState<"anotar" | "recortar">("anotar");
+  // URL/base64 da imagem que o Cropper vai usar como fonte (imagem anotada exportada do Fabric)
+  const [cropSrc, setCropSrc]       = useState<string>("");
+
+  // O Cropper só aparece quando o modo é original_zoom E o usuário passou para o passo de recorte
+  const mostraCropper = modo === "original_zoom" && etapaZoom === "recortar";
+
+  // ── Resetar etapa ao fechar/abrir ─────────────────────────────────────────
+
+  useEffect(() => {
+    if (open) {
+      setEtapaZoom("anotar");
+      setCropSrc("");
+      imagemAnotadaParaRecorteRef.current = "";
+    }
+  }, [open]);
 
   // ── Carregar imagem via blob para evitar erros CORS do Cloudinary ─────────
 
@@ -110,7 +141,10 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     largura: number,
     altura: number
   ) {
-    const src = foto.urlAnotada || foto.url;
+    // SEMPRE usa foto.url como base — nunca foto.urlAnotada.
+    // Se usássemos urlAnotada, as anotações antigas seriam "queimadas" na imagem base
+    // e ao salvar novamente, seriam duplicadas por cima delas mesmas.
+    const src = foto.url;
 
     try {
       // Tenta fetch/blob primeiro — evita o problema de CORS com Cloudinary
@@ -176,7 +210,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.add(img);
     canvas.sendToBack(img);
 
-    // Restaura anotações salvas anteriormente (se houver)
+    // Restaura anotações salvas anteriormente (se houver) por cima da imagem original
     if (foto.anotacoesJson) {
       try {
         const formas: object[] = JSON.parse(foto.anotacoesJson);
@@ -198,16 +232,18 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     salvarHistorico(canvas);
     canvas.renderAll();
 
-    // Libera memory do object URL após o canvas já ter carregado a imagem
+    // Libera memória do object URL após o canvas já ter carregado a imagem
     if (objectUrlParaRevogar) {
       setTimeout(() => URL.revokeObjectURL(objectUrlParaRevogar), 5000);
     }
   }
 
   // ── Inicializar canvas Fabric com polling até container ter dimensões ──────
+  // O canvas é montado UMA vez quando open=true e destruído quando open=false.
+  // Não depende de mostraCropper para não destruir o canvas ao ir para o passo de recorte.
 
   useEffect(() => {
-    if (!open || mostraCropper) return;
+    if (!open) return;
 
     let tentativas = 0;
 
@@ -231,7 +267,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
       canvasDimsRef.current = { w: largura, h: altura };
 
-      // Destrói instância anterior se existir (troca de modo)
+      // Destrói instância anterior se existir
       if (fabricRef.current) {
         fabricRef.current.dispose();
         fabricRef.current = null;
@@ -245,6 +281,16 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       });
       fabricRef.current = canvas;
       historyRef.current = [];
+
+      // Bug 1b: duplo clique sobre um IText existente reabre o modo de edição de texto
+      canvas.on("mouse:dblclick", (e: fabric.IEvent) => {
+        const target = e.target;
+        if (target && (target as any).type === "i-text") {
+          canvas.setActiveObject(target);
+          (target as fabric.IText).enterEditing();
+          canvas.renderAll();
+        }
+      });
 
       // Carrega a imagem de forma assíncrona (evita bloqueio)
       carregarImagemNoCanvas(canvas, largura, altura);
@@ -269,9 +315,10 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mostraCropper]);
+  }, [open]);
 
-  // ── Inicializar Cropper.js (modo original_zoom) ───────────────────────────
+  // ── Inicializar Cropper.js (modo original_zoom, passo recortar) ───────────
+  // Usa cropSrc (base64 da imagem anotada exportada do Fabric) como fonte.
 
   useEffect(() => {
     if (!open || !mostraCropper) return;
@@ -310,7 +357,36 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
         cropperRef.current = null;
       }
     };
-  }, [open, mostraCropper]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mostraCropper, cropSrc]);
+
+  // ── Fluxo de dois passos para original_zoom ───────────────────────────────
+
+  /**
+   * Exporta o canvas com as anotações como base64, guarda na ref e avança para
+   * o passo de recorte. O canvas NÃO é desmontado — apenas oculto via CSS para
+   * preservar as anotações caso o usuário queira voltar.
+   */
+  function irParaRecorte() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const base64 = canvas.toDataURL({ format: "jpeg", quality: 0.92 });
+    imagemAnotadaParaRecorteRef.current = base64;
+    setCropSrc(base64);
+    setEtapaZoom("recortar");
+  }
+
+  /**
+   * Destrói o Cropper e volta para o passo de anotação.
+   * O canvas já está montado e com as anotações intactas.
+   */
+  function voltarParaAnotar() {
+    if (cropperRef.current) {
+      cropperRef.current.destroy();
+      cropperRef.current = null;
+    }
+    setEtapaZoom("anotar");
+  }
 
   // ── Helpers de histórico ──────────────────────────────────────────────────
 
@@ -422,8 +498,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     });
     canvas.add(texto);
     canvas.setActiveObject(texto);
-    (texto as fabric.IText).enterEditing();
+    // Bug 1a: renderAll() primeiro, enterEditing() em rAF para garantir que o canvas
+    // já renderizou o objeto antes de ativar o modo de edição de texto
     canvas.renderAll();
+    requestAnimationFrame(() => {
+      (texto as fabric.IText).enterEditing();
+      canvas.renderAll();
+    });
     salvarHistorico(canvas);
   }
 
@@ -450,23 +531,34 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       let urlRecorte: string | undefined;
       let anotacoesJson: string | undefined;
 
-      if (mostraCropper) {
-        // Modo original_zoom: exporta apenas o recorte
-        const cropCanvas = cropperRef.current?.getCroppedCanvas({
-          maxWidth: 1200, maxHeight: 900,
-        });
-        if (!cropCanvas) throw new Error("Nenhum recorte definido");
-        const base64Recorte = cropCanvas.toDataURL("image/jpeg", 0.9);
-        urlRecorte = await uploadBase64(base64Recorte, "laudo-zoom");
+      if (modo === "original_zoom") {
+        if (etapaZoom === "recortar" && cropperRef.current) {
+          // Passo 2: o usuário definiu o recorte
+          // Faz upload da imagem anotada (já exportada ao clicar em "Definir recorte →")
+          if (imagemAnotadaParaRecorteRef.current) {
+            urlAnotada = await uploadBase64(imagemAnotadaParaRecorteRef.current, "laudo-anotada");
+          }
+          // Faz upload do recorte selecionado no Cropper
+          const cropCanvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1200, maxHeight: 900 });
+          if (!cropCanvas) throw new Error("Nenhum recorte definido");
+          urlRecorte = await uploadBase64(cropCanvas.toDataURL("image/jpeg", 0.9), "laudo-zoom");
+        } else {
+          // Passo 1: salvou sem passar pelo recorte — salva só as anotações
+          const canvas = fabricRef.current;
+          if (!canvas) throw new Error("Canvas não inicializado");
+          const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+          urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+          const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
+          if (formas.length > 0) {
+            anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
+          }
+        }
       } else {
+        // Todos os outros modos: exporta canvas com anotações
         const canvas = fabricRef.current;
         if (!canvas) throw new Error("Canvas não inicializado");
-
-        // Exporta imagem completa (base + anotações)
         const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
         urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
-
-        // Serializa só as formas para reedição futura (exclui a imagem base)
         const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
         if (formas.length > 0) {
           anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
@@ -537,7 +629,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
                     <button
                       key={m.value}
                       type="button"
-                      onClick={() => setModo(m.value)}
+                      onClick={() => {
+                        setModo(m.value);
+                        // Ao trocar de modo, volta para o passo de anotação
+                        if (m.value !== "original_zoom") {
+                          voltarParaAnotar();
+                        }
+                      }}
                       className={`
                         px-2 py-1 rounded text-[10px] lg:text-xs transition-colors whitespace-nowrap
                         lg:w-full lg:text-left
@@ -555,7 +653,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
                 </div>
               </div>
 
-              {/* Ferramentas — só visíveis nos modos Fabric */}
+              {/* Ferramentas — visíveis quando o canvas está ativo (não no passo de recorte) */}
               {!mostraCropper && (
                 <>
                   <div className="space-y-1 flex-shrink-0">
@@ -611,51 +709,84 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
                       <Trash2 className="h-3 w-3" /><span className="hidden sm:inline">Limpar</span>
                     </Button>
                   </div>
+
+                  {/* Botão para ir ao passo de recorte — só no modo original_zoom */}
+                  {modo === "original_zoom" && (
+                    <div className="flex-shrink-0 pt-1 lg:pt-2">
+                      <Button
+                        size="sm"
+                        className="gap-1 h-7 lg:h-8 text-[10px] lg:text-xs lg:w-full whitespace-nowrap"
+                        onClick={irParaRecorte}
+                      >
+                        <CropIcon className="h-3 w-3" />
+                        <span>Definir recorte</span>
+                        <ChevronRight className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
 
-              {/* Dica para o modo de recorte */}
+              {/* Controles do passo de recorte */}
               {mostraCropper && (
-                <div className="space-y-1 flex-shrink-0 max-w-[180px] lg:max-w-none">
-                  <div className="flex items-center gap-1 text-[10px] lg:text-xs text-muted-foreground whitespace-nowrap">
-                    <CropIcon className="h-3 w-3 flex-shrink-0" />
-                    <span>Arraste para selecionar o detalhe</span>
+                <div className="space-y-2 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1 h-7 lg:h-8 text-[10px] lg:text-xs lg:w-full whitespace-nowrap"
+                    onClick={voltarParaAnotar}
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    <span>Voltar</span>
+                  </Button>
+                  <div className="flex items-start gap-1 text-[10px] lg:text-xs text-muted-foreground">
+                    <CropIcon className="h-3 w-3 flex-shrink-0 mt-0.5" />
+                    <span>Arraste para selecionar o detalhe a ampliar</span>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Área principal — Canvas ou Cropper ───────────────────────── */}
+          {/* ── Área principal ────────────────────────────────────────────── */}
           <div
             ref={canvasContainerRef}
             className="flex-1 overflow-auto flex items-start justify-center p-2 bg-slate-900 min-h-0"
             style={{ minHeight: 250 }}
           >
-            {/* Canvas Fabric.js */}
-            {!mostraCropper && (
-              <div className="relative">
-                <canvas
-                  id="foto-editor-canvas"
-                  style={{ display: "block", border: "1px solid #334155" }}
-                />
-                <Badge
-                  variant="secondary"
-                  className="absolute bottom-2 left-2 text-[9px] px-1.5 py-0.5 hidden sm:flex"
-                >
-                  Clique nos botões para adicionar • Arraste para mover
-                </Badge>
-              </div>
-            )}
+            {/*
+              O canvas Fabric SEMPRE permanece montado no DOM enquanto o editor estiver aberto.
+              Quando o usuário vai para o passo de recorte (mostraCropper=true), ele é apenas
+              ocultado via CSS — isso preserva todas as anotações desenhadas.
+            */}
+            <div
+              className="relative"
+              style={{ display: mostraCropper ? "none" : "block" }}
+            >
+              <canvas
+                id="foto-editor-canvas"
+                style={{ display: "block", border: "1px solid #334155" }}
+              />
+              <Badge
+                variant="secondary"
+                className="absolute bottom-2 left-2 text-[9px] px-1.5 py-0.5 hidden sm:flex"
+              >
+                Clique nos botões para adicionar • Duplo clique para editar texto
+              </Badge>
+            </div>
 
-            {/* Imagem para o Cropper.js */}
+            {/* Imagem para o Cropper.js — só aparece no passo de recorte */}
             {mostraCropper && (
               <div className="w-full h-full overflow-hidden">
+                {/*
+                  A imagem do Cropper usa cropSrc: o base64 exportado do canvas com
+                  as anotações já aplicadas. Isso garante que o usuário verá a versão
+                  anotada ao selecionar o recorte, e o recorte conterá as anotações.
+                */}
                 <img
                   ref={cropImgRef}
-                  src={foto.url}
+                  src={cropSrc || foto.url}
                   alt="Foto para recorte"
-                  crossOrigin="anonymous"
                   style={{ display: "block", maxWidth: "100%", maxHeight: "100%" }}
                 />
               </div>

@@ -466,39 +466,55 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
             fi += 1;
 
           // ── Modo ORIGINAL_ZOOM — original à esq + recorte à dir ──────────
+          // Se urlRecorte não está definido ainda (usuário anotou mas não recortou),
+          // exibe a foto anotada em largura total como fallback (igual ao modo destaque).
           } else if (modo === "original_zoom") {
-            const half = (CW - 12) / 2;
-            const h = 160;
-            checkPageBreak(h + 50);
-            const y0 = doc.y;
-            // Original
-            await drawPhoto(foto.url, L, y0, half, h);
-            doc.fontSize(6.5).font("Helvetica").fillColor(MUTED)
-              .text("Original", L, y0 + h + 2, { width: half, align: "center" });
-            // Recorte ampliado
-            if (foto.urlRecorte) {
+            if (!foto.urlRecorte) {
+              // Fallback: sem recorte — exibe a versão anotada (ou original) em largura total
+              const h = 220;
+              checkPageBreak(h + 50);
+              const y0 = doc.y;
+              await drawPhoto(foto.urlAnotada || foto.url, L, y0, CW, h);
+              drawClassBadge(foto.classificacao, L, y0, CW);
+              const legendY = y0 + h + 4;
+              if (foto.legenda) {
+                doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
+                  .text(foto.legenda, L, legendY, { width: CW });
+              }
+              if (foto.comentario) {
+                doc.fontSize(7).font("Helvetica").fillColor(MUTED)
+                  .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
+              }
+              doc.y = legendY + 30;
+              fi += 1;
+            } else {
+              // Fluxo normal: original à esquerda + recorte ampliado à direita
+              const half = (CW - 12) / 2;
+              const h = 160;
+              checkPageBreak(h + 50);
+              const y0 = doc.y;
+              // Original (ou versão anotada do lado esquerdo)
+              await drawPhoto(foto.urlAnotada || foto.url, L, y0, half, h);
+              doc.fontSize(6.5).font("Helvetica").fillColor(MUTED)
+                .text("Original", L, y0 + h + 2, { width: half, align: "center" });
+              // Recorte ampliado com borda vermelha para destacar o detalhe
               await drawPhoto(foto.urlRecorte, L + half + 12, y0, half, h);
-              // Borda vermelha para destacar o detalhe
               doc.rect(L + half + 12, y0, half, h).stroke("#ef4444");
               doc.fontSize(6.5).font("Helvetica").fillColor("#ef4444")
                 .text("Detalhe ampliado", L + half + 12, y0 + h + 2, { width: half, align: "center" });
-            } else {
-              doc.rect(L + half + 12, y0, half, h).stroke("#e2e8f0");
-              doc.fontSize(7).fillColor(MUTED)
-                .text("(recorte nao definido)", L + half + 12, y0 + h / 2 - 5, { width: half, align: "center" });
+              drawClassBadge(foto.classificacao, L, y0, half);
+              const legendY = y0 + h + 14;
+              if (foto.legenda) {
+                doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
+                  .text(foto.legenda, L, legendY, { width: CW });
+              }
+              if (foto.comentario) {
+                doc.fontSize(7).font("Helvetica").fillColor(MUTED)
+                  .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
+              }
+              doc.y = legendY + 30;
+              fi += 1;
             }
-            drawClassBadge(foto.classificacao, L, y0, half);
-            const legendY = y0 + h + 14;
-            if (foto.legenda) {
-              doc.fontSize(7.5).font("Helvetica-Bold").fillColor(DARK)
-                .text(foto.legenda, L, legendY, { width: CW });
-            }
-            if (foto.comentario) {
-              doc.fontSize(7).font("Helvetica").fillColor(MUTED)
-                .text(foto.comentario, L, legendY + (foto.legenda ? 11 : 0), { width: CW });
-            }
-            doc.y = legendY + 30;
-            fi += 1;
 
           // ── Modo NORMAL ou ANOTADA — 2 fotos por linha ───────────────────
           } else {
