@@ -152,6 +152,17 @@ export const clientsRouter = router({
 
       const { sendWhatsappToNumber } = await import("../whatsapp");
 
+      // Substitui variáveis {{campo}} pelos dados reais do cliente antes de enviar
+      const replaceVars = (msg: string, c: typeof targets[number]) =>
+        msg
+          .replace(/\{\{nome\}\}/g,     c.name       || "")
+          .replace(/\{\{usuario\}\}/g,  c.username   || "")
+          .replace(/\{\{telefone\}\}/g, c.phone      || "")
+          .replace(/\{\{email\}\}/g,    c.email      || "")
+          .replace(/\{\{endereco\}\}/g, c.address    || "")
+          .replace(/\{\{sindico\}\}/g,  (c as any).syndicName || "")
+          .replace(/\{\{cnpj\}\}/g,     c.cnpjCpf    || "");
+
       const results: Array<{ id: number; name: string; phone: string; status: "sent" | "failed" | "skipped"; reason?: string }> = [];
 
       for (const client of targets) {
@@ -160,9 +171,8 @@ export const clientsRouter = router({
           continue;
         }
         try {
-          const firstName = client.name.split(" ")[0];
-          const fullMessage = `Olá, ${firstName}! 👋\n\n📢 *COMUNICADO IMPORTANTE*\n\n${input.message}\n\nAgradecemos a sua confiança! 🙏\n*JNC Elétrica*`;
-          await sendWhatsappToNumber(client.phone, fullMessage);
+          const finalMessage = replaceVars(input.message, client);
+          await sendWhatsappToNumber(client.phone, finalMessage);
           results.push({ id: client.id, name: client.name, phone: client.phone, status: "sent" });
         } catch (err: any) {
           results.push({ id: client.id, name: client.name, phone: client.phone, status: "failed", reason: err?.message ?? "Erro desconhecido" });

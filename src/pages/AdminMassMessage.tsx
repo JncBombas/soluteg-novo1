@@ -1,5 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect, useMemo, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +18,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft,
   MessageSquare,
   Send,
   Loader2,
@@ -41,8 +39,38 @@ interface BroadcastResult {
   reason?: string;
 }
 
+// Variáveis disponíveis para personalização da mensagem
+const MERGE_TAGS = [
+  { tag: "{{nome}}",     label: "Nome",       desc: "Nome completo do cliente" },
+  { tag: "{{usuario}}", label: "Usuário",     desc: "Nome de usuário do portal" },
+  { tag: "{{telefone}}",label: "Telefone",    desc: "Telefone do cliente" },
+  { tag: "{{email}}",   label: "E-mail",      desc: "E-mail do cliente" },
+  { tag: "{{endereco}}",label: "Endereço",    desc: "Endereço do cliente" },
+  { tag: "{{sindico}}", label: "Síndico",     desc: "Nome do síndico responsável" },
+  { tag: "{{cnpj}}",    label: "CNPJ/CPF",   desc: "Documento do cliente" },
+];
+
+// Substitui as variáveis na mensagem com os dados reais de um cliente
+function replaceVars(msg: string, client: {
+  name?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  syndicName?: string;
+  cnpjCpf?: string;
+}): string {
+  return msg
+    .replace(/\{\{nome\}\}/g,     client.name      || "—")
+    .replace(/\{\{usuario\}\}/g,  client.username  || "—")
+    .replace(/\{\{telefone\}\}/g, client.phone     || "—")
+    .replace(/\{\{email\}\}/g,    client.email     || "—")
+    .replace(/\{\{endereco\}\}/g, client.address   || "—")
+    .replace(/\{\{sindico\}\}/g,  client.syndicName|| "—")
+    .replace(/\{\{cnpj\}\}/g,     client.cnpjCpf   || "—");
+}
+
 export default function AdminMassMessage() {
-  const [, setLocation] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
   const [targetType, setTargetType] = useState<TargetType>("all");
   const [message, setMessage] = useState("");
@@ -56,6 +84,9 @@ export default function AdminMassMessage() {
     skipped: number;
     results: BroadcastResult[];
   } | null>(null);
+
+  // Ref para controlar posição do cursor no textarea
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     const id = localStorage.getItem("adminId");
@@ -94,6 +125,13 @@ export default function AdminMassMessage() {
   const withPhone = previewTargets.filter((c) => c.phone);
   const withoutPhone = previewTargets.filter((c) => !c.phone);
 
+  // Preview da mensagem com dados do primeiro destinatário
+  const previewMessage = useMemo(() => {
+    const first = withPhone[0];
+    if (!first || !message.trim()) return message;
+    return replaceVars(message, first as any);
+  }, [message, withPhone]);
+
   const toggleClient = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -109,6 +147,24 @@ export default function AdminMassMessage() {
     } else {
       setSelectedIds(new Set(filteredForPicker.map((c) => c.id)));
     }
+  };
+
+  // Insere a tag na posição atual do cursor no textarea
+  const insertTag = (tag: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setMessage((prev) => prev + tag);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const newMsg = message.slice(0, start) + tag + message.slice(end);
+    setMessage(newMsg);
+    // Reposiciona o cursor após a tag inserida
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + tag.length, start + tag.length);
+    });
   };
 
   const canSend =
@@ -202,7 +258,7 @@ export default function AdminMassMessage() {
 
       {!results && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Coluna esquerda: configurações */}
+          {/* Coluna esquerda: destinatários */}
           <div className="space-y-4">
             <Card>
               <CardHeader className="pb-3">
@@ -236,10 +292,7 @@ export default function AdminMassMessage() {
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-500 px-1">
                       <span>{selectedIds.size} selecionado(s)</span>
-                      <button
-                        className="text-orange-500 hover:underline"
-                        onClick={toggleAll}
-                      >
+                      <button className="text-orange-500 hover:underline" onClick={toggleAll}>
                         {selectedIds.size === filteredForPicker.length ? "Desmarcar todos" : "Selecionar todos"}
                       </button>
                     </div>
@@ -296,9 +349,7 @@ export default function AdminMassMessage() {
                       {withPhone.length} com telefone · {withoutPhone.length} sem telefone (serão ignorados)
                     </p>
                     {previewTargets.length > 0 && (
-                      <p className="text-xs text-slate-400 pt-1">
-                        {targetLabel[targetType]}
-                      </p>
+                      <p className="text-xs text-slate-400 pt-1">{targetLabel[targetType]}</p>
                     )}
                   </div>
                 </div>
@@ -311,19 +362,55 @@ export default function AdminMassMessage() {
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Mensagem</CardTitle>
-                <CardDescription>Será enviada via WhatsApp para cada destinatário</CardDescription>
+                <CardDescription>
+                  Será enviada via WhatsApp. Use variáveis abaixo para personalizar por cliente.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                {/* Chips de variáveis personalizadas */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                    Inserir variável (clique para adicionar ao texto)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MERGE_TAGS.map(({ tag, label, desc }) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        title={desc}
+                        onClick={() => insertTag(tag)}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <Textarea
-                  placeholder="Digite a mensagem que será enviada..."
-                  className="min-h-48 resize-none"
+                  ref={textareaRef}
+                  placeholder={"Ex: Olá {{nome}}, temos uma novidade para você!"}
+                  className="min-h-48 resize-none font-mono text-sm"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   maxLength={4096}
                 />
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>{message.length}/4096 caracteres</span>
+                  {withPhone.length > 0 && message.includes("{{") && (
+                    <span className="text-orange-500">Prévia com dados do 1º destinatário no envio</span>
+                  )}
                 </div>
+
+                {/* Prévia da mensagem personalizada */}
+                {withPhone.length > 0 && message.trim() && previewMessage !== message && (
+                  <div className="border rounded p-3 bg-slate-50 space-y-1">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                      Prévia — {withPhone[0]?.name}
+                    </p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap break-words">{previewMessage}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -385,14 +472,19 @@ export default function AdminMassMessage() {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="bg-slate-50 border rounded p-3 text-sm text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">
-            <span className="text-slate-400">Olá, [Nome do cliente]! 👋{"\n\n"}📢 </span>
-            <span className="font-semibold text-slate-500">COMUNICADO IMPORTANTE</span>
-            <span className="text-slate-400">{"\n\n"}</span>
-            {message}
-            <span className="text-slate-400">{"\n\n"}Agradecemos a sua confiança! 🙏{"\n"}</span>
-            <span className="font-semibold text-slate-500">JNC Elétrica</span>
+
+          {/* Prévia da mensagem no modal de confirmação */}
+          <div className="space-y-1">
+            {withPhone[0] && previewMessage !== message && (
+              <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">
+                Exemplo com dados de {withPhone[0].name}
+              </p>
+            )}
+            <div className="bg-slate-50 border rounded p-3 text-sm text-slate-700 max-h-40 overflow-y-auto whitespace-pre-wrap break-words">
+              {previewMessage || message}
+            </div>
           </div>
+
           <div className="flex gap-3 justify-end">
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
