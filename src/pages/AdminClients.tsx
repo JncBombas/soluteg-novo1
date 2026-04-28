@@ -493,11 +493,11 @@ export default function AdminClients() {
               </Table>
 
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-slate-600">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t">
+                  <p className="text-sm text-slate-600 text-center sm:text-left">
                     Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, filteredClients.length)} de {filteredClients.length} clientes
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -506,19 +506,17 @@ export default function AdminClients() {
                     >
                       Anterior
                     </Button>
-                    <div className="flex items-center gap-2">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <Button
-                          key={page}
-                          size="sm"
-                          variant={currentPage === page ? "default" : "outline"}
-                          onClick={() => setCurrentPage(page)}
-                          className={currentPage === page ? "bg-orange-500 hover:bg-orange-600" : ""}
-                        >
-                          {page}
-                        </Button>
-                      ))}
-                    </div>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        size="sm"
+                        variant={currentPage === page ? "default" : "outline"}
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-orange-500 hover:bg-orange-600" : ""}
+                      >
+                        {page}
+                      </Button>
+                    ))}
                     <Button
                       size="sm"
                       variant="outline"

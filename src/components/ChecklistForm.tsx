@@ -313,9 +313,9 @@ export default function ChecklistForm({
         return (
           <div
             key={field.id}
-            className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-border/50 last:border-0 gap-2"
           >
-            <Label className="text-sm flex-1 pr-4">{field.label}</Label>
+            <Label className="text-sm">{field.label}</Label>
             <OkNokNaButtons
               value={value as string}
               onChange={(val) => handleChange(field.id, val)}
@@ -498,10 +498,10 @@ export default function ChecklistForm({
               return (
               <div
                 key={item.id}
-                className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-border/50 last:border-0 gap-2"
               >
-                <Label className="text-sm flex-1 pr-2">{item.label}</Label>
-                <div className="flex items-center gap-2">
+                <Label className="text-sm">{item.label}</Label>
+                <div className="flex items-center gap-2 shrink-0">
                   <OkNokNaButtons
                     value={currentValue}
                     onChange={handleItemChange}
@@ -530,7 +530,7 @@ export default function ChecklistForm({
       ))}
 
       {!readOnly && (
-        <div className="flex items-center justify-between pt-4 border-t">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t">
           <p className="text-xs text-muted-foreground">
             {isComplete ? (
               <span className="text-green-600 font-medium">✓ Todos os campos obrigatórios preenchidos</span>
@@ -538,7 +538,7 @@ export default function ChecklistForm({
               "Preencha todos os campos obrigatórios"
             )}
           </p>
-          <Button onClick={handleSave} disabled={isSaving} className="h-11 px-6">
+          <Button onClick={handleSave} disabled={isSaving} className="h-11 px-6 w-full sm:w-auto">
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
