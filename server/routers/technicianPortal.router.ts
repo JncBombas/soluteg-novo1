@@ -268,6 +268,8 @@ export const technicianPortalRouter = router({
       .input(z.object({
         workOrderId: z.number(),
         comment:     z.string().min(1),
+        // false = visível ao cliente (isInternal=0); true = apenas interno (isInternal=1)
+        isInternal:  z.boolean().default(true),
       }))
       .mutation(async ({ input, ctx }) => {
         const os = await technicianDb.getWorkOrderByIdForTechnician(input.workOrderId, ctx.technicianId);
@@ -281,7 +283,7 @@ export const technicianPortalRouter = router({
           userId:      `tecnico-${ctx.technicianId}`,
           userType:    "admin",
           comment:     input.comment,
-          isInternal:  1,
+          isInternal:  input.isInternal ? 1 : 0,
         });
         return { success: true };
       }),

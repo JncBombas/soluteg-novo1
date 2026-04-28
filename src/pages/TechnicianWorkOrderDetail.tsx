@@ -37,6 +37,8 @@ import {
   Download,
   Globe,
   Loader2,
+  Eye,
+  Lock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -79,6 +81,8 @@ export default function TechnicianWorkOrderDetail() {
 
   // Comentários
   const [newComment, setNewComment] = useState("");
+  // true = apenas interno (padrão), false = visível ao cliente
+  const [commentIsInternal, setCommentIsInternal] = useState(true);
 
   // Anexos
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +219,7 @@ export default function TechnicianWorkOrderDetail() {
   const createCommentMutation = (trpc as any).technicianPortal.comments.create.useMutation({
     onSuccess: () => {
       setNewComment("");
+      setCommentIsInternal(true);
       refetchComments();
     },
     onError: (e: any) => toast.error(e.message),
@@ -342,7 +347,7 @@ export default function TechnicianWorkOrderDetail() {
 
   function handleSendComment() {
     if (!workOrderId || !newComment.trim()) return;
-    createCommentMutation.mutate({ workOrderId, comment: newComment.trim() });
+    createCommentMutation.mutate({ workOrderId, comment: newComment.trim(), isInternal: commentIsInternal });
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -600,13 +605,25 @@ export default function TechnicianWorkOrderDetail() {
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {comments.map((c: any) => (
                       <div key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-lg px-3 py-2">
-                        <div className="flex items-center gap-1.5 mb-1">
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                           <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
                             {c.userId?.startsWith("tecnico-") ? "Técnico" : c.userId}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             · {format(new Date(c.createdAt), "dd/MM HH:mm", { locale: ptBR })}
                           </span>
+                          {/* Badge de visibilidade */}
+                          {c.isInternal === 1 || c.isInternal === true ? (
+                            <span className="inline-flex items-center gap-0.5 text-xs bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full px-1.5 py-0.5">
+                              <Lock className="w-2.5 h-2.5" />
+                              Interno
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full px-1.5 py-0.5">
+                              <Eye className="w-2.5 h-2.5" />
+                              Visível ao cliente
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm">{c.comment}</p>
                       </div>
@@ -614,28 +631,59 @@ export default function TechnicianWorkOrderDetail() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Adicionar observação..."
-                    rows={2}
-                    className="flex-1 resize-none text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendComment();
-                      }
-                    }}
-                  />
-                  <Button
-                    size="icon"
-                    onClick={handleSendComment}
-                    disabled={!newComment.trim() || createCommentMutation.isPending}
-                    className="self-end bg-blue-600 hover:bg-blue-700 text-white shrink-0"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
+                {/* Toggle de visibilidade + campo de texto */}
+                <div className="space-y-2">
+                  {/* Botões de seleção de visibilidade */}
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setCommentIsInternal(true)}
+                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                        commentIsInternal
+                          ? "bg-slate-200 dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-medium"
+                          : "border-slate-200 dark:border-slate-700 text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <Lock className="w-3 h-3" />
+                      Interno
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentIsInternal(false)}
+                      className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                        !commentIsInternal
+                          ? "bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 font-medium"
+                          : "border-slate-200 dark:border-slate-700 text-muted-foreground hover:bg-slate-50 dark:hover:bg-slate-800"
+                      }`}
+                    >
+                      <Eye className="w-3 h-3" />
+                      Visível ao cliente
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder={commentIsInternal ? "Observação interna..." : "Mensagem para o cliente..."}
+                      rows={2}
+                      className="flex-1 resize-none text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendComment();
+                        }
+                      }}
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSendComment}
+                      disabled={!newComment.trim() || createCommentMutation.isPending}
+                      className={`self-end shrink-0 text-white ${commentIsInternal ? "bg-slate-600 hover:bg-slate-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
