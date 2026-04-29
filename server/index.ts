@@ -172,6 +172,12 @@ async function startServer() {
       const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
       if (match?.[1]) {
         const { v2: cloudinary } = await import("cloudinary");
+        // Garante credenciais configuradas (o singleton pode não ter sido inicializado ainda)
+        cloudinary.config({
+          cloud_name: process.env.CLOUDINARY_NAME,
+          api_key: process.env.CLOUDINARY_API_KEY,
+          api_secret: process.env.CLOUDINARY_API_SECRET,
+        });
         await cloudinary.uploader.destroy(match[1]);
       }
       res.json({ success: true });

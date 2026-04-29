@@ -319,6 +319,7 @@ export default function AdminLaudoForm() {
 
   // ── Editor avançado de fotos ─────────────────────────────────────────────
   const [fotoEditando, setFotoEditando] = useState<Foto | null>(null);
+  const [fotoParaExcluir, setFotoParaExcluir] = useState<number | null>(null);
   const addMedicaoMutation = trpc.laudos.addMedicao.useMutation();
   const removeMedicaoMutation = trpc.laudos.removeMedicao.useMutation();
 
@@ -406,12 +407,14 @@ export default function AdminLaudoForm() {
     }
   }
 
-  async function handleRemoveFoto(index: number) {
-    const foto = fotos[index];
+  async function confirmarExclusaoFoto() {
+    if (fotoParaExcluir === null) return;
+    const foto = fotos[fotoParaExcluir];
     if (foto.id) {
       await removeFotoMutation.mutateAsync({ id: foto.id });
     }
-    setFotos((prev) => prev.filter((_, i) => i !== index));
+    setFotos((prev) => prev.filter((_, i) => i !== fotoParaExcluir));
+    setFotoParaExcluir(null);
   }
 
   function handleFotoChange(index: number, field: keyof Foto, value: string) {
@@ -1180,7 +1183,7 @@ export default function AdminLaudoForm() {
                               <ChevronDown className="h-3 w-3" />
                             </button>
                             <button
-                              onClick={() => handleRemoveFoto(i)}
+                              onClick={() => setFotoParaExcluir(i)}
                               className="p-1 bg-red-500/80 text-white rounded hover:bg-red-600"
                             >
                               <X className="h-3 w-3" />
@@ -1375,6 +1378,25 @@ export default function AdminLaudoForm() {
               }}
             >
               Aplicar Template
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog — Confirmação de exclusão de foto */}
+      <AlertDialog open={fotoParaExcluir !== null} onOpenChange={(open) => !open && setFotoParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir foto?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-2 mt-2">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarExclusaoFoto}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

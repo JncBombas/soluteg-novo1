@@ -298,23 +298,8 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       fabricRef.current = canvas;
       historyRef.current = [];
 
-      // Bug 1 (revisão): duplo clique sobre IText existente reabre edição.
-      // setTimeout(50ms) + foco no .upper-canvas é necessário no Fabric v5 porque
-      // enterEditing() falha silenciosamente se chamado antes do canvas ter foco no DOM.
-      canvas.on("mouse:dblclick", (e: fabric.IEvent) => {
-        const target = e.target;
-        if (target && (target as any).type === "i-text") {
-          canvas.setActiveObject(target);
-          setTimeout(() => {
-            (target as fabric.IText).enterEditing();
-            canvas.renderAll();
-            const upperCanvas = document
-              .getElementById("foto-editor-canvas")
-              ?.parentElement?.querySelector(".upper-canvas") as HTMLCanvasElement | null;
-            upperCanvas?.focus();
-          }, 50);
-        }
-      });
+      // Fabric v5 já trata double-click nativamente no IText (enterEditing interno).
+      // Não adicionamos listener mouse:dblclick próprio para não conflitar.
 
       // Carrega a imagem de forma assíncrona (evita bloqueio)
       carregarImagemNoCanvas(canvas, largura, altura);
@@ -383,6 +368,42 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mostraCropper, cropSrc]);
+
+  // ── Ativar edição de texto no IText ─────────────────────────────────────
+  // No Fabric v5, chamar enterEditing() diretamente pode falhar se o canvas
+  // ainda não tiver foco no DOM. A solução mais confiável é despachar um evento
+  // dblclick no upperCanvasEl na posição do objeto — isso passa pelo pipeline
+  // interno do Fabric que cuida do foco e da textarea oculta corretamente.
+
+  function ativarEdicaoTexto(texto: fabric.IText) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    // upperCanvasEl é o canvas interativo criado pelo Fabric (sobreposto ao lower)
+    const upperEl = (canvas as any).upperCanvasEl as HTMLCanvasElement | undefined;
+    if (!upperEl) {
+      // Fallback: chama enterEditing diretamente se não encontrar o upper canvas
+      canvas.setActiveObject(texto);
+      texto.enterEditing();
+      canvas.renderAll();
+      return;
+    }
+
+    // Converte coordenadas do canvas Fabric para coordenadas de tela do elemento DOM
+    const vp    = canvas.viewportTransform ?? [1, 0, 0, 1, 0, 0];
+    const zoom  = canvas.getZoom();
+    const center = texto.getCenterPoint();
+    const screenX = center.x * zoom + vp[4];
+    const screenY = center.y * zoom + vp[5];
+    const rect  = upperEl.getBoundingClientRect();
+
+    upperEl.dispatchEvent(new MouseEvent("dblclick", {
+      bubbles: true,
+      cancelable: true,
+      clientX: rect.left + screenX,
+      clientY: rect.top + screenY,
+    }));
+  }
 
   // ── Fluxo de dois passos para original_zoom ───────────────────────────────
 
@@ -527,21 +548,12 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     });
     canvas.add(texto);
     canvas.setActiveObject(texto);
-    // Bug 1 (revisão): setTimeout(50ms) + foco no .upper-canvas para garantir que
-    // o Fabric v5 ative o modo de edição corretamente após o canvas ter foco no DOM.
     canvas.renderAll();
-    setTimeout(() => {
-      canvas.setActiveObject(texto);
-      (texto as fabric.IText).enterEditing();
-      canvas.renderAll();
-      const canvasEl = document.getElementById("foto-editor-canvas");
-      const upperCanvas = canvasEl?.parentElement?.querySelector(
-        ".upper-canvas"
-      ) as HTMLCanvasElement | null;
-      upperCanvas?.focus();
-    }, 50);
     salvarHistorico(canvas);
     canvasModificadoRef.current = true;
+    // Ativa edição via dispatch de dblclick no upperCanvasEl — mais confiável no Fabric v5
+    // que chamar enterEditing() diretamente, pois passa pelo pipeline interno de foco.
+    setTimeout(() => ativarEdicaoTexto(texto), 80);
   }
 
   // ── Upload / deleção de imagens no Cloudinary ────────────────────────────
@@ -851,17 +863,17 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
             {/* Imagem para o Cropper.js — só aparece no passo de recorte */}
             {mostraCropper && (
-              <div className="w-full h-full overflow-hidden">
-                {/*
-                  A imagem do Cropper usa cropSrc: o base64 exportado do canvas com
-                  as anotações já aplicadas. Isso garante que o usuário verá a versão
-                  anotada ao selecionar o recorte, e o recorte conterá as anotações.
-                */}
+              /*
+                overflow-visible é obrigatório aqui: o Cropper.js adiciona elementos
+                (crop box, handles, overlay) que ficam fora dos limites da imagem.
+                Com overflow-hidden, esses elementos são cortados e a UI some.
+              */
+              <div className="w-full" style={{ overflow: "visible" }}>
                 <img
                   ref={cropImgRef}
                   src={cropSrc || foto.url}
                   alt="Foto para recorte"
-                  style={{ display: "block", maxWidth: "100%", maxHeight: "100%" }}
+                  style={{ display: "block", maxWidth: "100%", maxHeight: "calc(95dvh - 200px)" }}
                 />
               </div>
             )}

@@ -24,8 +24,11 @@ cloudinary.config({
  */
 async function deletarDoCloudinary(url: string): Promise<void> {
   try {
-    // Remove parâmetros de transformação (ex: /c_fill,w_200/) antes do public_id
-    const match = url.match(/\/upload\/(?:[^/]+\/)*(?:v\d+\/)?(.+)\.[a-z]+$/i);
+    // Extrai o public_id da URL do Cloudinary.
+    // Formato esperado: /upload/v{ver}/{public_id}.{ext}
+    // A regex (?:[^/]+\/)* foi removida pois ela consome o nome da pasta de forma greedy,
+    // resultando em public_id incorreto (ex.: "image" em vez de "laudo_fotos/image").
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
     if (match?.[1]) {
       await cloudinary.uploader.destroy(match[1]);
     }
@@ -375,8 +378,8 @@ export async function removeLaudoFoto(id: number) {
     // Deleta todas as versões da foto no Cloudinary em paralelo
     const urlsParaDeletar = [
       foto.url,
-      (foto as any).urlAnotada,
-      (foto as any).urlRecorte,
+      foto.urlAnotada,
+      foto.urlRecorte,
     ].filter(Boolean) as string[];
 
     await Promise.all(urlsParaDeletar.map(deletarDoCloudinary));
