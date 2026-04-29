@@ -31,7 +31,9 @@
       "Bash(npm list:*)",
       "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
       "Bash(xargs grep:*)",
-      "Bash(npm show:*)"
+      "Bash(npm show:*)",
+      "Bash(grep -l \"categories\\\\|products\\\\|sales\\\\|saleItems\\\\|cashTransactions\\\\|customers\" \"c:/Users/thiag/OneDrive/Documentos/GitHub/soluteg-novo1/drizzle/\"*.sql)",
+      "Bash(grep -l \"laudos\\\\b\" \"c:/Users/thiag/OneDrive/Documentos/GitHub/soluteg-novo1/drizzle/\"*.sql)"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\.claude\\projects\\c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1\\memory"
