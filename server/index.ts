@@ -167,9 +167,8 @@ async function startServer() {
       if (!url || typeof url !== "string") {
         return res.json({ success: false });
       }
-      // Extrai o public_id da URL do Cloudinary
-      // Formato: https://res.cloudinary.com/{cloud}/image/upload/v{ver}/{public_id}.{ext}
-      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+      // Âncora no número de versão (/v\d+/) — ignora transformações no prefixo (q_auto,f_auto/)
+      const match = url.match(/\/v\d+\/(.+)\.[a-z0-9]+$/i);
       if (match?.[1]) {
         const { v2: cloudinary } = await import("cloudinary");
         // Garante credenciais configuradas (o singleton pode não ter sido inicializado ainda)

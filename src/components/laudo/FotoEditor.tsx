@@ -33,15 +33,10 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { fabric } from "fabric";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -126,6 +121,10 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   // Rastreia se o usuário fez alguma alteração no canvas desde que o editor foi aberto.
   // Quando false, handleSalvar reutiliza as URLs já salvas no banco sem fazer novo upload.
   const canvasModificadoRef = useRef(false);
+  // URLs atuais no Cloudinary — atualizadas DENTRO do handleSalvar após cada upload.
+  // Usar a prop foto.urlAnotada seria inseguro: ela pode estar desatualizada entre saves.
+  const urlAnotadaLocalRef  = useRef<string | null>(null);
+  const urlRecorteLocalRef  = useRef<string | null>(null);
 
   const [modo, setModo]             = useState(foto.modoLayout ?? "normal");
   const [cor, setCor]               = useState(CORES[0].value);
@@ -145,7 +144,11 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       setEtapaZoom("anotar");
       setCropSrc("");
       imagemAnotadaParaRecorteRef.current = "";
+      // Sincroniza os refs locais com os valores atuais da prop ao abrir
+      urlAnotadaLocalRef.current = foto.urlAnotada ?? null;
+      urlRecorteLocalRef.current = foto.urlRecorte ?? null;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // ── Carregar imagem via blob para evitar erros CORS do Cloudinary ─────────
@@ -253,6 +256,17 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       setTimeout(() => URL.revokeObjectURL(objectUrlParaRevogar), 5000);
     }
   }
+
+  // ── Fechar com ESC (sem Dialog Radix, precisamos do listener manual) ─────
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !salvando) onClose();
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, salvando]);
 
   // ── Inicializar canvas Fabric com polling até container ter dimensões ──────
   // O canvas é montado UMA vez quando open=true e destruído quando open=false.
@@ -368,42 +382,6 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mostraCropper, cropSrc]);
-
-  // ── Ativar edição de texto no IText ─────────────────────────────────────
-  // No Fabric v5, chamar enterEditing() diretamente pode falhar se o canvas
-  // ainda não tiver foco no DOM. A solução mais confiável é despachar um evento
-  // dblclick no upperCanvasEl na posição do objeto — isso passa pelo pipeline
-  // interno do Fabric que cuida do foco e da textarea oculta corretamente.
-
-  function ativarEdicaoTexto(texto: fabric.IText) {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-
-    // upperCanvasEl é o canvas interativo criado pelo Fabric (sobreposto ao lower)
-    const upperEl = (canvas as any).upperCanvasEl as HTMLCanvasElement | undefined;
-    if (!upperEl) {
-      // Fallback: chama enterEditing diretamente se não encontrar o upper canvas
-      canvas.setActiveObject(texto);
-      texto.enterEditing();
-      canvas.renderAll();
-      return;
-    }
-
-    // Converte coordenadas do canvas Fabric para coordenadas de tela do elemento DOM
-    const vp    = canvas.viewportTransform ?? [1, 0, 0, 1, 0, 0];
-    const zoom  = canvas.getZoom();
-    const center = texto.getCenterPoint();
-    const screenX = center.x * zoom + vp[4];
-    const screenY = center.y * zoom + vp[5];
-    const rect  = upperEl.getBoundingClientRect();
-
-    upperEl.dispatchEvent(new MouseEvent("dblclick", {
-      bubbles: true,
-      cancelable: true,
-      clientX: rect.left + screenX,
-      clientY: rect.top + screenY,
-    }));
-  }
 
   // ── Fluxo de dois passos para original_zoom ───────────────────────────────
 
@@ -551,9 +529,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
     canvas.renderAll();
     salvarHistorico(canvas);
     canvasModificadoRef.current = true;
-    // Ativa edição via dispatch de dblclick no upperCanvasEl — mais confiável no Fabric v5
-    // que chamar enterEditing() diretamente, pois passa pelo pipeline interno de foco.
-    setTimeout(() => ativarEdicaoTexto(texto), 80);
+    // Sem Dialog Radix (e seu focus trap), enterEditing() funciona diretamente.
+    // requestAnimationFrame garante que o canvas já renderizou o objeto.
+    requestAnimationFrame(() => {
+      texto.enterEditing();
+      texto.selectAll();
+      canvas.renderAll();
+    });
   }
 
   // ── Upload / deleção de imagens no Cloudinary ────────────────────────────
@@ -598,18 +580,21 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
       if (modo === "original_zoom") {
         if (etapaZoom === "recortar" && cropperRef.current) {
           // Passo 2: usuário definiu o recorte.
-          // Apaga versões anteriores antes de criar novas para não acumular no Cloudinary.
-          if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
-          if (foto.urlRecorte) await deletarCloudinaryUrl(foto.urlRecorte as string);
+          // urlAnotadaLocalRef e urlRecorteLocalRef sempre têm a versão mais recente —
+          // usar foto.urlAnotada/urlRecorte seria inseguro pois a prop pode estar desatualizada.
+          if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
+          if (urlRecorteLocalRef.current) await deletarCloudinaryUrl(urlRecorteLocalRef.current);
 
           // Sobe a imagem anotada exportada no passo de anotação
           if (imagemAnotadaParaRecorteRef.current) {
             urlAnotada = await uploadBase64(imagemAnotadaParaRecorteRef.current, "laudo-anotada");
+            urlAnotadaLocalRef.current = urlAnotada;
           }
           // Sobe o recorte selecionado no Cropper
           const cropCanvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1200, maxHeight: 900 });
           if (!cropCanvas) throw new Error("Nenhum recorte definido");
           urlRecorte = await uploadBase64(cropCanvas.toDataURL("image/jpeg", 0.9), "laudo-zoom");
+          urlRecorteLocalRef.current = urlRecorte;
 
         } else {
           // Passo 1: salvou sem definir recorte — aplica mesma lógica dos outros modos
@@ -617,16 +602,16 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
           if (!canvas) throw new Error("Canvas não inicializado");
 
           if (canvasModificadoRef.current) {
-            if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
+            if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
             const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
             urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+            urlAnotadaLocalRef.current = urlAnotada;
             const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
             if (formas.length > 0) {
               anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
             }
           } else {
-            // Canvas não modificado — reutiliza URLs existentes
-            urlAnotada = foto.urlAnotada ?? undefined;
+            urlAnotada = urlAnotadaLocalRef.current ?? undefined;
             anotacoesJson = foto.anotacoesJson ?? undefined;
           }
         }
@@ -636,17 +621,18 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
         if (!canvas) throw new Error("Canvas não inicializado");
 
         if (canvasModificadoRef.current) {
-          // Apaga versão anterior antes de criar nova
-          if (foto.urlAnotada) await deletarCloudinaryUrl(foto.urlAnotada);
+          // Apaga versão anterior antes de criar nova (usa ref local, não a prop)
+          if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
           const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
           urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+          urlAnotadaLocalRef.current = urlAnotada;  // atualiza para o próximo save
           const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
           if (formas.length > 0) {
             anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
           }
         } else {
           // Canvas não modificado — só modoLayout pode ter mudado
-          urlAnotada = foto.urlAnotada ?? undefined;
+          urlAnotada = urlAnotadaLocalRef.current ?? undefined;
           anotacoesJson = foto.anotacoesJson ?? undefined;
         }
       }
@@ -662,20 +648,33 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
+  // Usa createPortal em vez de Radix Dialog para evitar o focus trap do Radix,
+  // que roubava o foco da textarea oculta do Fabric IText ao ativar edição de texto
+  // e causava clipping no Cropper.js por constraints de overflow do Dialog.
 
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v && !salvando) onClose(); }}>
-      {/*
-        No mobile ocupa a tela toda (max-w-full h-full).
-        No desktop limita em 5xl.
-      */}
-      <DialogContent
-        className="p-0 gap-0 overflow-hidden w-full max-w-full sm:max-w-5xl"
-        style={{ maxHeight: "95dvh", height: "95dvh" }}
+  if (!open) return null;
+
+  return createPortal(
+    <>
+      {/* Backdrop semitransparente — fechar ao clicar fora */}
+      <div
+        className="fixed inset-0 z-50 bg-black/50"
+        onClick={() => { if (!salvando) onClose(); }}
+      />
+      {/* Painel do editor centralizado */}
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+        style={{ padding: "0 0" }}
       >
-        <DialogHeader className="px-4 pt-4 pb-2 border-b flex-shrink-0">
-          <DialogTitle className="text-base">Editar Foto</DialogTitle>
-        </DialogHeader>
+        <div
+          className="pointer-events-auto relative bg-background flex flex-col p-0 overflow-hidden w-full sm:max-w-5xl rounded-none sm:rounded-lg shadow-2xl"
+          style={{ maxHeight: "95dvh", height: "95dvh" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Cabeçalho */}
+          <div className="px-4 pt-4 pb-2 border-b flex-shrink-0 flex items-center justify-between">
+            <h2 className="text-base font-semibold">Editar Foto</h2>
+          </div>
 
         {/*
           Layout:
@@ -835,10 +834,15 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
           </div>
 
           {/* ── Área principal ────────────────────────────────────────────── */}
+          {/*
+            overflow-auto quando o canvas está ativo (para rolagem em telas pequenas).
+            overflow-visible quando o Cropper está ativo: o Cropper.js posiciona os
+            handles do crop box FORA dos limites da imagem — overflow-auto os cortaria.
+          */}
           <div
             ref={canvasContainerRef}
-            className="flex-1 overflow-auto flex items-start justify-center p-2 bg-slate-900 min-h-0"
-            style={{ minHeight: 250 }}
+            className="flex-1 flex items-start justify-center p-2 bg-slate-900 min-h-0"
+            style={{ minHeight: 250, overflow: mostraCropper ? "visible" : "auto" }}
           >
             {/*
               O canvas Fabric SEMPRE permanece montado no DOM enquanto o editor estiver aberto.
@@ -880,17 +884,19 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
           </div>
         </div>
 
-        {/* ── Rodapé com botões ─────────────────────────────────────────── */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t bg-background flex-shrink-0">
-          <Button variant="outline" size="sm" onClick={onClose} disabled={salvando}>
-            Cancelar
-          </Button>
-          <Button size="sm" onClick={handleSalvar} disabled={salvando} className="gap-1">
-            {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Salvar alterações
-          </Button>
+          {/* ── Rodapé com botões ─────────────────────────────────────────── */}
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t bg-background flex-shrink-0">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={salvando}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleSalvar} disabled={salvando} className="gap-1">
+              {salvando && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Salvar alterações
+            </Button>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>,
+    document.body
   );
 }

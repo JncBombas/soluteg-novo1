@@ -24,11 +24,11 @@ cloudinary.config({
  */
 async function deletarDoCloudinary(url: string): Promise<void> {
   try {
-    // Extrai o public_id da URL do Cloudinary.
-    // Formato esperado: /upload/v{ver}/{public_id}.{ext}
-    // A regex (?:[^/]+\/)* foi removida pois ela consome o nome da pasta de forma greedy,
-    // resultando em public_id incorreto (ex.: "image" em vez de "laudo_fotos/image").
-    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/i);
+    // Âncora no número de versão (/v\d+/) que sempre está presente em URLs do Cloudinary.
+    // Isso ignora qualquer prefixo de transformação (ex.: q_auto,f_auto/) que o Cloudinary
+    // pode incluir na URL quando o upload usa o parâmetro "transformation".
+    // Ex: .../upload/q_auto,f_auto/v1234/laudo_anotadas/file.jpg → "laudo_anotadas/file"
+    const match = url.match(/\/v\d+\/(.+)\.[a-z0-9]+$/i);
     if (match?.[1]) {
       await cloudinary.uploader.destroy(match[1]);
     }
