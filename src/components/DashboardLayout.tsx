@@ -286,12 +286,6 @@ function DashboardLayoutContent({
     }
   }, [adminMeQuery.error]);
 
-  // Enquanto verifica autenticação (ou enquanto aguarda redirect em caso de erro),
-  // não renderiza os filhos — evita que queries das páginas disparem sem cookie válido
-  if (adminMeQuery.isLoading || adminMeQuery.error) {
-    return <DashboardLayoutSkeleton />;
-  }
-
   const logoutMutation = trpc.adminAuth.logout.useMutation({
     onSettled: () => {
       localStorage.removeItem("adminId");
@@ -398,6 +392,13 @@ function DashboardLayoutContent({
     .map((n: string) => n[0])
     .join("")
     .toUpperCase() || "A";
+
+  // Enquanto verifica autenticação (ou aguarda redirect em caso de erro),
+  // não renderiza os filhos — evita que queries das páginas disparem sem cookie válido.
+  // IMPORTANTE: deve ficar após todos os hooks para não violar as regras do React.
+  if (adminMeQuery.isLoading || adminMeQuery.error) {
+    return <DashboardLayoutSkeleton />;
+  }
 
   return (
     <>
