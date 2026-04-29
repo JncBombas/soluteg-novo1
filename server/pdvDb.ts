@@ -235,14 +235,16 @@ export async function getCashBalance() {
 
 export async function getDashboardStats() {
   const db = await getPdvDb();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   const [todaySales, lowStock, topProducts, balance] = await Promise.all([
+    // Usa DATE(createdAt) = CURDATE() do MySQL para evitar problema de serialização
+    // de objeto Date JS pelo mysql2 (que enviaria string inválida como bind param)
     db.select({
       total: sql<number>`SUM(${sales.total})`,
       count: sql<number>`COUNT(${sales.id})`,
-    }).from(sales).where(and(gte(sales.createdAt, today), eq(sales.canceled as any, false))),
+    }).from(sales).where(
+      sql`DATE(${sales.createdAt}) = CURDATE() AND ${sales.canceled} = 0`
+    ),
     getLowStockProducts(),
     db.select({
       productId: saleItems.productId,
