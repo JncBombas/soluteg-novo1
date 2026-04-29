@@ -103,6 +103,20 @@ const CORES = [
   { value: "#22c55e", label: "Verde",    tw: "bg-green-500" },
 ];
 
+/**
+ * Espaço de mundo fixo para o canvas Fabric.
+ *
+ * Problema: se o canvas fosse criado com o tamanho do container (varia por dispositivo),
+ * as coordenadas das formas salvas em JSON seriam diferentes entre PC e mobile — ao trocar
+ * de dispositivo, tudo apareceria deslocado.
+ *
+ * Solução: canvas SEMPRE opera em WORLD_W × WORLD_H pixels internamente.
+ * O viewport transform (`canvas.setViewportTransform`) escala este espaço para o display
+ * real de cada dispositivo. Coordenadas do JSON são sempre em "mundo" (1200×800).
+ */
+const WORLD_W = 1200;
+const WORLD_H = 800;
+
 // ── Componente ────────────────────────────────────────────────────────────────
 
 export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorProps) {
@@ -111,7 +125,9 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   const cropImgRef         = useRef<HTMLImageElement | null>(null);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   // Dimensões efetivas do canvas (atualizadas após inicialização)
-  const canvasDimsRef      = useRef({ w: 600, h: 400 });
+  // Dimensões do espaço de mundo — sempre WORLD_W × WORLD_H (constante acima do componente).
+  // Usado em posicaoCentral() para posicionar formas no centro do mundo, não do display.
+  const canvasDimsRef      = useRef({ w: WORLD_W, h: WORLD_H });
   // Histórico de estados JSON das formas para desfazer
   const historyRef         = useRef<string[]>([]);
   // Controla cleanup de polling de inicialização do canvas
@@ -129,6 +145,9 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   const [modo, setModo]             = useState(foto.modoLayout ?? "normal");
   const [cor, setCor]               = useState(CORES[0].value);
   const [salvando, setSalvando]     = useState(false);
+  // Modal para entrada de texto — abre teclado nativo em mobile sem conflito com Fabric.
+  // Usa fabric.Text (estático) em vez de IText (inline-edit) para evitar problemas de foco.
+  const [textoModal, setTextoModal] = useState<{ visible: boolean; valor: string; obj: fabric.Text | null }>({ visible: false, valor: "", obj: null });
   // Fluxo de dois passos para o modo original_zoom: "anotar" → "recortar"
   const [etapaZoom, setEtapaZoom]   = useState<"anotar" | "recortar">("anotar");
   // URL/base64 da imagem que o Cropper vai usar como fonte (imagem anotada exportada do Fabric)
@@ -290,12 +309,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
         return;
       }
 
-      // Calcula dimensões baseadas no espaço disponível
-      // 32px = padding horizontal do container (p-2 em cada lado)
+      // Tamanho de DISPLAY: adapta ao container, mas nunca ultrapassamos 1000px de largura.
+      // O canvas INTERNO opera sempre em WORLD_W × WORLD_H via viewport transform.
       const largura = Math.min(container.clientWidth - 32, 1000);
-      const altura  = Math.round(largura * 0.6);
+      const altura  = Math.round(largura * (WORLD_H / WORLD_W));  // mantém proporção 3:2
 
-      canvasDimsRef.current = { w: largura, h: altura };
+      // canvasDimsRef aponta para o MUNDO, não o display — posicionar formas no centro
+      canvasDimsRef.current = { w: WORLD_W, h: WORLD_H };
 
       // Destrói instância anterior se existir
       if (fabricRef.current) {
@@ -303,20 +323,37 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
         fabricRef.current = null;
       }
 
+      // Canvas HTML tem o tamanho do display; o viewport transform escala para o mundo.
       const canvas = new fabric.Canvas("foto-editor-canvas", {
         width: largura,
         height: altura,
         selection: true,
         preserveObjectStacking: true,
       });
+
+      // Escala o espaço de mundo (WORLD_W × WORLD_H) para o display atual.
+      // Com zoom = 0.4 num mobile com 480px, uma forma em (600,400) aparece em (240,160).
+      // No PC com zoom = 0.7 e 840px, a mesma forma aparece em (420,280) — mesma posição relativa.
+      const zoom = Math.min(largura / WORLD_W, altura / WORLD_H);
+      canvas.setViewportTransform([zoom, 0, 0, zoom, 0, 0]);
+
       fabricRef.current = canvas;
       historyRef.current = [];
 
-      // Fabric v5 já trata double-click nativamente no IText (enterEditing interno).
-      // Não adicionamos listener mouse:dblclick próprio para não conflitar.
+      // Detecta duplo clique / duplo toque em texto para abrir o modal de edição.
+      // Funciona com fabric.Text (novo) e fabric.IText (textos de sessões antigas).
+      canvas.on("mouse:dblclick", (e: any) => {
+        const target = e.target;
+        if (!target) return;
+        if (target.type === "text" || target.type === "i-text") {
+          // Se for IText que auto-entrou em edição, sai antes de abrir o modal
+          if (target.isEditing) target.exitEditing();
+          setTextoModal({ visible: true, valor: target.text ?? "", obj: target as fabric.Text });
+        }
+      });
 
-      // Carrega a imagem de forma assíncrona (evita bloqueio)
-      carregarImagemNoCanvas(canvas, largura, altura);
+      // Carrega a imagem em coordenadas de MUNDO (WORLD_W × WORLD_H)
+      carregarImagemNoCanvas(canvas, WORLD_W, WORLD_H);
     }
 
     // Duplo requestAnimationFrame + 150ms: garante que o Dialog já terminou
@@ -391,9 +428,8 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
    * preservar as anotações caso o usuário queira voltar.
    */
   function irParaRecorte() {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    const base64 = canvas.toDataURL({ format: "jpeg", quality: 0.92 });
+    // Exporta em resolução de mundo (WORLD_W × WORLD_H) para o Cropper ter boa qualidade
+    const base64 = exportarCanvasBase64();
     imagemAnotadaParaRecorteRef.current = base64;
     setCropSrc(base64);
     setEtapaZoom("recortar");
@@ -518,24 +554,80 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
   }
 
   function addTexto() {
+    // Abre o modal nativo de texto em vez de criar IText diretamente.
+    // Vantagem: usa <textarea autoFocus>, que abre o teclado nativo no iOS/Android.
+    // Fabric.Text estático é criado só após o usuário confirmar — sem problemas de foco.
+    setTextoModal({ visible: true, valor: "", obj: null });
+  }
+
+  /**
+   * Confirma a entrada de texto do modal e adiciona/atualiza o objeto no canvas.
+   * Usa fabric.Text (estático) em vez de fabric.IText (inline-edit).
+   */
+  function confirmarTexto() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const { left, top } = posicaoCentral(-80, -10);
-    const texto = new fabric.IText("Clique para editar", {
-      left, top, fontSize: 18, fill: cor, fontFamily: "Arial", fontWeight: "bold",
-    });
-    canvas.add(texto);
-    canvas.setActiveObject(texto);
-    canvas.renderAll();
-    salvarHistorico(canvas);
-    canvasModificadoRef.current = true;
-    // Sem Dialog Radix (e seu focus trap), enterEditing() funciona diretamente.
-    // requestAnimationFrame garante que o canvas já renderizou o objeto.
-    requestAnimationFrame(() => {
-      texto.enterEditing();
-      texto.selectAll();
+    const valor = textoModal.valor.trim() || "Texto";
+
+    if (textoModal.obj) {
+      // Editar texto existente (obj pode ser fabric.Text ou fabric.IText legado)
+      textoModal.obj.set("text", valor);
       canvas.renderAll();
-    });
+      salvarHistorico(canvas);
+      canvasModificadoRef.current = true;
+    } else {
+      // Criar novo objeto de texto estático no centro do mundo
+      const { left, top } = posicaoCentral(-80, -10);
+      const texto = new fabric.Text(valor, {
+        left, top,
+        fontSize: 20,
+        fill: cor,
+        fontFamily: "Arial",
+        fontWeight: "bold",
+        shadow: new fabric.Shadow({ color: "rgba(0,0,0,0.6)", blur: 4, offsetX: 1, offsetY: 1 }),
+      });
+      canvas.add(texto);
+      canvas.setActiveObject(texto);
+      canvas.renderAll();
+      salvarHistorico(canvas);
+      canvasModificadoRef.current = true;
+    }
+
+    setTextoModal({ visible: false, valor: "", obj: null });
+  }
+
+  // ── Exportar canvas em resolução de mundo (WORLD_W × WORLD_H) ─────────────
+  /**
+   * Exporta o conteúdo do canvas como JPEG em resolução de mundo (WORLD_W × WORLD_H).
+   *
+   * Por que isso é necessário:
+   * - O canvas HTML tem o tamanho do display (varia por dispositivo).
+   * - `canvas.toDataURL()` sem ajuste exportaria no tamanho do display.
+   * - Temporariamente redimensionamos o canvas para o mundo, removemos o viewport
+   *   transform (que está escalado para o display) e exportamos em resolução fixa.
+   * - Após exportar, restauramos o tamanho e transform originais.
+   */
+  function exportarCanvasBase64(): string {
+    const canvas = fabricRef.current;
+    if (!canvas) throw new Error("Canvas não inicializado");
+
+    const vp = canvas.viewportTransform!.slice() as number[];
+    const dw = canvas.getWidth(), dh = canvas.getHeight();
+
+    canvas.setWidth(WORLD_W);
+    canvas.setHeight(WORLD_H);
+    canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+    canvas.renderAll();
+
+    const b64 = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+
+    // Restaura estado de display
+    canvas.setWidth(dw);
+    canvas.setHeight(dh);
+    canvas.setViewportTransform(vp as [number, number, number, number, number, number]);
+    canvas.renderAll();
+
+    return b64;
   }
 
   // ── Upload / deleção de imagens no Cloudinary ────────────────────────────
@@ -603,7 +695,8 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
           if (canvasModificadoRef.current) {
             if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
-            const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+            // Exporta em resolução de mundo para consistência entre dispositivos
+            const base64Img = exportarCanvasBase64();
             urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
             urlAnotadaLocalRef.current = urlAnotada;
             const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
@@ -623,7 +716,8 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
         if (canvasModificadoRef.current) {
           // Apaga versão anterior antes de criar nova (usa ref local, não a prop)
           if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
-          const base64Img = canvas.toDataURL({ format: "jpeg", quality: 0.9 });
+          // Exporta em resolução de mundo (WORLD_W × WORLD_H) — independente do display
+          const base64Img = exportarCanvasBase64();
           urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
           urlAnotadaLocalRef.current = urlAnotada;  // atualiza para o próximo save
           const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
@@ -861,7 +955,7 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
                 variant="secondary"
                 className="absolute bottom-2 left-2 text-[9px] px-1.5 py-0.5 hidden sm:flex"
               >
-                Clique nos botões para adicionar • Duplo clique para editar texto
+                Clique nos botões para adicionar • Duplo clique no texto para editar
               </Badge>
             </div>
 
@@ -896,6 +990,52 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
           </div>
         </div>
       </div>
+
+      {/* ── Modal de texto — abre teclado nativo em mobile ─────────────────── */}
+      {/*
+        Render dentro do portal (z-[60], acima do editor z-50).
+        Usa <textarea autoFocus> que dispara o teclado nativo corretamente em iOS/Android.
+        Duplo clique em texto existente (fabric.Text ou fabric.IText legado) reabre o modal.
+      */}
+      {textoModal.visible && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40"
+          onClick={() => setTextoModal({ visible: false, valor: "", obj: null })}
+        >
+          <div
+            className="bg-background rounded-t-2xl sm:rounded-xl shadow-2xl p-4 w-full sm:w-96 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="font-semibold text-sm">
+              {textoModal.obj ? "Editar texto" : "Adicionar texto"}
+            </p>
+            <textarea
+              // eslint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+              className="w-full border rounded-lg p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              rows={3}
+              value={textoModal.valor}
+              onChange={(e) => setTextoModal((s) => ({ ...s, valor: e.target.value }))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); confirmarTexto(); }
+                if (e.key === "Escape") setTextoModal({ visible: false, valor: "", obj: null });
+              }}
+              placeholder="Digite o texto..."
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline" size="sm"
+                onClick={() => setTextoModal({ visible: false, valor: "", obj: null })}
+              >
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={confirmarTexto}>
+                {textoModal.obj ? "Salvar" : "Adicionar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>,
     document.body
   );
