@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, FileText, Eye, Edit2, Trash2, Download, Loader2 } from "lucide-react";
+import { Plus, Search, FileText, Eye, Edit2, Trash2, Download, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useDebounce } from "../hooks/useDebounce";
@@ -64,6 +64,14 @@ export default function AdminLaudos() {
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [pdfLoading, setPdfLoading] = useState<number | null>(null);
+  const [cleanupLoading, setCleanupLoading] = useState(false);
+  const [cleanupResult, setCleanupResult] = useState<{
+    totalNoCloudinary: number;
+    totalAtivosNoBanco: number;
+    orfaosEncontrados: number;
+    deletados: number;
+    falhas: number;
+  } | null>(null);
 
   const { data: laudos = [], isLoading, refetch } = trpc.laudos.list.useQuery({
     tipo: tipoFilter !== "all" ? tipoFilter : undefined,
@@ -103,6 +111,26 @@ export default function AdminLaudos() {
     generatePdfMutation.mutate({ id });
   }
 
+  async function handleCleanupCloudinary() {
+    setCleanupLoading(true);
+    setCleanupResult(null);
+    try {
+      const resp = await fetch("/api/admin/laudos/cleanup-cloudinary", { method: "POST" });
+      const data = await resp.json();
+      if (!data.success) throw new Error(data.message ?? "Erro na limpeza");
+      setCleanupResult(data);
+      if (data.deletados > 0) {
+        toast.success(`${data.deletados} arquivo${data.deletados !== 1 ? "s" : ""} órfão${data.deletados !== 1 ? "s" : ""} deletado${data.deletados !== 1 ? "s" : ""} do Cloudinary`);
+      } else {
+        toast.success("Cloudinary já está limpo — nenhum órfão encontrado");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao executar limpeza");
+    } finally {
+      setCleanupLoading(false);
+    }
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-6">
@@ -114,10 +142,25 @@ export default function AdminLaudos() {
               Gerencie laudos de inspeção e relatórios técnicos
             </p>
           </div>
-          <Button onClick={() => navigate("/gestor/laudos/novo")} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Laudo
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-muted-foreground"
+              onClick={handleCleanupCloudinary}
+              disabled={cleanupLoading}
+              title="Remove imagens editadas/recortadas que não estão mais associadas a nenhuma foto"
+            >
+              {cleanupLoading
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Sparkles className="h-4 w-4" />}
+              <span className="hidden sm:inline">Limpar Cloudinary</span>
+            </Button>
+            <Button onClick={() => navigate("/gestor/laudos/novo")} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Laudo
+            </Button>
+          </div>
         </div>
 
         {/* Filtros */}

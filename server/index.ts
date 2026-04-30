@@ -187,6 +187,84 @@ async function startServer() {
   });
 
   // ============================================================
+  // 🧹 ROTA: Limpeza de imagens órfãs no Cloudinary (pasta laudo_anotadas)
+  // Endereço: POST /api/admin/laudos/cleanup-cloudinary
+  //
+  // Compara todos os public_ids ativos no banco (urlAnotada e urlRecorte de laudoFotos)
+  // com os arquivos existentes na pasta laudo_anotadas/ do Cloudinary.
+  // Deleta qualquer arquivo no Cloudinary que não esteja referenciado no banco.
+  // ============================================================
+  app.post("/api/admin/laudos/cleanup-cloudinary", async (req, res) => {
+    try {
+      const { v2: cld } = await import("cloudinary");
+      cld.config({
+        cloud_name: process.env.CLOUDINARY_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+
+      const { getDb } = await import("./db");
+      const { laudoFotos } = await import("../drizzle/schema");
+      const db = await getDb();
+      if (!db) return res.status(503).json({ success: false, message: "Banco indisponível" });
+
+      // Coleta todos os public_ids ativos no banco
+      const fotos = await db
+        .select({ urlAnotada: laudoFotos.urlAnotada, urlRecorte: laudoFotos.urlRecorte })
+        .from(laudoFotos);
+
+      const ativos = new Set<string>();
+      const extractPublicId = (url: string | null) => {
+        if (!url) return;
+        const m = url.match(/\/v\d+\/(.+)\.[a-z0-9]+$/i);
+        if (m?.[1]) ativos.add(m[1]);
+      };
+      for (const f of fotos) {
+        extractPublicId(f.urlAnotada);
+        extractPublicId(f.urlRecorte);
+      }
+
+      // Lista todos os arquivos da pasta laudo_anotadas/ no Cloudinary (com paginação)
+      const cloudinaryIds: string[] = [];
+      let nextCursor: string | undefined;
+      do {
+        const result: any = await cld.api.resources({
+          type: "upload",
+          prefix: "laudo_anotadas/",
+          max_results: 500,
+          next_cursor: nextCursor,
+        });
+        for (const r of result.resources ?? []) cloudinaryIds.push(r.public_id);
+        nextCursor = result.next_cursor;
+      } while (nextCursor);
+
+      // Identifica e deleta os órfãos
+      const orfaos = cloudinaryIds.filter((id) => !ativos.has(id));
+      let deletados = 0;
+      let falhas = 0;
+      for (const id of orfaos) {
+        try {
+          await cld.uploader.destroy(id);
+          deletados++;
+        } catch {
+          falhas++;
+        }
+      }
+
+      res.json({
+        success: true,
+        totalNoCloudinary: cloudinaryIds.length,
+        totalAtivosNoBanco: ativos.size,
+        orfaosEncontrados: orfaos.length,
+        deletados,
+        falhas,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, message: e.message });
+    }
+  });
+
+  // ============================================================
   // 🔑 ROTA: Login do Cliente (Portal do Cliente)
   // Endereço: POST /api/client-login
   //
