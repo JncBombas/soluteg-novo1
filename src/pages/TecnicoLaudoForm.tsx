@@ -392,7 +392,7 @@ export default function TecnicoLaudoForm() {
     urlAnotada?: string;
     urlRecorte?: string;
     modoLayout: string;
-    anotacoesJson?: string;
+    anotacoesJson?: string | null;
   }) {
     if (!fotoEditando?.id) return;
     await updateFotoMutation.mutateAsync({
@@ -410,7 +410,7 @@ export default function TecnicoLaudoForm() {
               urlAnotada: resultado.urlAnotada ?? f.urlAnotada,
               urlRecorte: resultado.urlRecorte ?? f.urlRecorte,
               modoLayout: resultado.modoLayout,
-              anotacoesJson: resultado.anotacoesJson ?? f.anotacoesJson,
+              anotacoesJson: resultado.anotacoesJson !== undefined ? resultado.anotacoesJson : f.anotacoesJson,
             }
           : f
       )

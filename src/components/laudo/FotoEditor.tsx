@@ -75,7 +75,12 @@ export interface FotoEditorResult {
   urlAnotada?: string;
   urlRecorte?: string;
   modoLayout: string;
-  anotacoesJson?: string;
+  /**
+   * `string`    — novo JSON de anotações (atualiza o banco)
+   * `null`      — canvas foi limpo/sem formas (limpa o banco explicitamente)
+   * `undefined` — canvas não foi modificado (mantém o valor atual no banco)
+   */
+  anotacoesJson?: string | null;
 }
 
 interface FotoEditorProps {
@@ -339,6 +344,13 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
       fabricRef.current = canvas;
       historyRef.current = [];
+
+      // Marca o canvas como modificado ao mover/redimensionar/rotacionar qualquer forma.
+      // Sem este listener, arrastar um objeto existente não setava canvasModificadoRef
+      // e o handleSalvar ia para o branch "reutiliza URL existente" sem fazer upload.
+      canvas.on("object:modified", () => {
+        canvasModificadoRef.current = true;
+      });
 
       // Detecta duplo clique / duplo toque em texto para abrir o modal de edição.
       // Funciona com fabric.Text (novo) e fabric.IText (textos de sessões antigas).
@@ -662,72 +674,73 @@ export default function FotoEditor({ open, onClose, foto, onSave }: FotoEditorPr
 
   // ── Salvar ────────────────────────────────────────────────────────────────
 
+  /**
+   * Captura o JSON das formas do canvas (excluindo a imagem base).
+   * Retorna `string` se há formas, `null` se o canvas está vazio.
+   * `null` sinaliza ao banco que deve LIMPAR o JSON antigo.
+   * `undefined` (não chamado) sinaliza "não modificado — manter valor atual".
+   */
+  function capturarAnotacoesJson(): string | null {
+    const canvas = fabricRef.current;
+    if (!canvas) return null;
+    const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
+    return formas.length > 0 ? JSON.stringify(formas.map((o) => o.toObject())) : null;
+  }
+
   async function handleSalvar() {
     setSalvando(true);
     try {
       let urlAnotada: string | undefined;
       let urlRecorte: string | undefined;
-      let anotacoesJson: string | undefined;
+      // undefined = "não mudou, preservar no banco"; null = "limpar"; string = novo valor
+      let anotacoesJson: string | null | undefined;
 
       if (modo === "original_zoom") {
         if (etapaZoom === "recortar" && cropperRef.current) {
-          // Passo 2: usuário definiu o recorte.
-          // urlAnotadaLocalRef e urlRecorteLocalRef sempre têm a versão mais recente —
-          // usar foto.urlAnotada/urlRecorte seria inseguro pois a prop pode estar desatualizada.
+          // Passo 2: recorte definido — sempre sobe ambas as imagens.
           if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
           if (urlRecorteLocalRef.current) await deletarCloudinaryUrl(urlRecorteLocalRef.current);
 
-          // Sobe a imagem anotada exportada no passo de anotação
           if (imagemAnotadaParaRecorteRef.current) {
             urlAnotada = await uploadBase64(imagemAnotadaParaRecorteRef.current, "laudo-anotada");
             urlAnotadaLocalRef.current = urlAnotada;
           }
-          // Sobe o recorte selecionado no Cropper
           const cropCanvas = cropperRef.current.getCroppedCanvas({ maxWidth: 1200, maxHeight: 900 });
           if (!cropCanvas) throw new Error("Nenhum recorte definido");
           urlRecorte = await uploadBase64(cropCanvas.toDataURL("image/jpeg", 0.9), "laudo-zoom");
           urlRecorteLocalRef.current = urlRecorte;
+          // Captura JSON atual — pode ter mudado desde o último save
+          anotacoesJson = capturarAnotacoesJson();
 
         } else {
-          // Passo 1: salvou sem definir recorte — aplica mesma lógica dos outros modos
+          // Passo 1: salvou sem definir recorte
           const canvas = fabricRef.current;
           if (!canvas) throw new Error("Canvas não inicializado");
 
           if (canvasModificadoRef.current) {
             if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
-            // Exporta em resolução de mundo para consistência entre dispositivos
-            const base64Img = exportarCanvasBase64();
-            urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
+            urlAnotada = await uploadBase64(exportarCanvasBase64(), "laudo-anotada");
             urlAnotadaLocalRef.current = urlAnotada;
-            const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
-            if (formas.length > 0) {
-              anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
-            }
+            anotacoesJson = capturarAnotacoesJson();
           } else {
             urlAnotada = urlAnotadaLocalRef.current ?? undefined;
-            anotacoesJson = foto.anotacoesJson ?? undefined;
+            // undefined = mantém o valor atual no banco
           }
         }
       } else {
-        // Todos os outros modos: exporta canvas com anotações
+        // Todos os outros modos
         const canvas = fabricRef.current;
         if (!canvas) throw new Error("Canvas não inicializado");
 
         if (canvasModificadoRef.current) {
-          // Apaga versão anterior antes de criar nova (usa ref local, não a prop)
           if (urlAnotadaLocalRef.current) await deletarCloudinaryUrl(urlAnotadaLocalRef.current);
-          // Exporta em resolução de mundo (WORLD_W × WORLD_H) — independente do display
-          const base64Img = exportarCanvasBase64();
-          urlAnotada = await uploadBase64(base64Img, "laudo-anotada");
-          urlAnotadaLocalRef.current = urlAnotada;  // atualiza para o próximo save
-          const formas = canvas.getObjects().filter((o) => !(o instanceof fabric.Image));
-          if (formas.length > 0) {
-            anotacoesJson = JSON.stringify(formas.map((o) => o.toObject()));
-          }
+          urlAnotada = await uploadBase64(exportarCanvasBase64(), "laudo-anotada");
+          urlAnotadaLocalRef.current = urlAnotada;
+          anotacoesJson = capturarAnotacoesJson();  // null se vazio → limpa o banco
         } else {
           // Canvas não modificado — só modoLayout pode ter mudado
           urlAnotada = urlAnotadaLocalRef.current ?? undefined;
-          anotacoesJson = foto.anotacoesJson ?? undefined;
+          // undefined = mantém o valor atual no banco
         }
       }
 

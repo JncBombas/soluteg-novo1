@@ -441,7 +441,8 @@ export default function AdminLaudoForm() {
     urlAnotada?: string;
     urlRecorte?: string;
     modoLayout: string;
-    anotacoesJson?: string;
+    // string = novo valor; null = limpar no banco; undefined = não mudou
+    anotacoesJson?: string | null;
   }) {
     if (!fotoEditando?.id) return;
     await updateFotoAdminMutation.mutateAsync({
@@ -451,7 +452,6 @@ export default function AdminLaudoForm() {
       modoLayout: resultado.modoLayout as any,
       anotacoesJson: resultado.anotacoesJson,
     });
-    // Atualiza o state local para refletir na miniatura imediatamente
     setFotos((prev) =>
       prev.map((f) =>
         f.id === fotoEditando.id
@@ -460,7 +460,10 @@ export default function AdminLaudoForm() {
               urlAnotada: resultado.urlAnotada ?? f.urlAnotada,
               urlRecorte: resultado.urlRecorte ?? f.urlRecorte,
               modoLayout: resultado.modoLayout,
-              anotacoesJson: resultado.anotacoesJson ?? f.anotacoesJson,
+              // undefined = não modificado → mantém valor atual
+              // null = canvas limpo → limpa local também
+              // string = novo valor
+              anotacoesJson: resultado.anotacoesJson !== undefined ? resultado.anotacoesJson : f.anotacoesJson,
             }
           : f
       )
