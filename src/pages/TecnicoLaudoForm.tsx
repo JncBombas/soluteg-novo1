@@ -544,7 +544,7 @@ export default function TecnicoLaudoForm() {
 
   function handleTipoChange(novoTipo: string) {
     setTipo(novoTipo);
-    if (!isNew) return;
+    // Aplica template tanto para laudos novos quanto para laudos já salvos ao mudar tipo
     const camposVazios = !objeto && !metodologia && constatacoes.length === 0;
     if (camposVazios) {
       aplicarTemplate(novoTipo);

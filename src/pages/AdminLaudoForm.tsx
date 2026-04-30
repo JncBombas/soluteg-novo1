@@ -43,7 +43,7 @@ import {
   Upload,
   X,
   AlertTriangle,
-  UserPlus,
+
   BookOpen,
   Search,
   FileInput,
@@ -610,7 +610,7 @@ export default function AdminLaudoForm() {
 
   function handleTipoChange(novoTipo: string) {
     setTipo(novoTipo);
-    if (!isNew) return;
+    // Aplica template tanto para laudos novos quanto para laudos já salvos ao mudar tipo
     const camposVazios = !objeto && !metodologia && constatacoes.length === 0;
     if (camposVazios) {
       aplicarTemplate(novoTipo);
@@ -869,34 +869,34 @@ export default function AdminLaudoForm() {
                     ) : (
                       <p className="text-sm text-muted-foreground">Nenhum técnico atribuído.</p>
                     )}
-                    {/* Adicionar técnico */}
+                    {/* Adicionar técnico — atribuição imediata ao selecionar no dropdown */}
                     {!isFinalized && (
-                      <div className="flex gap-2 mt-1">
-                        <Select value={tecnicoSelecionado} onValueChange={setTecnicoSelecionado}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecionar técnico" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">— Selecione —</SelectItem>
-                            {(tecnicosList as any[]).map((t: any) => (
-                              <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          disabled={tecnicoSelecionado === "none" || atribuirTecnicoMutation.isPending}
-                          onClick={() => {
-                            if (tecnicoSelecionado !== "none") {
-                              atribuirTecnicoMutation.mutate({ laudoId: laudoId!, tecnicoId: Number(tecnicoSelecionado) });
+                      <div className="mt-1">
+                        <Select
+                          value={tecnicoSelecionado}
+                          onValueChange={(v) => {
+                            setTecnicoSelecionado(v);
+                            if (v !== "none" && laudoId) {
+                              atribuirTecnicoMutation.mutate({
+                                laudoId,
+                                tecnicoId: Number(v),
+                              });
                             }
                           }}
+                          disabled={atribuirTecnicoMutation.isPending}
                         >
-                          {atribuirTecnicoMutation.isPending
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <UserPlus className="h-4 w-4" />}
-                        </Button>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder={atribuirTecnicoMutation.isPending ? "Atribuindo…" : "Atribuir técnico"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">— Selecione para atribuir —</SelectItem>
+                            {(tecnicosList as any[])
+                              .filter((t: any) => !tecnicosAtribuidos.some((a) => a.tecnicoId === t.id))
+                              .map((t: any) => (
+                                <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
