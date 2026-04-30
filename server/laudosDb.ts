@@ -588,16 +588,22 @@ export async function searchNormaTrechos(params: {
 
 /**
  * Retorna todas as citações de um laudo, ordenadas por `ordem`.
+ * Retorna [] em caso de erro (ex: tabela não existe se migration ainda não foi executada).
  */
 export async function getLaudoCitacoes(laudoId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
-    .select()
-    .from(laudoCitacoes)
-    .where(eq(laudoCitacoes.laudoId, laudoId))
-    .orderBy(asc(laudoCitacoes.ordem), asc(laudoCitacoes.createdAt));
+  try {
+    return await db
+      .select()
+      .from(laudoCitacoes)
+      .where(eq(laudoCitacoes.laudoId, laudoId))
+      .orderBy(asc(laudoCitacoes.ordem), asc(laudoCitacoes.createdAt));
+  } catch {
+    // Tabela pode não existir ainda se as migrations não foram executadas
+    return [];
+  }
 }
 
 /**
