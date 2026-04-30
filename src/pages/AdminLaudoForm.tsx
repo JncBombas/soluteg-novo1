@@ -53,6 +53,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { LAUDO_TEMPLATES } from "@/lib/laudoTemplates";
 import FotoEditor, { type FotoEditorFoto } from "@/components/laudo/FotoEditor";
+import CitacoesTab, { type Citacao } from "@/components/laudo/CitacoesTab";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,9 @@ export default function AdminLaudoForm() {
 
   // ── Aba 6: Conclusão
   const [parecer, setParecer] = useState<"conforme" | "nao_conforme" | "parcialmente_conforme" | "">("");
+
+  // ── Aba 7: Citações normativas
+  const [citacoes, setCitacoes] = useState<Citacao[]>([]);
   const [conclusao, setConclusao] = useState("");
   const [recomendacoes, setRecomendacoes] = useState("");
 
@@ -240,6 +244,7 @@ export default function AdminLaudoForm() {
     setRecomendacoes(laudoData.recomendacoes ?? "");
     setLaudoStatus(laudoData.status);
     setTecnicosAtribuidos((laudoData as any).tecnicos ?? []);
+    setCitacoes((laudoData as any).citacoes ?? []);
   }, [laudoData]);
 
   // Para novo laudo: preenche normas da biblioteca assim que carregam
@@ -690,12 +695,13 @@ export default function AdminLaudoForm() {
 
         {/* Abas */}
         <Tabs defaultValue="identificacao">
-          <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 flex-nowrap sm:flex-wrap">
+          <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-7 flex-nowrap sm:flex-wrap">
             <TabsTrigger value="identificacao" className="shrink-0 sm:shrink">Identificação</TabsTrigger>
             <TabsTrigger value="contexto" className="shrink-0 sm:shrink">Contexto</TabsTrigger>
             <TabsTrigger value="constatacoes" className="shrink-0 sm:shrink">Constatações</TabsTrigger>
             <TabsTrigger value="medicoes" className="shrink-0 sm:shrink">Medições</TabsTrigger>
             <TabsTrigger value="fotos" className="shrink-0 sm:shrink">Fotos</TabsTrigger>
+            <TabsTrigger value="citacoes" className="shrink-0 sm:shrink">Citações</TabsTrigger>
             <TabsTrigger value="conclusao" className="shrink-0 sm:shrink">Conclusão</TabsTrigger>
           </TabsList>
 
@@ -1246,6 +1252,22 @@ export default function AdminLaudoForm() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* ── ABA 7: Citações normativas ───────────────────────────── */}
+          <TabsContent value="citacoes">
+            <Card>
+              <CardContent className="pt-6">
+                <CitacoesTab
+                  laudoId={laudoId ?? 0}
+                  tipoLaudo={tipo}
+                  citacoes={citacoes}
+                  isFinalized={isFinalized}
+                  isTecnico={false}
+                  onCitacoesChange={setCitacoes}
+                />
               </CardContent>
             </Card>
           </TabsContent>

@@ -836,3 +836,53 @@ export const normasBiblioteca = mysqlTable("normasBiblioteca", {
 
 export type NormaBiblioteca = typeof normasBiblioteca.$inferSelect;
 export type InsertNormaBiblioteca = typeof normasBiblioteca.$inferInsert;
+
+/**
+ * Trechos normativos citáveis vinculados a uma norma da biblioteca.
+ * Cada trecho tem número do item, título e texto, além de palavras-chave
+ * em JSON para busca por relevância.
+ * Cascade delete: remover a norma remove todos os seus trechos.
+ */
+export const normaTrechos = mysqlTable("normaTrechos", {
+  id: int("id").autoincrement().primaryKey(),
+  normaId: int("normaId").notNull(),
+  // Ex: "6.2.1", "item 10.3.4"
+  numeroItem: varchar("numeroItem", { length: 50 }).notNull(),
+  // Ex: "Proteção contra choques elétricos"
+  tituloItem: text("tituloItem").notNull(),
+  // O trecho citável em si
+  texto: text("texto").notNull(),
+  // JSON array de strings para busca — ex: '["aterramento","proteção"]'
+  palavrasChave: text("palavrasChave").notNull().default("[]"),
+  ativa: tinyint("ativa").default(1).notNull(),
+});
+
+export type NormaTrecho = typeof normaTrechos.$inferSelect;
+export type InsertNormaTrecho = typeof normaTrechos.$inferInsert;
+
+/**
+ * Citações normativas de um laudo.
+ * trechoId é nullable — permite citações manuais sem vínculo com a biblioteca.
+ * Os campos normaCodigo, numeroItem, tituloItem e textoCitado são desnormalizados
+ * para garantir que o PDF seja gerado corretamente mesmo se o trecho for removido.
+ * Cascade delete: remover o laudo remove todas as suas citações.
+ */
+export const laudoCitacoes = mysqlTable("laudoCitacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  laudoId: int("laudoId").notNull(),
+  // FK opcional para biblioteca — null quando citação é manual
+  trechoId: int("trechoId"),
+  // Dados desnormalizados para o PDF
+  normaCodigo: varchar("normaCodigo", { length: 150 }).notNull(),
+  numeroItem: varchar("numeroItem", { length: 50 }).notNull(),
+  tituloItem: text("tituloItem").notNull(),
+  textoCitado: text("textoCitado").notNull(),
+  // Comentário do técnico sobre como a citação se aplica ao caso
+  aplicacao: text("aplicacao"),
+  // Posição para ordenação manual
+  ordem: int("ordem").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LaudoCitacao = typeof laudoCitacoes.$inferSelect;
+export type InsertLaudoCitacao = typeof laudoCitacoes.$inferInsert;

@@ -270,8 +270,65 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
         }
       }
 
-      // 3. Metodologia e Condições
-      sectionTitle("3. Metodologia e Condicoes do Local");
+      // 3. Fundamentação Normativa (citações de trechos das normas)
+      // Só renderiza se o laudo tiver citações adicionadas
+      const citacoes = (laudoRef as any).citacoes as Array<{
+        normaCodigo: string;
+        numeroItem: string;
+        tituloItem: string;
+        textoCitado: string;
+        aplicacao?: string | null;
+      }> | undefined;
+
+      if (citacoes && citacoes.length > 0) {
+        sectionTitle("3. Fundamentacao Normativa");
+
+        for (let qi = 0; qi < citacoes.length; qi++) {
+          const cit = citacoes[qi];
+
+          // Cabeçalho da citação: badge da norma + número e título do item
+          checkPageBreak(80);
+          const citY = doc.y;
+
+          // Badge da norma (fundo azul claro)
+          const badgeText = cit.normaCodigo;
+          const badgeW = Math.min(doc.widthOfString(badgeText, { fontSize: 8 }) + 16, 160);
+          doc.rect(L, citY, badgeW, 16).fill("#dbeafe");
+          doc.fontSize(8).font("Helvetica-Bold").fillColor("#1e40af")
+            .text(badgeText, L + 4, citY + 4, { width: badgeW - 8 });
+
+          // Número e título do item
+          doc.fontSize(8).font("Helvetica").fillColor(MUTED)
+            .text(`Item ${cit.numeroItem} — ${cit.tituloItem}`,
+              L + badgeW + 6, citY + 4, { width: CW - badgeW - 6 });
+
+          doc.y = citY + 20;
+
+          // Texto citado (em itálico com borda esquerda azul)
+          checkPageBreak(30);
+          const textY = doc.y;
+          doc.rect(L, textY, 3, 0).fill("#2563eb"); // borda esquerda (desenhada após saber altura)
+          doc.fontSize(8.5).font("Helvetica-Oblique").fillColor("#374151")
+            .text(`"${cit.textoCitado}"`, L + 10, textY, { width: CW - 10, lineGap: 2 });
+          // Desenha borda esquerda retroativamente com a altura real
+          const textH = doc.y - textY + 4;
+          doc.rect(L, textY - 2, 3, textH).fill("#2563eb");
+          doc.y = textY + textH + 4;
+
+          // Aplicação ao caso (se houver)
+          if (cit.aplicacao) {
+            checkPageBreak(20);
+            doc.fontSize(8).font("Helvetica-Bold").fillColor(DARK)
+              .text("Aplicacao: ", L + 10, doc.y, { continued: true });
+            doc.font("Helvetica").fillColor(MUTED).text(cit.aplicacao, { width: CW - 10 });
+          }
+
+          doc.moveDown(0.6);
+        }
+      }
+
+      // 4. Metodologia e Condições
+      sectionTitle("4. Metodologia e Condicoes do Local");
       bodyText("Metodologia", laudoRef.metodologia ?? "");
       doc.moveDown(0.3);
       bodyText("Equipamentos Utilizados", laudoRef.equipamentosUtilizados ?? "");
@@ -279,12 +336,12 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
       bodyText("Condicoes do Local", laudoRef.condicoesLocal ?? "");
       doc.moveDown(0.4);
 
-      // 4. Constatações Técnicas
+      // 5. Constatações Técnicas
       const constatacoes = laudoRef.constatacoes as Array<{
         item: string; descricao: string; status: string; referenciaNormativa?: string;
       }>;
       if (constatacoes && constatacoes.length > 0) {
-        sectionTitle("4. Constatacoes Tecnicas");
+        sectionTitle("5. Constatacoes Tecnicas");
 
         const wItem = CW * 0.18;
         const wDesc = CW * 0.44;
@@ -320,12 +377,12 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
         doc.moveDown(0.4);
       }
 
-      // 5. Medições
+      // 6. Medições
       const medicoes = laudoRef.medicoes as Array<{
         descricao: string; unidade?: string; valorMedido?: string; valorReferencia?: string; resultado?: string;
       }>;
       if (medicoes && medicoes.length > 0) {
-        sectionTitle("5. Medicoes e Ensaios");
+        sectionTitle("6. Medicoes e Ensaios");
 
         checkPageBreak(18);
         const mhY = doc.y;
@@ -406,7 +463,7 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
       };
 
       if (fotos && fotos.length > 0) {
-        sectionTitle("6. Registros Fotograficos");
+        sectionTitle("7. Registros Fotograficos");
 
         let fi = 0;
         while (fi < fotos.length) {
@@ -559,8 +616,8 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
         }
       }
 
-      // 7. Conclusão
-      sectionTitle("7. Conclusao e Parecer Tecnico");
+      // 8. Conclusão
+      sectionTitle("8. Conclusao e Parecer Tecnico");
       if (laudoRef.conclusaoParecer) {
         checkPageBreak(50);
         const parecerY = doc.y;
@@ -575,14 +632,14 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
         paragraph(laudoRef.conclusaoTexto);
       }
 
-      // 8. Recomendações
+      // 9. Recomendações
       if (laudoRef.recomendacoes) {
-        sectionTitle("8. Recomendacoes");
+        sectionTitle("9. Recomendacoes");
         paragraph(laudoRef.recomendacoes);
       }
 
-      // 9. Assinatura
-      sectionTitle("9. Responsabilidade Tecnica");
+      // 10. Assinatura
+      sectionTitle("10. Responsabilidade Tecnica");
       checkPageBreak(90);
       const sigY = doc.y + 8;
       doc.moveTo(L + 40, sigY + 50).lineTo(L + 200, sigY + 50).stroke("#1e293b");

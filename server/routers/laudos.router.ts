@@ -384,6 +384,134 @@ export const laudosRouter = router({
       return await db.listNormasBiblioteca(input.tipoLaudo);
     }),
 
+  // ── Trechos normativos (busca e listagem por norma) ───────────────────────
+
+  // Admin: busca trechos por palavra-chave em todas as normas
+  "normasTrechos.search": adminLocalProcedure
+    .input(z.object({
+      busca: z.string().min(2),
+      tipoLaudo: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.searchNormaTrechos(input);
+    }),
+
+  // Admin: lista todos os trechos de uma norma específica
+  "normasTrechos.listByNorma": adminLocalProcedure
+    .input(z.object({ normaId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.listNormaTrechos(input.normaId);
+    }),
+
+  // Técnico: mesmas queries com protectedTechnicianProcedure
+  "normasTrechosTecnico.search": protectedTechnicianProcedure
+    .input(z.object({
+      busca: z.string().min(2),
+      tipoLaudo: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.searchNormaTrechos(input);
+    }),
+
+  "normasTrechosTecnico.listByNorma": protectedTechnicianProcedure
+    .input(z.object({ normaId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await import("../laudosDb");
+      return await db.listNormaTrechos(input.normaId);
+    }),
+
+  // ── Citações normativas do laudo ──────────────────────────────────────────
+
+  // Admin: adiciona uma citação (da biblioteca ou manual)
+  "citacoes.add": adminLocalProcedure
+    .input(z.object({
+      laudoId: z.number(),
+      trechoId: z.number().optional(),
+      normaCodigo: z.string().min(1),
+      numeroItem: z.string().min(1),
+      tituloItem: z.string().min(1),
+      textoCitado: z.string().min(1),
+      aplicacao: z.string().optional(),
+      ordem: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await import("../laudosDb");
+      const nova = await db.addLaudoCitacao(input);
+      return { success: true, citacao: nova };
+    }),
+
+  // Admin: atualiza texto ou aplicação de uma citação
+  "citacoes.update": adminLocalProcedure
+    .input(z.object({
+      id: z.number(),
+      textoCitado: z.string().optional(),
+      aplicacao: z.string().optional(),
+      ordem: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      const db = await import("../laudosDb");
+      await db.updateLaudoCitacao(id, data);
+      return { success: true };
+    }),
+
+  // Admin: remove uma citação
+  "citacoes.remove": adminLocalProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await import("../laudosDb");
+      await db.removeLaudoCitacao(input.id);
+      return { success: true };
+    }),
+
+  // Técnico: mesmas mutations com ownership check do laudo
+  "citacoesTecnico.add": protectedTechnicianProcedure
+    .input(z.object({
+      laudoId: z.number(),
+      trechoId: z.number().optional(),
+      normaCodigo: z.string().min(1),
+      numeroItem: z.string().min(1),
+      tituloItem: z.string().min(1),
+      textoCitado: z.string().min(1),
+      aplicacao: z.string().optional(),
+      ordem: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await import("../laudosDb");
+      const laudo = await db.getLaudoById(input.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      const atribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      const nova = await db.addLaudoCitacao(input);
+      return { success: true, citacao: nova };
+    }),
+
+  "citacoesTecnico.update": protectedTechnicianProcedure
+    .input(z.object({
+      id: z.number(),
+      textoCitado: z.string().optional(),
+      aplicacao: z.string().optional(),
+      ordem: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      const db = await import("../laudosDb");
+      await db.updateLaudoCitacao(id, data);
+      return { success: true };
+    }),
+
+  "citacoesTecnico.remove": protectedTechnicianProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await import("../laudosDb");
+      await db.removeLaudoCitacao(input.id);
+      return { success: true };
+    }),
+
   // ── Configurações do Técnico ───────────────────────────────────────────────
   getTecnico: adminLocalProcedure
     .query(async () => {

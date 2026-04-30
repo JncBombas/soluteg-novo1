@@ -3,6 +3,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { getDb } from "./db";
 import {
   laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos, normasBiblioteca,
+  normaTrechos, laudoCitacoes,
   InsertLaudo, InsertLaudoFoto, InsertLaudoMedicao, InsertConfiguracoesTecnico,
 } from "../drizzle/schema";
 
@@ -213,6 +214,8 @@ export async function getLaudoById(id: number) {
     .leftJoin(technicians, eq(laudoTecnicos.tecnicoId, technicians.id))
     .where(eq(laudoTecnicos.laudoId, id));
 
+  const citacoes = await getLaudoCitacoes(id);
+
   return {
     ...laudo,
     constatacoes: laudo.constatacoes ? JSON.parse(laudo.constatacoes) : [],
@@ -220,6 +223,7 @@ export async function getLaudoById(id: number) {
     fotos,
     medicoes,
     tecnicos: tecnicosRows,
+    citacoes,
   };
 }
 
@@ -510,6 +514,154 @@ export async function upsertConfiguracoesTecnico(data: {
 }
 
 // ── Biblioteca de normas ─────────────────────────────────────────────────────
+
+// ── Trechos normativos ───────────────────────────────────────────────────────
+
+/**
+ * Lista todos os trechos ativos de uma norma específica, ordenados por número do item.
+ */
+export async function listNormaTrechos(normaId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(normaTrechos)
+    .where(and(eq(normaTrechos.normaId, normaId), eq(normaTrechos.ativa, 1 as any)))
+    .orderBy(asc(normaTrechos.numeroItem));
+}
+
+/**
+ * Busca trechos por palavra-chave em texto, tituloItem e palavrasChave.
+ * Faz JOIN com normasBiblioteca para retornar codigo e titulo da norma.
+ * Se tipoLaudo for informado, filtra apenas normas compatíveis.
+ */
+export async function searchNormaTrechos(params: {
+  busca: string;
+  tipoLaudo?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const termoBusca = `%${params.busca}%`;
+
+  const rows = await db
+    .select({
+      id: normaTrechos.id,
+      normaId: normaTrechos.normaId,
+      normaCodigo: normasBiblioteca.codigo,
+      normaTitulo: normasBiblioteca.titulo,
+      normaTiposLaudo: normasBiblioteca.tiposLaudo,
+      numeroItem: normaTrechos.numeroItem,
+      tituloItem: normaTrechos.tituloItem,
+      texto: normaTrechos.texto,
+      palavrasChave: normaTrechos.palavrasChave,
+    })
+    .from(normaTrechos)
+    .innerJoin(normasBiblioteca, eq(normaTrechos.normaId, normasBiblioteca.id))
+    .where(
+      and(
+        eq(normaTrechos.ativa, 1 as any),
+        eq(normasBiblioteca.ativa, 1 as any),
+        or(
+          like(normaTrechos.texto, termoBusca),
+          like(normaTrechos.tituloItem, termoBusca),
+          like(normaTrechos.palavrasChave, termoBusca)
+        )
+      )
+    )
+    .orderBy(asc(normasBiblioteca.codigo), asc(normaTrechos.numeroItem));
+
+  // Filtra por tipo de laudo em memória (tiposLaudo é JSON array)
+  if (!params.tipoLaudo) return rows;
+  return rows.filter((r) => {
+    try {
+      const tipos: string[] = JSON.parse(r.normaTiposLaudo);
+      return tipos.includes(params.tipoLaudo!);
+    } catch {
+      return true; // se JSON inválido, inclui o resultado
+    }
+  });
+}
+
+// ── Citações dos laudos ──────────────────────────────────────────────────────
+
+/**
+ * Retorna todas as citações de um laudo, ordenadas por `ordem`.
+ */
+export async function getLaudoCitacoes(laudoId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(laudoCitacoes)
+    .where(eq(laudoCitacoes.laudoId, laudoId))
+    .orderBy(asc(laudoCitacoes.ordem), asc(laudoCitacoes.createdAt));
+}
+
+/**
+ * Adiciona uma citação normativa a um laudo.
+ * Retorna o id inserido.
+ */
+export async function addLaudoCitacao(data: {
+  laudoId: number;
+  trechoId?: number;
+  normaCodigo: string;
+  numeroItem: string;
+  tituloItem: string;
+  textoCitado: string;
+  aplicacao?: string;
+  ordem?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(laudoCitacoes).values({
+    laudoId: data.laudoId,
+    trechoId: data.trechoId ?? null,
+    normaCodigo: data.normaCodigo,
+    numeroItem: data.numeroItem,
+    tituloItem: data.tituloItem,
+    textoCitado: data.textoCitado,
+    aplicacao: data.aplicacao ?? null,
+    ordem: data.ordem ?? 0,
+  });
+
+  // Retorna a citação recém-criada para o frontend poder atualizar o estado local
+  const [nova] = await db
+    .select()
+    .from(laudoCitacoes)
+    .where(eq(laudoCitacoes.laudoId, data.laudoId))
+    .orderBy(desc(laudoCitacoes.createdAt))
+    .limit(1);
+
+  return nova;
+}
+
+/**
+ * Atualiza campos editáveis de uma citação (textoCitado, aplicacao, ordem).
+ */
+export async function updateLaudoCitacao(id: number, data: Partial<{
+  textoCitado: string;
+  aplicacao: string;
+  ordem: number;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.update(laudoCitacoes).set(data as any).where(eq(laudoCitacoes.id, id));
+}
+
+/**
+ * Remove uma citação pelo id.
+ */
+export async function removeLaudoCitacao(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.delete(laudoCitacoes).where(eq(laudoCitacoes.id, id));
+}
 
 export async function listNormasBiblioteca(tipoLaudo?: string) {
   const db = await getDb();
