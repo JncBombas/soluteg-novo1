@@ -566,7 +566,10 @@ export async function searchNormaTrechos(params: {
         or(
           like(normaTrechos.texto, termoBusca),
           like(normaTrechos.tituloItem, termoBusca),
-          like(normaTrechos.palavrasChave, termoBusca)
+          like(normaTrechos.palavrasChave, termoBusca),
+          like(normaTrechos.numeroItem, termoBusca),
+          like(normasBiblioteca.codigo, termoBusca),
+          like(normasBiblioteca.titulo, termoBusca)
         )
       )
     )
