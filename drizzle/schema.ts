@@ -853,7 +853,8 @@ export const normaTrechos = mysqlTable("normaTrechos", {
   // O trecho citável em si
   texto: text("texto").notNull(),
   // JSON array de strings para busca — ex: '["aterramento","proteção"]'
-  palavrasChave: text("palavrasChave").notNull().default("[]"),
+  // Sem .default() pois TEXT não suporta DEFAULT no MySQL — sempre fornecido no insert
+  palavrasChave: text("palavrasChave").notNull(),
   ativa: tinyint("ativa").default(1).notNull(),
 });
 

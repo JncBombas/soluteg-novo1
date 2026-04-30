@@ -14,7 +14,8 @@ CREATE TABLE `normaTrechos` (
   `texto` text NOT NULL,
   -- JSON array de strings para busca por palavra-chave
   -- Ex: '["aterramento","proteção","contato indireto"]'
-  `palavrasChave` text NOT NULL DEFAULT '[]',
+  -- Nota: TEXT não suporta DEFAULT no MySQL — valor sempre fornecido no INSERT
+  `palavrasChave` text NOT NULL,
   `ativa` tinyint NOT NULL DEFAULT 1,
   CONSTRAINT `normaTrechos_id` PRIMARY KEY(`id`)
 );
