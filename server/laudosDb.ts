@@ -587,6 +587,35 @@ export async function searchNormaTrechos(params: {
   });
 }
 
+/**
+ * Retorna todos os trechos ativos da biblioteca com código e título da norma.
+ * Usado pela IA para ter contexto completo sem filtro de palavra-chave.
+ */
+export async function listAllNormaTrechosParaIA() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select({
+        id: normaTrechos.id,
+        normaId: normaTrechos.normaId,
+        normaCodigo: normasBiblioteca.codigo,
+        normaTitulo: normasBiblioteca.titulo,
+        numeroItem: normaTrechos.numeroItem,
+        tituloItem: normaTrechos.tituloItem,
+        texto: normaTrechos.texto,
+        palavrasChave: normaTrechos.palavrasChave,
+      })
+      .from(normaTrechos)
+      .innerJoin(normasBiblioteca, eq(normaTrechos.normaId, normasBiblioteca.id))
+      .where(and(eq(normaTrechos.ativa, 1 as any), eq(normasBiblioteca.ativa, 1 as any)))
+      .orderBy(asc(normasBiblioteca.codigo), asc(normaTrechos.numeroItem));
+  } catch {
+    return []; // tabela pode não existir se migrations não foram executadas
+  }
+}
+
 // ── Citações dos laudos ──────────────────────────────────────────────────────
 
 /**

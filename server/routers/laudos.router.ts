@@ -512,6 +512,92 @@ export const laudosRouter = router({
       return { success: true };
     }),
 
+  // ── IA: sugerir normas aplicáveis ─────────────────────────────────────────
+
+  // Admin: analisa o laudo e sugere trechos normativos relevantes via Claude API
+  "ia.sugerirNormas": adminLocalProcedure
+    .input(z.object({ laudoId: z.number() }))
+    .mutation(async ({ input }) => {
+      const ia = await import("../iaLaudos");
+      const sugestoes = await ia.sugerirNormasIA(input.laudoId);
+      return { success: true, sugestoes };
+    }),
+
+  // Admin: gera sugestão de conclusão, parecer e recomendações via Claude API
+  "ia.sugerirConclusao": adminLocalProcedure
+    .input(z.object({ laudoId: z.number() }))
+    .mutation(async ({ input }) => {
+      const ia = await import("../iaLaudos");
+      const sugestao = await ia.sugerirConclusaoIA(input.laudoId);
+      return { success: true, sugestao };
+    }),
+
+  // Técnico: mesmas procedures com verificação de acesso ao laudo
+  "iaTecnico.sugerirNormas": protectedTechnicianProcedure
+    .input(z.object({ laudoId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await import("../laudosDb");
+      const laudo = await db.getLaudoById(input.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      const ia = await import("../iaLaudos");
+      const sugestoes = await ia.sugerirNormasIA(input.laudoId);
+      return { success: true, sugestoes };
+    }),
+
+  "iaTecnico.sugerirConclusao": protectedTechnicianProcedure
+    .input(z.object({ laudoId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await import("../laudosDb");
+      const laudo = await db.getLaudoById(input.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+      const ia = await import("../iaLaudos");
+      const sugestao = await ia.sugerirConclusaoIA(input.laudoId);
+      return { success: true, sugestao };
+    }),
+
+  // ── Envio por WhatsApp ─────────────────────────────────────────────────────
+
+  // Admin: gera PDF do laudo e envia via WhatsApp para o número informado
+  enviarWhatsapp: adminLocalProcedure
+    .input(z.object({
+      laudoId: z.number(),
+      telefone: z.string().min(8),
+      mensagem: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { generateLaudoPDF } = await import("../pdfLaudo");
+      const db = await import("../laudosDb");
+      const wa = await import("../whatsapp");
+
+      // Busca dados do laudo para compor a mensagem e o nome do arquivo
+      const laudo = await db.getLaudoById(input.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+      if (laudo.status !== "finalizado") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Apenas laudos finalizados podem ser enviados" });
+      }
+
+      // Gera o PDF em memória (Buffer)
+      const pdfBuffer = await generateLaudoPDF(input.laudoId);
+      const filename  = `${laudo.numero ?? `LAU-${input.laudoId}`}.pdf`;
+
+      const mensagem = input.mensagem?.trim() ||
+        `Olá! Segue o laudo técnico *${laudo.numero}* — ${laudo.titulo}.\nEm caso de dúvidas, entre em contato conosco.`;
+
+      // Envia via WhatsApp (usa a função existente que suporta PDF)
+      await wa.sendWhatsappToNumberWithPDF(input.telefone, mensagem, pdfBuffer, filename);
+
+      // Atualiza status para "enviado"
+      await db.updateLaudo(input.laudoId, { status: "enviado" } as any);
+
+      return { success: true };
+    }),
+
   // ── Configurações do Técnico ───────────────────────────────────────────────
   getTecnico: adminLocalProcedure
     .query(async () => {

@@ -2,8 +2,10 @@
  * CitacoesTab — Aba de Fundamentação Normativa do laudo.
  *
  * Funcionalidades:
- * - Busca de trechos na biblioteca por palavra-chave (3+ chars)
+ * - Busca de trechos na biblioteca por norma, número do item ou palavra-chave (3+ chars)
+ * - Botão "✨ Sugerir normas" — chama Claude API e retorna 3-6 trechos relevantes
  * - Resultados clicáveis com botão "Adicionar ao laudo"
+ * - Sugestões da IA exibidas em seção separada com badge roxo e justificativa
  * - Lista das citações já adicionadas com textos editáveis e ordenação ↑↓
  * - Botão "Adicionar manualmente" para inserir citação livre (sem biblioteca)
  * - Salva aplicação no onBlur via citacoes.update (sem botão extra)
@@ -30,6 +32,7 @@ import {
   Trash2,
   Loader2,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -59,6 +62,15 @@ interface TrechoResultado {
   palavrasChave: string;
 }
 
+interface SugestaoIA {
+  trechoId: number;
+  normaCodigo: string;
+  numeroItem: string;
+  tituloItem: string;
+  textoCitado: string;
+  justificativa: string;
+}
+
 interface Props {
   laudoId: number;
   tipoLaudo: string;
@@ -78,11 +90,15 @@ export default function CitacoesTab({
   isTecnico = false,
   onCitacoesChange,
 }: Props) {
-  // ── Estado de busca
+  // ── Estado de busca manual
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
   const [buscando, setBuscando] = useState(false);
   const [resultados, setResultados] = useState<TrechoResultado[]>([]);
+
+  // ── Estado de sugestões da IA
+  const [sugerindoNormas, setSugerindoNormas] = useState(false);
+  const [sugestoesIA, setSugestoesIA] = useState<SugestaoIA[]>([]);
 
   // ── Estado do modal de inserção manual
   const [showManual, setShowManual] = useState(false);
@@ -99,11 +115,8 @@ export default function CitacoesTab({
 
   // ── Procedures tRPC (prefixo diferente para admin vs técnico)
   const prefixoBusca = isTecnico ? "normasTrechosTecnico" : "normasTrechos";
-  const prefixoCit = isTecnico ? "citacoesTecnico" : "citacoes";
-
-  const searchMutation = (trpc.laudos as any)[`${prefixoBusca}.search`]?.useMutation
-    ? undefined // fallback: queries não são mutations — veja abaixo
-    : undefined;
+  const prefixoCit   = isTecnico ? "citacoesTecnico" : "citacoes";
+  const prefixoIA    = isTecnico ? "iaTecnico" : "ia";
 
   const addMutation = (trpc.laudos as any)[`${prefixoCit}.add`].useMutation({
     onError: (e: any) => toast.error(e.message),
@@ -115,6 +128,13 @@ export default function CitacoesTab({
 
   const removeMutation = (trpc.laudos as any)[`${prefixoCit}.remove`].useMutation({
     onError: (e: any) => toast.error(e.message),
+  });
+
+  const sugerirNormasMutation = (trpc.laudos as any)[`${prefixoIA}.sugerirNormas`].useMutation({
+    onError: (e: any) => {
+      toast.error(e.message ?? "Erro ao consultar a IA");
+      setSugerindoNormas(false);
+    },
   });
 
   // ── Busca de trechos (query com fetch manual via utils)
@@ -142,17 +162,46 @@ export default function CitacoesTab({
     }
   }
 
+  // ── Sugestão via IA
+  async function handleSugerirNormas() {
+    if (laudoId === 0) {
+      toast.warning("Salve o laudo antes de usar a sugestão de normas");
+      return;
+    }
+    setSugerindoNormas(true);
+    setSugestoesIA([]);
+    try {
+      const resultado = await sugerirNormasMutation.mutateAsync({ laudoId });
+      const sugestoes: SugestaoIA[] = resultado?.sugestoes ?? [];
+      if (!sugestoes.length) {
+        toast.info("A IA não encontrou sugestões relevantes para este laudo");
+      } else {
+        setSugestoesIA(sugestoes);
+        toast.success(`${sugestoes.length} norma${sugestoes.length > 1 ? "s sugeridas" : " sugerida"} pela IA`);
+      }
+    } finally {
+      setSugerindoNormas(false);
+    }
+  }
+
   // ── Adicionar trecho da biblioteca ao laudo
-  async function handleAdicionar(trecho: TrechoResultado) {
-    setAdicionandoId(trecho.id);
+  async function handleAdicionar(item: {
+    id?: number;
+    normaCodigo: string;
+    numeroItem: string;
+    tituloItem: string;
+    texto?: string;
+    textoCitado?: string;
+  }) {
+    setAdicionandoId(item.id ?? -1);
     try {
       const resultado = await addMutation.mutateAsync({
         laudoId,
-        trechoId: trecho.id,
-        normaCodigo: trecho.normaCodigo,
-        numeroItem: trecho.numeroItem,
-        tituloItem: trecho.tituloItem,
-        textoCitado: trecho.texto,
+        trechoId: item.id,
+        normaCodigo: item.normaCodigo,
+        numeroItem: item.numeroItem,
+        tituloItem: item.tituloItem,
+        textoCitado: item.textoCitado ?? item.texto ?? "",
         ordem: citacoes.length,
       });
       if (resultado?.citacao) {
@@ -198,7 +247,7 @@ export default function CitacoesTab({
 
   // ── Salvar aplicação ao sair do campo (onBlur)
   function handleAplicacaoBlur(citacao: Citacao, novaAplicacao: string) {
-    if (novaAplicacao === (citacao.aplicacao ?? "")) return; // sem mudança
+    if (novaAplicacao === (citacao.aplicacao ?? "")) return;
     updateMutation.mutate({ id: citacao.id, aplicacao: novaAplicacao });
     onCitacoesChange(citacoes.map((c) => c.id === citacao.id ? { ...c, aplicacao: novaAplicacao } : c));
   }
@@ -224,19 +273,25 @@ export default function CitacoesTab({
 
     const nova = [...citacoes];
     [nova[index], nova[alvo]] = [nova[alvo], nova[index]];
-    // Atualiza ordens
     const comOrdens = nova.map((c, i) => ({ ...c, ordem: i }));
     onCitacoesChange(comOrdens);
 
-    // Persiste as duas ordens alteradas
     updateMutation.mutate({ id: comOrdens[index].id, ordem: comOrdens[index].ordem });
     updateMutation.mutate({ id: comOrdens[alvo].id, ordem: comOrdens[alvo].ordem });
   }
 
+  // ── Helpers
+  const jaAdicionado = (trechoId?: number, normaCodigo?: string, numeroItem?: string) =>
+    citacoes.some(
+      (c) =>
+        (trechoId && c.trechoId === trechoId) ||
+        (c.normaCodigo === normaCodigo && c.numeroItem === numeroItem)
+    );
+
   return (
     <div className="space-y-6">
       {/* ── Cabeçalho ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h3 className="text-base font-semibold">Fundamentação Normativa</h3>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -251,13 +306,13 @@ export default function CitacoesTab({
         )}
       </div>
 
-      {/* ── Campo de busca ────────────────────────────────────────── */}
+      {/* ── Campo de busca + botão IA ─────────────────────────────── */}
       {!isFinalized && (
         <Card>
-          <CardContent className="pt-4">
-            <Label className="text-sm font-medium mb-2 block">Buscar na biblioteca de normas</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
+          <CardContent className="pt-4 space-y-3">
+            <Label className="text-sm font-medium block">Buscar na biblioteca de normas</Label>
+            <div className="flex gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Norma, número do item ou palavra-chave (ex: NBR 5410, 6.2.1, aterramento...)"
@@ -267,51 +322,143 @@ export default function CitacoesTab({
                   className="pl-9"
                 />
               </div>
-              <Button onClick={handleBuscar} disabled={buscando} className="gap-2">
+              <Button onClick={handleBuscar} disabled={buscando} className="gap-2 shrink-0">
                 {buscando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 Buscar
               </Button>
+              <Button
+                variant="outline"
+                onClick={handleSugerirNormas}
+                disabled={sugerindoNormas || laudoId === 0}
+                className="gap-2 shrink-0 border-purple-300 text-purple-700 hover:bg-purple-50"
+                title={laudoId === 0 ? "Salve o laudo antes de usar a IA" : "Sugerir normas aplicáveis via IA"}
+              >
+                {sugerindoNormas
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Sparkles className="h-4 w-4" />}
+                Sugerir normas
+              </Button>
             </div>
 
-            {/* Resultados da busca */}
+            {/* ── Sugestões da IA ─────────────────────────────────── */}
+            {sugestoesIA.length > 0 && (
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-purple-600 text-white text-xs gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    IA
+                  </Badge>
+                  <p className="text-xs text-muted-foreground">
+                    {sugestoesIA.length} sugestão{sugestoesIA.length > 1 ? "ões" : ""} da IA
+                  </p>
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground ml-auto underline"
+                    onClick={() => setSugestoesIA([])}
+                  >
+                    Limpar
+                  </button>
+                </div>
+                {sugestoesIA.map((s, i) => {
+                  const adicionado = jaAdicionado(s.trechoId, s.normaCodigo, s.numeroItem);
+                  return (
+                    <div
+                      key={i}
+                      className="border border-purple-200 rounded-lg p-3 bg-purple-50/40 hover:bg-purple-50/70 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <Badge className="bg-purple-600 text-white font-mono text-xs gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              {s.normaCodigo}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">item {s.numeroItem}</span>
+                          </div>
+                          <p className="text-sm font-medium">{s.tituloItem}</p>
+                          <p className="text-xs text-muted-foreground mt-1 italic line-clamp-2">
+                            "{s.textoCitado}"
+                          </p>
+                          {s.justificativa && (
+                            <p className="text-xs text-purple-700 mt-1.5 italic">
+                              ✦ {s.justificativa}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant={adicionado ? "secondary" : "outline"}
+                          className={`shrink-0 gap-1 text-xs ${!adicionado ? "border-purple-300 text-purple-700 hover:bg-purple-50" : ""}`}
+                          disabled={adicionado || adicionandoId === s.trechoId}
+                          onClick={() => !adicionado && handleAdicionar({
+                            id: s.trechoId,
+                            normaCodigo: s.normaCodigo,
+                            numeroItem: s.numeroItem,
+                            tituloItem: s.tituloItem,
+                            textoCitado: s.textoCitado,
+                          })}
+                        >
+                          {adicionandoId === s.trechoId
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : adicionado
+                            ? "Já adicionado"
+                            : <><Plus className="h-3 w-3" /> Adicionar</>}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Resultados da busca manual ───────────────────────── */}
             {resultados.length > 0 && (
-              <div className="mt-4 space-y-2">
+              <div className="mt-2 space-y-2">
                 <p className="text-xs text-muted-foreground">
                   {resultados.length} resultado{resultados.length !== 1 ? "s" : ""} para "{buscaAtiva}"
                 </p>
-                {resultados.map((r) => (
-                  <div
-                    key={r.id}
-                    className="border rounded-lg p-3 bg-muted/30 hover:bg-muted/60 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-xs">
-                            {r.normaCodigo}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">item {r.numeroItem}</span>
+                {resultados.map((r) => {
+                  const adicionado = jaAdicionado(r.id, r.normaCodigo, r.numeroItem);
+                  return (
+                    <div
+                      key={r.id}
+                      className="border rounded-lg p-3 bg-muted/30 hover:bg-muted/60 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 font-mono text-xs">
+                              {r.normaCodigo}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">item {r.numeroItem}</span>
+                          </div>
+                          <p className="text-sm font-medium">{r.tituloItem}</p>
+                          <p className="text-xs text-muted-foreground mt-1 italic line-clamp-2">
+                            "{r.texto}"
+                          </p>
                         </div>
-                        <p className="text-sm font-medium">{r.tituloItem}</p>
-                        <p className="text-xs text-muted-foreground mt-1 italic line-clamp-2">
-                          "{r.texto}"
-                        </p>
+                        <Button
+                          size="sm"
+                          variant={adicionado ? "secondary" : "outline"}
+                          className="shrink-0 gap-1 text-xs"
+                          disabled={adicionado || adicionandoId === r.id}
+                          onClick={() => !adicionado && handleAdicionar({
+                            id: r.id,
+                            normaCodigo: r.normaCodigo,
+                            numeroItem: r.numeroItem,
+                            tituloItem: r.tituloItem,
+                            texto: r.texto,
+                          })}
+                        >
+                          {adicionandoId === r.id
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : adicionado
+                            ? "Já adicionado"
+                            : <><Plus className="h-3 w-3" /> Adicionar</>}
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0 gap-1 text-xs"
-                        disabled={adicionandoId === r.id}
-                        onClick={() => handleAdicionar(r)}
-                      >
-                        {adicionandoId === r.id
-                          ? <Loader2 className="h-3 w-3 animate-spin" />
-                          : <Plus className="h-3 w-3" />}
-                        Adicionar
-                      </Button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -324,7 +471,7 @@ export default function CitacoesTab({
           <BookOpen className="h-10 w-10 opacity-30" />
           <p className="text-sm">Nenhuma citação normativa adicionada</p>
           {!isFinalized && (
-            <p className="text-xs">Use o campo de busca acima ou adicione manualmente</p>
+            <p className="text-xs">Use o campo de busca, a sugestão de IA ou adicione manualmente</p>
           )}
         </div>
       ) : (

@@ -43,6 +43,7 @@ import {
   X,
   AlertTriangle,
   LogOut,
+  Sparkles,
   BookOpen,
   Search,
   FileInput,
@@ -161,6 +162,14 @@ export default function TecnicoLaudoForm() {
   // ── Template
   const [confirmTemplate, setConfirmTemplate] = useState<{ show: boolean; tipo: string }>({ show: false, tipo: "" });
 
+  // ── IA: sugestão de conclusão técnica via Claude API (procedimento do técnico)
+  const [sugerindoConclusao, setSugerindoConclusao] = useState(false);
+  const [sugestaoConclusao, setSugestaoConclusao] = useState<{
+    parecer: "conforme" | "nao_conforme" | "parcialmente_conforme";
+    conclusao: string;
+    recomendacoes: string;
+  } | null>(null);
+
   // ── Biblioteca de normas
   const [showBiblioteca, setShowBiblioteca] = useState(false);
   const [bibliotecaSearch, setBibliotecaSearch] = useState("");
@@ -266,6 +275,11 @@ export default function TecnicoLaudoForm() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Mutation de IA: sugere conclusão técnica para o técnico via Claude API (com verificação de acesso)
+  const sugerirConclusaoMutation = (trpc as any).laudos["iaTecnico.sugerirConclusao"].useMutation({
+    onError: (e: any) => { toast.error(e.message); setSugerindoConclusao(false); },
+  });
+
   const addFotoMutation = (trpc as any).laudos.addFotoTecnico.useMutation();
   const removeFotoMutation = (trpc as any).laudos.removeFoto.useMutation();
   const updateFotoMutation = (trpc as any).laudos.updateFotoTecnico.useMutation();
@@ -343,6 +357,19 @@ export default function TecnicoLaudoForm() {
       });
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ── IA: Sugerir conclusão ─────────────────────────────────────────────────
+
+  async function handleSugerirConclusao() {
+    if (!laudoId) { toast.error("Salve o laudo antes de usar a IA"); return; }
+    setSugerindoConclusao(true);
+    try {
+      const result = await sugerirConclusaoMutation.mutateAsync({ laudoId });
+      setSugestaoConclusao(result.sugestao);
+    } finally {
+      setSugerindoConclusao(false);
     }
   }
 
@@ -1174,7 +1201,24 @@ export default function TecnicoLaudoForm() {
           {/* ── ABA 6: Conclusão ─────────────────────────────────────── */}
           <TabsContent value="conclusao">
             <Card>
-              <CardHeader><CardTitle className="text-base">Conclusão e Parecer Técnico</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Conclusão e Parecer Técnico</CardTitle>
+                {/* Botão de sugestão de conclusão via IA — disponível apenas para rascunhos já salvos */}
+                {!isFinalized && laudoId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSugerirConclusao}
+                    disabled={sugerindoConclusao}
+                    className="gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+                  >
+                    {sugerindoConclusao
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Sparkles className="h-3.5 w-3.5" />}
+                    Sugerir conclusão
+                  </Button>
+                )}
+              </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-2">
                   <Label>Parecer Final</Label>
@@ -1406,6 +1450,66 @@ export default function TecnicoLaudoForm() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog — Sugestão de conclusão pela IA (procedimento do técnico) */}
+      <Dialog open={!!sugestaoConclusao} onOpenChange={(open) => !open && setSugestaoConclusao(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Conclusão sugerida pela IA</DialogTitle>
+          </DialogHeader>
+          {sugestaoConclusao && (
+            <div className="space-y-4">
+              {/* Badge com o parecer sugerido */}
+              <div>
+                <span className="text-sm font-medium text-muted-foreground mr-2">Parecer:</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  sugestaoConclusao.parecer === "conforme"
+                    ? "bg-green-100 text-green-800"
+                    : sugestaoConclusao.parecer === "nao_conforme"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {sugestaoConclusao.parecer === "conforme" ? "🟢 Conforme" :
+                   sugestaoConclusao.parecer === "nao_conforme" ? "🔴 Não Conforme" : "🟡 Parcialmente Conforme"}
+                </span>
+              </div>
+              {/* Texto de conclusão gerado */}
+              <div>
+                <p className="text-sm font-medium mb-1">Conclusão Técnica:</p>
+                <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {sugestaoConclusao.conclusao}
+                </div>
+              </div>
+              {/* Recomendações (exibidas apenas se não estiverem vazias) */}
+              {sugestaoConclusao.recomendacoes && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Recomendações:</p>
+                  <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {sugestaoConclusao.recomendacoes}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="outline" onClick={() => setSugestaoConclusao(null)}>
+                  Descartar
+                </Button>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => {
+                    setParecer(sugestaoConclusao.parecer);
+                    setConclusao(sugestaoConclusao.conclusao);
+                    setRecomendacoes(sugestaoConclusao.recomendacoes);
+                    setSugestaoConclusao(null);
+                    toast.success("Conclusão aplicada!");
+                  }}
+                >
+                  Usar esta conclusão
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

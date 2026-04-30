@@ -3,9 +3,10 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle, Upload, Plus, FileText } from "lucide-react";
 import { maskCnpjCpf, maskPhone, isValidCnpjCpf, isValidPhone } from "@/lib/masks";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -32,7 +33,7 @@ export default function EditClient() {
   const [success, setSuccess] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
-  // ── Busca dados do cliente via tRPC ──────────────────────────
+  // ── Busca dados do cliente e dos laudos associados via tRPC ──────────────────────────
   const { data: client, isLoading, refetch: refetchClient } = trpc.clients.getById.useQuery(
     { id: clientId ?? 0 },
     { enabled: !!clientId }
@@ -53,6 +54,12 @@ export default function EditClient() {
       newPassword: "",
     });
   }, [client]);
+
+  // Busca todos os laudos vinculados a este cliente para exibir na ficha
+  const { data: laudosCliente = [] } = trpc.laudos.list.useQuery(
+    { clienteId: clientId ?? 0 },
+    { enabled: !!clientId, staleTime: 30_000 }
+  );
 
   // ── Mutations via tRPC ───────────────────────────────────────
   const updateMutation = trpc.clients.update.useMutation();
@@ -365,6 +372,92 @@ export default function EditClient() {
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* ── Seção de Laudos Técnicos do Cliente ──────────────────── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Laudos Técnicos
+            </CardTitle>
+            <CardDescription>
+              Laudos associados a este cliente
+            </CardDescription>
+          </div>
+          {/* Botão para criar novo laudo pré-vinculado a este cliente */}
+          <Button
+            size="sm"
+            onClick={() => setLocation(`/gestor/laudos/novo?clienteId=${clientId}`)}
+            className="gap-1.5 bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Novo laudo</span>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {(laudosCliente as any[]).length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-6">
+              Nenhum laudo técnico cadastrado para este cliente.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                    <th className="pb-2 pr-4">Número</th>
+                    <th className="pb-2 pr-4">Tipo</th>
+                    <th className="pb-2 pr-4 hidden sm:table-cell">Título</th>
+                    <th className="pb-2 pr-4">Status</th>
+                    <th className="pb-2">Data</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {(laudosCliente as any[]).map((laudo: any) => (
+                    <tr
+                      key={laudo.id}
+                      className="hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => setLocation(`/gestor/laudos/${laudo.id}`)}
+                    >
+                      <td className="py-2.5 pr-4 font-mono text-xs font-medium text-orange-700">
+                        {laudo.numero ?? `#${laudo.id}`}
+                      </td>
+                      <td className="py-2.5 pr-4 text-xs text-slate-600 whitespace-nowrap">
+                        {laudo.tipo === "instalacao_eletrica" ? "Instalação Elétrica" :
+                         laudo.tipo === "inspecao_predial" ? "Inspeção Predial" :
+                         laudo.tipo === "nr10_nr12" ? "NR-10/12" :
+                         laudo.tipo === "grupo_gerador" ? "Grupo Gerador" : "Adequações"}
+                      </td>
+                      <td className="py-2.5 pr-4 hidden sm:table-cell text-slate-700 max-w-[200px] truncate">
+                        {laudo.titulo}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <Badge className={`text-[11px] px-2 py-0.5 ${
+                          laudo.status === "rascunho"   ? "bg-slate-100 text-slate-700" :
+                          laudo.status === "finalizado" ? "bg-blue-100 text-blue-800" :
+                          laudo.status === "enviado"    ? "bg-green-100 text-green-800" :
+                                                          "bg-red-100 text-red-700"
+                        }`}>
+                          {laudo.status === "rascunho"   ? "Rascunho" :
+                           laudo.status === "finalizado" ? "Finalizado" :
+                           laudo.status === "enviado"    ? "Enviado" : "Cancelado"}
+                        </Badge>
+                      </td>
+                      <td className="py-2.5 text-xs text-slate-500 whitespace-nowrap">
+                        {laudo.dataInspecao
+                          ? new Date(laudo.dataInspecao).toLocaleDateString("pt-BR")
+                          : laudo.createdAt
+                          ? new Date(laudo.createdAt).toLocaleDateString("pt-BR")
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

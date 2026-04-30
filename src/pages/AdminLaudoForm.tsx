@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, useSearch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +43,8 @@ import {
   Upload,
   X,
   AlertTriangle,
-
+  Sparkles,
+  MessageSquare,
   BookOpen,
   Search,
   FileInput,
@@ -115,6 +116,7 @@ export default function AdminLaudoForm() {
   const [, navigate] = useLocation();
   const isNew = !params.id || params.id === "novo";
   const laudoId = isNew ? null : Number(params.id);
+  const searchString = useSearch();
 
   // ── Aba 1: Identificação
   const [tipo, setTipo] = useState("instalacao_eletrica");
@@ -161,6 +163,19 @@ export default function AdminLaudoForm() {
 
   // ── Template
   const [confirmTemplate, setConfirmTemplate] = useState<{ show: boolean; tipo: string }>({ show: false, tipo: "" });
+
+  // ── IA: sugestão de conclusão técnica via Claude API
+  const [sugerindoConclusao, setSugerindoConclusao] = useState(false);
+  const [sugestaoConclusao, setSugestaoConclusao] = useState<{
+    parecer: "conforme" | "nao_conforme" | "parcialmente_conforme";
+    conclusao: string;
+    recomendacoes: string;
+  } | null>(null);
+
+  // ── WhatsApp: envio do laudo finalizado com PDF em anexo
+  const [showWhatsapp, setShowWhatsapp] = useState(false);
+  const [whatsappTelefone, setWhatsappTelefone] = useState("");
+  const [whatsappMensagem, setWhatsappMensagem] = useState("");
 
   // ── Biblioteca de normas
   const [showBiblioteca, setShowBiblioteca] = useState(false);
@@ -260,6 +275,14 @@ export default function AdminLaudoForm() {
     setNormas(normasFiltradas.map((n: any) => ({ codigo: n.codigo, titulo: n.titulo })));
   }, [(normasBibliotecaData as any[]).length]);
 
+  // Para novo laudo: preenche clienteId a partir do parâmetro ?clienteId= na URL
+  useEffect(() => {
+    if (!isNew) return;
+    const params = new URLSearchParams(searchString);
+    const v = params.get("clienteId");
+    if (v) setClienteId(Number(v));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Mutations
   const createMutation = trpc.laudos.create.useMutation({
     onSuccess: (data: any) => {
@@ -276,6 +299,21 @@ export default function AdminLaudoForm() {
 
   // Mutation silenciosa usada apenas para salvar campos do template logo após o create
   const updateSilentMutation = trpc.laudos.update.useMutation({
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutation de IA: sugere conclusão técnica, parecer e recomendações via Claude API
+  const sugerirConclusaoMutation = (trpc as any).laudos["ia.sugerirConclusao"].useMutation({
+    onError: (e: any) => { toast.error(e.message); setSugerindoConclusao(false); },
+  });
+
+  // Mutation para gerar PDF do laudo e enviá-lo via WhatsApp para o número informado
+  const enviarWhatsappMutation = (trpc as any).laudos.enviarWhatsapp.useMutation({
+    onSuccess: () => {
+      toast.success("Laudo enviado via WhatsApp!");
+      setLaudoStatus("enviado");
+      setShowWhatsapp(false);
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -406,6 +444,19 @@ export default function AdminLaudoForm() {
       // Na prática, as medições são gerenciadas via addMedicao/removeMedicao inline
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ── IA: Sugerir conclusão ─────────────────────────────────────────────────
+
+  async function handleSugerirConclusao() {
+    if (!laudoId) { toast.error("Salve o laudo antes de usar a IA"); return; }
+    setSugerindoConclusao(true);
+    try {
+      const result = await sugerirConclusaoMutation.mutateAsync({ laudoId });
+      setSugestaoConclusao(result.sugestao);
+    } finally {
+      setSugerindoConclusao(false);
     }
   }
 
@@ -702,6 +753,17 @@ export default function AdminLaudoForm() {
               >
                 {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                 PDF
+              </Button>
+            )}
+            {/* Botão de envio via WhatsApp — disponível apenas para laudos com status "finalizado" */}
+            {laudoStatus === "finalizado" && (
+              <Button
+                size="sm"
+                onClick={() => setShowWhatsapp(true)}
+                className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">WhatsApp</span>
               </Button>
             )}
             {isFinalized && (
@@ -1300,7 +1362,24 @@ export default function AdminLaudoForm() {
           {/* ── ABA 6: Conclusão ─────────────────────────────────────── */}
           <TabsContent value="conclusao">
             <Card>
-              <CardHeader><CardTitle className="text-base">Conclusão e Parecer Técnico</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base">Conclusão e Parecer Técnico</CardTitle>
+                {/* Botão de sugestão de conclusão via IA — disponível apenas para rascunhos já salvos */}
+                {!isFinalized && laudoId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSugerirConclusao}
+                    disabled={sugerindoConclusao}
+                    className="gap-1.5 text-purple-700 border-purple-300 hover:bg-purple-50"
+                  >
+                    {sugerindoConclusao
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Sparkles className="h-3.5 w-3.5" />}
+                    Sugerir conclusão
+                  </Button>
+                )}
+              </CardHeader>
               <CardContent className="space-y-5">
                 {/* Parecer visual */}
                 <div className="space-y-2">
@@ -1578,6 +1657,115 @@ export default function AdminLaudoForm() {
               </Button>
               <Button disabled={!osPreview} onClick={handleImportarOS}>
                 Importar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog — Sugestão de conclusão pela IA */}
+      <Dialog open={!!sugestaoConclusao} onOpenChange={(open) => !open && setSugestaoConclusao(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Conclusão sugerida pela IA</DialogTitle>
+          </DialogHeader>
+          {sugestaoConclusao && (
+            <div className="space-y-4">
+              {/* Badge com o parecer sugerido */}
+              <div>
+                <span className="text-sm font-medium text-muted-foreground mr-2">Parecer:</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  sugestaoConclusao.parecer === "conforme"
+                    ? "bg-green-100 text-green-800"
+                    : sugestaoConclusao.parecer === "nao_conforme"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-yellow-100 text-yellow-800"
+                }`}>
+                  {sugestaoConclusao.parecer === "conforme" ? "🟢 Conforme" :
+                   sugestaoConclusao.parecer === "nao_conforme" ? "🔴 Não Conforme" : "🟡 Parcialmente Conforme"}
+                </span>
+              </div>
+              {/* Texto de conclusão gerado */}
+              <div>
+                <p className="text-sm font-medium mb-1">Conclusão Técnica:</p>
+                <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  {sugestaoConclusao.conclusao}
+                </div>
+              </div>
+              {/* Recomendações (exibidas apenas se não estiverem vazias) */}
+              {sugestaoConclusao.recomendacoes && (
+                <div>
+                  <p className="text-sm font-medium mb-1">Recomendações:</p>
+                  <div className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                    {sugestaoConclusao.recomendacoes}
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <Button variant="outline" onClick={() => setSugestaoConclusao(null)}>
+                  Descartar
+                </Button>
+                <Button
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => {
+                    setParecer(sugestaoConclusao.parecer);
+                    setConclusao(sugestaoConclusao.conclusao);
+                    setRecomendacoes(sugestaoConclusao.recomendacoes);
+                    setSugestaoConclusao(null);
+                    toast.success("Conclusão aplicada!");
+                  }}
+                >
+                  Usar esta conclusão
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog — Envio do laudo finalizado via WhatsApp com PDF em anexo */}
+      <Dialog open={showWhatsapp} onOpenChange={setShowWhatsapp}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Laudo via WhatsApp</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Telefone *</Label>
+              <Input
+                placeholder="Ex: 5511999998888 (DDI + DDD + número, sem +)"
+                value={whatsappTelefone}
+                onChange={(e) => setWhatsappTelefone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Formato: DDI + DDD + número. Ex: 5511999998888</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Mensagem (opcional)</Label>
+              <Textarea
+                rows={3}
+                placeholder="Olá! Segue o laudo técnico conforme solicitado."
+                value={whatsappMensagem}
+                onChange={(e) => setWhatsappMensagem(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Se vazio, uma mensagem padrão com o número e título do laudo será enviada.</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={() => setShowWhatsapp(false)}>Cancelar</Button>
+              <Button
+                disabled={!whatsappTelefone.trim() || enviarWhatsappMutation.isPending}
+                onClick={() => {
+                  enviarWhatsappMutation.mutate({
+                    laudoId: laudoId!,
+                    telefone: whatsappTelefone.trim(),
+                    mensagem: whatsappMensagem.trim() || undefined,
+                  });
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white gap-1.5"
+              >
+                {enviarWhatsappMutation.isPending
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <MessageSquare className="h-4 w-4" />}
+                Enviar
               </Button>
             </div>
           </div>
