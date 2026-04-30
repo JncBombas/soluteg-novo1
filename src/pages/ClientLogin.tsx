@@ -191,6 +191,19 @@ export default function ClientLogin() {
                   <strong>Não tem acesso?</strong> Entre em contato com o administrador do sistema para criar sua conta.
                 </p>
               </div>
+
+              {/* Link para o portal do técnico */}
+              <div className="mt-4 text-center">
+                <p className="text-sm text-gray-400">
+                  É técnico?{" "}
+                  <a
+                    href="/technician/login"
+                    className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                  >
+                    Acesse o Portal do Técnico
+                  </a>
+                </p>
+              </div>
             </CardContent>
           </Card>
 
