@@ -264,13 +264,18 @@ export default function AdminLaudoForm() {
   const createMutation = trpc.laudos.create.useMutation({
     onSuccess: (data: any) => {
       toast.success(`Laudo ${data.numero} criado!`);
-      navigate(`/gestor/laudos/${data.id}`);
+      // navigate é feito em handleSave após salvar os campos do template
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const updateMutation = trpc.laudos.update.useMutation({
     onSuccess: () => toast.success("Laudo salvo"),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutation silenciosa usada apenas para salvar campos do template logo após o create
+  const updateSilentMutation = trpc.laudos.update.useMutation({
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -354,7 +359,27 @@ export default function AdminLaudoForm() {
     setSaving(true);
     try {
       if (isNew) {
-        await createMutation.mutateAsync({ tipo: tipo as any, titulo, clienteId: clienteId ?? undefined, osId: osId ?? undefined, normasReferencia: normas as any });
+        // Cria o rascunho
+        const created = await createMutation.mutateAsync({
+          tipo: tipo as any,
+          titulo,
+          clienteId: clienteId ?? undefined,
+          osId: osId ?? undefined,
+          normasReferencia: normas as any,
+        });
+        // Salva os campos do template (não enviados no create) para que o
+        // useEffect de carregamento não os sobrescreva com strings vazias
+        if (objeto || metodologia || equipamentos || condicoes || constatacoes.length > 0) {
+          await updateSilentMutation.mutateAsync({
+            id: created.id,
+            objeto: objeto || undefined,
+            metodologia: metodologia || undefined,
+            equipamentosUtilizados: equipamentos || undefined,
+            condicoesLocal: condicoes || undefined,
+            constatacoes: constatacoes.length > 0 ? (constatacoes as any) : undefined,
+          });
+        }
+        navigate(`/gestor/laudos/${created.id}`);
         return;
       }
 

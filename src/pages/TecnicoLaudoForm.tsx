@@ -251,13 +251,18 @@ export default function TecnicoLaudoForm() {
   const createMutation = (trpc as any).laudos.createTecnico.useMutation({
     onSuccess: (data: any) => {
       toast.success(`Laudo ${data.numero} criado!`);
-      navigate(`/technician/laudos/${data.id}`);
+      // navigate é feito em handleSave após salvar os campos do template
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const updateMutation = (trpc as any).laudos.updateTecnico.useMutation({
     onSuccess: () => toast.success("Laudo salvo"),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Mutation silenciosa usada apenas para salvar campos do template logo após o create
+  const updateSilentMutation = (trpc as any).laudos.updateTecnico.useMutation({
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -296,12 +301,26 @@ export default function TecnicoLaudoForm() {
     setSaving(true);
     try {
       if (isNew) {
-        await createMutation.mutateAsync({
+        // Cria o rascunho
+        const created = await createMutation.mutateAsync({
           tipo: tipo as any,
           titulo,
           clienteId: clienteId ?? undefined,
           normasReferencia: normas as any,
         });
+        // Salva os campos do template (não enviados no create) para que o
+        // useEffect de carregamento não os sobrescreva com strings vazias
+        if (objeto || metodologia || equipamentos || condicoes || constatacoes.length > 0) {
+          await updateSilentMutation.mutateAsync({
+            id: created.id,
+            objeto: objeto || undefined,
+            metodologia: metodologia || undefined,
+            equipamentosUtilizados: equipamentos || undefined,
+            condicoesLocal: condicoes || undefined,
+            constatacoes: constatacoes.length > 0 ? (constatacoes as any) : undefined,
+          });
+        }
+        navigate(`/technician/laudos/${created.id}`);
         return;
       }
 
