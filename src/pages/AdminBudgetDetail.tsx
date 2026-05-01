@@ -110,7 +110,7 @@ export default function AdminBudgetDetail() {
     { budgetId: budgetId! },
     { enabled: !!budgetId }
   );
-  const { data: clientsData } = trpc.clients.list.useQuery({ adminId });
+  const { data: clientsData } = trpc.clients.list.useQuery(undefined);
 
   const createMutation = trpc.budgets.create.useMutation({
     onSuccess: (res) => { toast.success("Orçamento criado!"); navigate(`/gestor/orcamentos/${res.id}`); },
@@ -293,7 +293,6 @@ export default function AdminBudgetDetail() {
     if (isNew) {
       if (!clientId) { toast.error("Selecione um cliente"); return; }
       createMutation.mutate({
-        adminId,
         clientId,
         serviceType: serviceType as any,
         priority: priority as any,

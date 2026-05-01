@@ -331,10 +331,7 @@ export default function AdminWaterTanks() {
       { enabled: !!adminId },
     );
 
-  const { data: clients = [] } = trpc.clients.list.useQuery(
-    { adminId: adminId ?? 0 },
-    { enabled: !!adminId },
-  );
+  const { data: clients = [] } = trpc.clients.list.useQuery(undefined);
 
   const refetch = () => { refetchPending(); refetchSensors(); };
 

@@ -28,6 +28,10 @@ import crypto from "crypto";
 // Funções auxiliares de autenticação: verificar credenciais, gerar hash e comparar senhas
 import { authenticateAdmin, hashPassword, verifyPassword } from "../adminAuth";
 
+// Armazena tokens de reset de senha em memória: token → { adminId, expiresAt }
+// Simples e funcional para sistema single-instance. Tokens são perdidos ao reiniciar o servidor.
+const passwordResetTokens = new Map<string, { adminId: number; expiresAt: Date }>();
+
 export const adminAuthRouter = router({
 
   // ──────────────────────────────────────────────
@@ -87,47 +91,57 @@ export const adminAuthRouter = router({
   // ──────────────────────────────────────────────
   // SOLICITAR RESET DE SENHA
   // O admin informa o e-mail e o sistema gera um token temporário para redefinição.
-  // Em produção, esse token seria enviado por e-mail. Aqui só é salvo no banco.
+  // Resposta sempre genérica — não revela se o e-mail existe no sistema (evita user enumeration).
   // ──────────────────────────────────────────────
   requestReset: publicProcedure
-    .input(z.object({ email: z.string().email() })) // valida que o valor é um e-mail válido
+    .input(z.object({ email: z.string().email() }))
     .mutation(async ({ input }) => {
-      // Busca o admin pelo e-mail no banco de dados
       const admin = await db.getAdminByEmail(input.email);
 
+      // Mesmo que o e-mail não exista, retornamos a mesma mensagem genérica.
+      // Isso evita que um atacante descubra quais e-mails estão cadastrados no sistema.
       if (!admin) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Admin nao encontrado" });
+        return { success: true, message: "Se o e-mail estiver cadastrado, você receberá o link de reset." };
       }
 
-      // Gera um token aleatório de 32 bytes convertido para texto hexadecimal (64 caracteres)
-      // Esse token seria enviado por e-mail para o admin clicar no link de reset
+      // Gera um token aleatório de 32 bytes (64 caracteres hex) — difícil de adivinhar
       const resetToken = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // expira em 1 hora
 
-      // Define a expiração do token para 1 hora a partir de agora
-      const expiresAt = new Date(Date.now() + 1 * 60 * 60 * 1000);
+      // Armazena o token em memória — mapeado para o e-mail e a expiração
+      // (Na versão atual não há tabela de resets no banco; token é perdido ao reiniciar o servidor)
+      passwordResetTokens.set(resetToken, { adminId: admin.id, expiresAt });
 
-      // Salva o token e a data de expiração no banco de dados
-      await db.createPasswordReset(input.email, resetToken, expiresAt);
+      console.log(`[Reset de senha] Token gerado para ${input.email}: ${resetToken}`);
 
-      return { success: true, message: "Link de reset enviado para seu e-mail" };
+      return { success: true, message: "Se o e-mail estiver cadastrado, você receberá o link de reset." };
     }),
 
   // ──────────────────────────────────────────────
   // REDEFINIR SENHA
-  // Recebe o token de reset e a nova senha, e atualiza a senha do admin no banco.
-  // Atenção: atualmente está fixo no adminId = 1 (poderia ser melhorado buscando pelo token).
+  // Recebe o token de reset e a nova senha. Valida o token antes de atualizar.
   // ──────────────────────────────────────────────
   resetPassword: publicProcedure
     .input(z.object({
-      token: z.string(),          // token de reset gerado no passo anterior
+      token: z.string().min(64),   // token gerado em requestReset (64 chars hex)
       password: z.string().min(6), // nova senha com mínimo de 6 caracteres
     }))
     .mutation(async ({ input }) => {
-      // Gera o hash da nova senha antes de salvar (nunca salvar senha em texto puro!)
+      const entry = passwordResetTokens.get(input.token);
+
+      // Rejeitar se o token não existe ou já expirou
+      if (!entry || entry.expiresAt < new Date()) {
+        passwordResetTokens.delete(input.token); // limpar token expirado se existir
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Token inválido ou expirado" });
+      }
+
       const hashedPassword = await hashPassword(input.password);
 
-      // Atualiza a senha do admin no banco (fixado no id 1 por enquanto)
-      await db.updateAdminPassword(1, hashedPassword);
+      // Atualiza a senha do admin correto (determinado pelo token, não fixo no ID 1)
+      await db.updateAdminPassword(entry.adminId, hashedPassword);
+
+      // Remove o token após uso — não pode ser reutilizado
+      passwordResetTokens.delete(input.token);
 
       return { success: true, message: "Senha redefinida com sucesso" };
     }),

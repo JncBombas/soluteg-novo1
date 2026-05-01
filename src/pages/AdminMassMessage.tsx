@@ -93,10 +93,7 @@ export default function AdminMassMessage() {
     if (id) setAdminId(parseInt(id));
   }, []);
 
-  const { data: clients = [], isLoading: loadingClients } = trpc.clients.list.useQuery(
-    { adminId: adminId ?? 0 },
-    { enabled: !!adminId }
-  );
+  const { data: clients = [], isLoading: loadingClients } = trpc.clients.list.useQuery(undefined);
 
   const broadcast = trpc.clients.broadcastMessage.useMutation({
     onSuccess: (data) => {
@@ -175,7 +172,6 @@ export default function AdminMassMessage() {
   const handleSend = () => {
     if (!adminId || !canSend) return;
     broadcast.mutate({
-      adminId,
       message: message.trim(),
       targetType,
       clientIds: targetType === "selected" ? Array.from(selectedIds) : undefined,

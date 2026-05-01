@@ -5,18 +5,18 @@ import { TRPCError } from "@trpc/server";
 import { hashPassword } from "../adminAuth";
 
 export const clientsRouter = router({
+  // Lista clientes do admin autenticado — adminId vem do JWT (ctx), não do input.
   list: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
-      search: z.string().optional(),
-    }))
-    .query(async ({ input }) => {
-      return await db.getClientsByAdminId(input.adminId);
+      search: z.string().optional(), // filtro de busca (usado no frontend, não na query SQL)
+    }).optional())
+    .query(async ({ ctx }) => {
+      return await db.getClientsByAdminId(ctx.adminId);
     }),
 
+  // Cria novo cliente vinculado ao admin autenticado — adminId vem do JWT (ctx).
   create: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
       name: z.string().min(1),
       email: z.string().email().optional().or(z.literal("")),
       username: z.string().max(100).optional().or(z.literal("")),
@@ -27,7 +27,7 @@ export const clientsRouter = router({
       syndicName: z.string().optional(),
       type: z.enum(["com_portal", "sem_portal"]).default("com_portal"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { password, username, type, ...clientData } = input;
 
       if (type === "com_portal") {
@@ -40,16 +40,20 @@ export const clientsRouter = router({
       }
 
       const finalUsername = (type === "sem_portal" && (!username || !username.trim()))
-        ? `_sp_${input.adminId}_${Date.now()}`
+        ? `_sp_${ctx.adminId}_${Date.now()}`
         : username!;
+
+      // crypto.randomBytes é mais seguro que Math.random() para geração de senhas aleatórias
+      const { randomBytes } = await import("crypto");
       const finalPassword = (type === "sem_portal" && (!password || !password.trim()))
-        ? Math.random().toString(36) + Math.random().toString(36)
+        ? randomBytes(16).toString("hex")
         : password!;
 
       const hashedPassword = await hashPassword(finalPassword);
 
       await db.createClient({
         ...clientData,
+        adminId: ctx.adminId,
         username: finalUsername,
         type,
         email: clientData.email || null,
@@ -130,15 +134,15 @@ export const clientsRouter = router({
       return await db.getClientByUsername(input.username);
     }),
 
+  // Envio em massa de mensagens WhatsApp — adminId vem do JWT (ctx), não do input.
   broadcastMessage: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
       message: z.string().min(1),
       targetType: z.enum(["all", "com_portal", "sem_portal", "selected"]),
       clientIds: z.array(z.number()).optional(),
     }))
-    .mutation(async ({ input }) => {
-      const allClients = await db.getClientsByAdminId(input.adminId);
+    .mutation(async ({ input, ctx }) => {
+      const allClients = await db.getClientsByAdminId(ctx.adminId);
 
       let targets = allClients;
       if (input.targetType === "com_portal") {

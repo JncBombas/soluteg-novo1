@@ -49,7 +49,7 @@ export default function AdminCreateWorkOrderNew() {
   });
 
   // Queries
-  const { data: clients = [], refetch: refetchClients } = trpc.clients.list.useQuery({ adminId });
+  const { data: clients = [], refetch: refetchClients } = trpc.clients.list.useQuery(undefined);
   const { data: techniciansList = [] } = (trpc as any).technicians.list.useQuery({ adminId }, { staleTime: 60_000 });
   const createWorkOrderMutation = trpc.workOrders.create.useMutation();
   const createClientMutation = trpc.clients.create.useMutation();

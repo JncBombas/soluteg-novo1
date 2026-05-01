@@ -194,7 +194,7 @@ export default function AdminLaudoForm() {
   const utils = trpc.useUtils();
 
   // ── Dados de suporte
-  const { data: clientesList = [] } = trpc.clients.list.useQuery({ adminId: 1 }, { staleTime: 60_000 });
+  const { data: clientesList = [] } = trpc.clients.list.useQuery(undefined, { staleTime: 60_000 });
   const { data: tecnicosList = [] } = (trpc as any).technicians.list.useQuery(
     { adminId: 1 },
     { enabled: isAdminView, staleTime: 60_000 }

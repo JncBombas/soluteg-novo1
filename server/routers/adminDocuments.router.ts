@@ -3,10 +3,10 @@ import { adminLocalProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 
 export const adminDocumentsRouter = router({
+  // Lista documentos do admin autenticado — adminId vem do JWT (ctx), não do input.
   list: adminLocalProcedure
-    .input(z.object({ adminId: z.number() }))
-    .query(async ({ input }) => {
-      return await db.getDocumentsByAdminId(input.adminId);
+    .query(async ({ ctx }) => {
+      return await db.getDocumentsByAdminId(ctx.adminId);
     }),
 
   update: adminLocalProcedure

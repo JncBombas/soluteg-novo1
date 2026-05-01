@@ -150,7 +150,7 @@ export default function ClientPortal() {
     try {
       // Upload photo first (if a new one was selected)
       if (profilePhotoPreview) {
-        await uploadPhotoMutation.mutateAsync({ clientId, imageBase64: profilePhotoPreview });
+        await uploadPhotoMutation.mutateAsync({ imageBase64: profilePhotoPreview });
       }
       // Then update the text fields
       await updateProfileMutation.mutateAsync({
@@ -194,7 +194,7 @@ export default function ClientPortal() {
   );
 
   const { data: clientBudgets, refetch: refetchBudgets } = trpc.budgets.getForPortal.useQuery(
-    { clientId: clientId || 0 },
+    undefined,
     { enabled: !!clientId }
   );
 
@@ -223,7 +223,7 @@ export default function ClientPortal() {
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 
-  const uploadPhotoMutation = trpc.clientProfile.uploadPhoto.useMutation({
+  const uploadPhotoMutation = (trpc as any).clientProfile.uploadMyPhoto.useMutation({
     onSuccess: (data: any) => {
       setProfilePhoto(data.photoUrl);
       setProfilePhotoPreview(null);

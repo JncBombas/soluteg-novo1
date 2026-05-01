@@ -64,9 +64,8 @@ export default function AdminClients() {
     isError,
     refetch,
   } = trpc.clients.list.useQuery(
-    { adminId: adminId ?? 0 },
+    undefined,
     {
-      enabled: !!adminId,
       onError: (err) => {
         console.error("Erro ao carregar clientes:", err);
         setError("Erro ao carregar clientes");

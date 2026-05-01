@@ -1,22 +1,42 @@
-import { publicProcedure, router } from "../_core/trpc";
+/**
+ * checklists.router.ts
+ *
+ * Endpoints para gerenciamento de checklists das Ordens de Serviço.
+ * Todos os endpoints exigem autenticação de admin (adminLocalProcedure).
+ *
+ * Estrutura:
+ *   - templates.*      → modelos de checklist reutilizáveis (ex: "Checklist Bomba de Recalque")
+ *   - inspectionTasks.*→ tarefas de inspeção ligadas a uma OS (agrupa instâncias de checklist)
+ *   - instances.*      → instâncias preenchidas de um template para uma tarefa específica
+ */
+
+import { adminLocalProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 export const checklistsRouter = router({
+
+  // ──────────────────────────────────────────────
+  // TEMPLATES — modelos de checklist cadastrados no sistema
+  // ──────────────────────────────────────────────
   templates: router({
-    list: publicProcedure.query(async () => {
+
+    // Lista todos os templates disponíveis
+    list: adminLocalProcedure.query(async () => {
       const checklistDb = await import("../checklistsDb");
       return await checklistDb.getAllTemplates();
     }),
 
-    getById: publicProcedure
+    // Busca um template específico pelo ID numérico
+    getById: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getTemplateById(input.id);
       }),
 
-    getBySlug: publicProcedure
+    // Busca um template pelo slug (identificador textual, ex: "bomba-recalque")
+    getBySlug: adminLocalProcedure
       .input(z.object({ slug: z.string() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
@@ -24,29 +44,38 @@ export const checklistsRouter = router({
       }),
   }),
 
+  // ──────────────────────────────────────────────
+  // INSPECTION TASKS — tarefas de inspeção ligadas a uma OS
+  // Cada tarefa pode ter múltiplas instâncias de checklist preenchidas
+  // ──────────────────────────────────────────────
   inspectionTasks: router({
-    listByWorkOrder: publicProcedure
+
+    // Lista todas as tarefas de inspeção de uma OS específica
+    listByWorkOrder: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getInspectionTasksByWorkOrder(input.workOrderId);
       }),
 
-    getById: publicProcedure
+    // Busca uma tarefa pelo ID
+    getById: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getInspectionTaskById(input.id);
       }),
 
-    getFull: publicProcedure
+    // Busca tarefa com todos os detalhes (instâncias de checklist incluídas)
+    getFull: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getFullInspectionTask(input.id);
       }),
 
-    create: publicProcedure
+    // Cria uma nova tarefa de inspeção para uma OS
+    create: adminLocalProcedure
       .input(z.object({
         workOrderId: z.number(),
         title: z.string().min(1),
@@ -58,7 +87,8 @@ export const checklistsRouter = router({
         return { success: true, id, message: "Tarefa de inspeção criada com sucesso" };
       }),
 
-    updateStatus: publicProcedure
+    // Atualiza o status de andamento de uma tarefa (pendente / em_andamento / concluida)
+    updateStatus: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         status: z.enum(["pendente", "em_andamento", "concluida"]),
@@ -69,7 +99,9 @@ export const checklistsRouter = router({
         return { success: true, message: "Status atualizado com sucesso" };
       }),
 
-    complete: publicProcedure
+    // Conclui uma tarefa de inspeção — exige que todos os checklists estejam preenchidos
+    // e registra as assinaturas do responsável e (opcionalmente) do cliente
+    complete: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         collaboratorSignature: z.string().min(1),
@@ -91,7 +123,8 @@ export const checklistsRouter = router({
         return { success: true, message: "Tarefa concluída com sucesso" };
       }),
 
-    delete: publicProcedure
+    // Remove uma tarefa de inspeção (e suas instâncias de checklist)
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
@@ -99,49 +132,61 @@ export const checklistsRouter = router({
         return { success: true, message: "Tarefa deletada com sucesso" };
       }),
 
-    canComplete: publicProcedure
+    // Verifica se uma tarefa pode ser concluída (todos checklists preenchidos)
+    canComplete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async () => {
         return true;
       }),
   }),
 
+  // ──────────────────────────────────────────────
+  // INSTANCES — instâncias preenchidas de um template
+  // Cada instância representa um equipamento específico sendo inspecionado
+  // (ex: "Bomba de Recalque P1 — andar 5")
+  // ──────────────────────────────────────────────
   instances: router({
-    listByTask: publicProcedure
+
+    // Lista instâncias de uma tarefa de inspeção específica
+    listByTask: adminLocalProcedure
       .input(z.object({ inspectionTaskId: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getChecklistsByInspectionTask(input.inspectionTaskId);
       }),
 
-    listByWorkOrder: publicProcedure
+    // Lista instâncias de todos os checklists de uma OS (usado no portal do técnico)
+    listByWorkOrder: adminLocalProcedure
       .input(z.object({ workOrderId: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getChecklistsByWorkOrderId(input.workOrderId);
       }),
 
-    getById: publicProcedure
+    // Busca uma instância pelo ID
+    getById: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getChecklistInstanceById(input.id);
       }),
 
-    getWithTemplate: publicProcedure
+    // Busca instância com os dados do template (perguntas + respostas juntos)
+    getWithTemplate: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
         return await checklistDb.getChecklistWithTemplate(input.id);
       }),
 
-    create: publicProcedure
+    // Cria uma nova instância de checklist para uma tarefa de inspeção
+    create: adminLocalProcedure
       .input(z.object({
         inspectionTaskId: z.number(),
         templateId: z.number(),
         customTitle: z.string().min(1),
-        brand: z.string().optional(),
-        power: z.string().optional(),
+        brand: z.string().optional(),    // marca do equipamento
+        power: z.string().optional(),    // potência/modelo do equipamento
       }))
       .mutation(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
@@ -149,11 +194,12 @@ export const checklistsRouter = router({
         return { success: true, id, message: "Checklist adicionado com sucesso" };
       }),
 
-    updateResponses: publicProcedure
+    // Salva as respostas preenchidas de uma instância de checklist
+    updateResponses: adminLocalProcedure
       .input(z.object({
         id: z.number(),
-        responses: z.record(z.string(), z.unknown()),
-        isComplete: z.boolean(),
+        responses: z.record(z.string(), z.unknown()), // objeto chave→valor com as respostas
+        isComplete: z.boolean(),                       // se todas as perguntas foram respondidas
       }))
       .mutation(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");
@@ -161,7 +207,8 @@ export const checklistsRouter = router({
         return { success: true, message: "Respostas salvas com sucesso" };
       }),
 
-    update: publicProcedure
+    // Atualiza metadados de uma instância (título, marca, potência)
+    update: adminLocalProcedure
       .input(z.object({
         id: z.number(),
         customTitle: z.string().optional(),
@@ -175,7 +222,8 @@ export const checklistsRouter = router({
         return { success: true, message: "Checklist atualizado com sucesso" };
       }),
 
-    delete: publicProcedure
+    // Remove uma instância de checklist
+    delete: adminLocalProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const checklistDb = await import("../checklistsDb");

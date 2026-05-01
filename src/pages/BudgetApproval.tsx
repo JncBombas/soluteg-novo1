@@ -27,9 +27,9 @@ export default function BudgetApproval() {
     { token },
     { enabled: !!token }
   );
-  const { data: items } = trpc.budgets.getItems.useQuery(
-    { budgetId: budget?.id ?? 0 },
-    { enabled: !!budget?.id }
+  const { data: items } = (trpc as any).budgets.getItemsByToken.useQuery(
+    { token },
+    { enabled: !!token && !!budget?.id }
   );
   const { data: photos } = (trpc as any).budgets.attachments.listByToken.useQuery(
     { token },
@@ -58,7 +58,7 @@ export default function BudgetApproval() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const exportMutation = trpc.budgets.exportPDF.useMutation({
+  const exportMutation = (trpc as any).budgets.exportPDFByToken.useMutation({
     onSuccess: (res) => {
       const link = document.createElement("a");
       link.href = `data:application/pdf;base64,${res.pdf}`;
@@ -72,11 +72,10 @@ export default function BudgetApproval() {
     if (!clientSig) { toast.error("Por favor, assine para confirmar a aprovação"); return; }
     if (!signerName.trim()) { toast.error("Informe seu nome completo"); return; }
     approveMutation.mutate({
-      id: budget!.id,
+      token,
       clientSignature: clientSig,
       clientSignatureName: signerName,
       approvedBy: signerName,
-      changedByType: "client",
       createOs: true,
     });
   };
@@ -84,10 +83,9 @@ export default function BudgetApproval() {
   const handleReject = () => {
     if (!rejectReason.trim()) { toast.error("Informe o motivo da reprovação"); return; }
     rejectMutation.mutate({
-      id: budget!.id,
+      token,
       rejectionReason: rejectReason,
       rejectedBy: "cliente",
-      changedByType: "client",
     });
   };
 
@@ -187,7 +185,7 @@ export default function BudgetApproval() {
               size="sm"
               variant="outline"
               className="text-white border-white/30 hover:bg-white/10 gap-2"
-              onClick={() => exportMutation.mutate({ id: budget.id })}
+              onClick={() => exportMutation.mutate({ token })}
               disabled={exportMutation.isPending}
             >
               {exportMutation.isPending ? <Loader2 className="animate-spin w-3 h-3" /> : <Download className="w-3 h-3" />}

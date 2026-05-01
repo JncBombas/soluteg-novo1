@@ -56,10 +56,7 @@ export default function AdminManageDocuments() {
   // --- BUSCA DE DADOS (QUERIES) ---
   
   // Busca a lista de clientes para preencher o seletor (Select) de filtro
-  const { data: clients = [] } = trpc.clients.list.useQuery(
-    { adminId: adminId || 0 },
-    { enabled: !!adminId }
-  );
+  const { data: clients = [] } = trpc.clients.list.useQuery(undefined);
 
   // Busca os documentos aplicando os filtros que estão "ativos"
   const { data: documents = [], isLoading, refetch } = trpc.documents.listAll.useQuery(

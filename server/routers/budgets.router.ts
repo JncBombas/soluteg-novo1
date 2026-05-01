@@ -1,6 +1,6 @@
 import * as db from "../db";
 import { sendWhatsappAlert, sendWhatsappAlertWithPDF, sendWhatsappToNumberWithPDF } from "../whatsapp";
-import { adminLocalProcedure, publicProcedure, router } from "../_core/trpc";
+import { adminLocalProcedure, protectedClientProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
@@ -36,9 +36,9 @@ export const budgetsRouter = router({
       return await budgetsDb.getBudgetByToken(input.token);
     }),
 
-  create: publicProcedure
+  // Criar orçamento — somente admin autenticado. adminId vem do JWT, não do input.
+  create: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
       clientId: z.number(),
       serviceType: z.enum(["instalacao", "manutencao", "corretiva", "preventiva", "rotina", "emergencial"]),
       priority: z.enum(["normal", "alta", "critica"]).default("normal"),
@@ -50,9 +50,9 @@ export const budgetsRouter = router({
       internalNotes: z.string().optional(),
       clientNotes: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const budgetsDb = await import("../budgetsDb");
-      const result = await budgetsDb.createBudget(input as any);
+      const result = await budgetsDb.createBudget({ ...input, adminId: ctx.adminId } as any);
 
       const cliente = await db.getClientById(input.clientId);
       const nomeCliente = cliente?.name || `ID ${input.clientId}`;
@@ -113,11 +113,22 @@ export const budgetsRouter = router({
       return { success: true, message: "Itens salvos com sucesso" };
     }),
 
-  getItems: publicProcedure
+  // Listar itens — somente admin. Use getItemsByToken para acesso público (página de aprovação).
+  getItems: adminLocalProcedure
     .input(z.object({ budgetId: z.number() }))
     .query(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
       return await budgetsDb.getBudgetItems(input.budgetId);
+    }),
+
+  // Listar itens via token público — usado na página de aprovação do cliente (/orcamento/:token)
+  getItemsByToken: publicProcedure
+    .input(z.object({ token: z.string().min(10) }))
+    .query(async ({ input }) => {
+      const budgetsDb = await import("../budgetsDb");
+      const budget = await budgetsDb.getBudgetByToken(input.token);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+      return await budgetsDb.getBudgetItems(budget.id);
     }),
 
   finalize: adminLocalProcedure
@@ -155,78 +166,83 @@ export const budgetsRouter = router({
       return { success: true, token: result.token, validUntil: result.validUntil };
     }),
 
+  // Aprovar orçamento — aceita token opaco (do link enviado ao cliente), não ID sequencial.
+  // changedByType sempre "client" pois este endpoint é da página pública de aprovação.
   approve: publicProcedure
     .input(z.object({
-      id: z.number(),
+      token: z.string().min(10),           // token do link de aprovação (/orcamento/:token)
       clientSignature: z.string().min(1),
       clientSignatureName: z.string().min(1),
       approvedBy: z.string(),
-      changedByType: z.enum(["admin", "client"]),
       createOs: z.boolean().default(true),
     }))
     .mutation(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
-      await budgetsDb.approveBudget(input.id, input.clientSignature, input.clientSignatureName, input.approvedBy, input.changedByType);
+      const budget = await budgetsDb.getBudgetByToken(input.token);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+      if (budget.status !== "finalizado") throw new TRPCError({ code: "BAD_REQUEST", message: "Orçamento não está disponível para aprovação" });
+      await budgetsDb.approveBudget(budget.id, input.clientSignature, input.clientSignatureName, input.approvedBy, "client");
 
+      // Reusar o `budget` já carregado pelo token — não precisamos buscar novamente
       let osId: number | null = null;
       if (input.createOs) {
-        const budget = await budgetsDb.getBudgetById(input.id);
-        if (budget) {
-          const workOrdersDb = await import("../workOrdersDb");
-          const osResult = await workOrdersDb.createWorkOrder({
-            adminId: budget.adminId,
-            clientId: budget.clientId,
-            type: budget.serviceType as any,
-            priority: budget.priority as any,
-            title: budget.title,
-            description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
-            status: "aberta",
-            estimatedValue: budget.totalValue != null ? budget.totalValue / 100 : undefined,
-            internalNotes: `Orçamento de origem: ${budget.budgetNumber}`,
+        const workOrdersDb = await import("../workOrdersDb");
+        const osResult = await workOrdersDb.createWorkOrder({
+          adminId: budget.adminId,
+          clientId: budget.clientId,
+          type: budget.serviceType as any,
+          priority: budget.priority as any,
+          title: budget.title,
+          description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
+          status: "aberta",
+          estimatedValue: budget.totalValue != null ? budget.totalValue / 100 : undefined,
+          internalNotes: `Orçamento de origem: ${budget.budgetNumber}`,
+        } as any);
+        osId = osResult.id;
+        await budgetsDb.linkGeneratedOs(budget.id, osId);
+
+        // Copiar fotos do orçamento como anexos "before" da OS
+        const auxDb = await import("../workOrdersAuxDb");
+        const budgetPhotos = await budgetsDb.getBudgetAttachments(budget.id);
+        for (const photo of budgetPhotos) {
+          await auxDb.createAttachment({
+            workOrderId: osId,
+            fileName:    photo.fileName,
+            fileKey:     photo.fileKey,
+            fileUrl:     photo.fileUrl,
+            fileType:    photo.fileType ?? undefined,
+            fileSize:    photo.fileSize ?? undefined,
+            category:    "before",
+            description: photo.caption ?? undefined,
+            uploadedBy:  photo.uploadedBy ?? undefined,
           } as any);
-          osId = osResult.id;
-          await budgetsDb.linkGeneratedOs(input.id, osId);
-
-          // Copiar fotos do orçamento como anexos "before" da OS
-          const auxDb = await import("../workOrdersAuxDb");
-          const budgetPhotos = await budgetsDb.getBudgetAttachments(input.id);
-          for (const photo of budgetPhotos) {
-            await auxDb.createAttachment({
-              workOrderId: osId,
-              fileName:    photo.fileName,
-              fileKey:     photo.fileKey,
-              fileUrl:     photo.fileUrl,
-              fileType:    photo.fileType ?? undefined,
-              fileSize:    photo.fileSize ?? undefined,
-              category:    "before",
-              description: photo.caption ?? undefined,
-              uploadedBy:  photo.uploadedBy ?? undefined,
-            } as any);
-          }
-
-          const adminUrl = `https://app.soluteg.com.br/gestor/work-orders/${osId}`;
-          const msg =
-            `✅ *ORÇAMENTO APROVADO – OS GERADA*\n\n` +
-            `📋 Orçamento: ${budget.budgetNumber}\n` +
-            `🏢 Cliente: ${budget.clientName ?? ''}\n` +
-            `🔗 OS Gerada: ${adminUrl}`;
-          sendWhatsappAlert(msg).catch(e => console.error("Erro Zap OS gerada:", e));
         }
+
+        const adminUrl = `https://app.soluteg.com.br/gestor/work-orders/${osId}`;
+        const msg =
+          `✅ *ORÇAMENTO APROVADO – OS GERADA*\n\n` +
+          `📋 Orçamento: ${budget.budgetNumber}\n` +
+          `🏢 Cliente: ${budget.clientName ?? ''}\n` +
+          `🔗 OS Gerada: ${adminUrl}`;
+        sendWhatsappAlert(msg).catch(e => console.error("Erro Zap OS gerada:", e));
       }
 
       return { success: true, osId };
     }),
 
+  // Reprovar orçamento — aceita token opaco. changedByType sempre "client" (página pública).
   reject: publicProcedure
     .input(z.object({
-      id: z.number(),
+      token: z.string().min(10),
       rejectionReason: z.string().min(1),
       rejectedBy: z.string(),
-      changedByType: z.enum(["admin", "client"]),
     }))
     .mutation(async ({ input }) => {
       const budgetsDb = await import("../budgetsDb");
-      await budgetsDb.rejectBudget(input.id, input.rejectionReason, input.rejectedBy, input.changedByType);
+      const budget = await budgetsDb.getBudgetByToken(input.token);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+      if (budget.status !== "finalizado") throw new TRPCError({ code: "BAD_REQUEST", message: "Orçamento não está disponível para reprovação" });
+      await budgetsDb.rejectBudget(budget.id, input.rejectionReason, input.rejectedBy, "client");
       return { success: true, message: "Orçamento reprovado" };
     }),
 
@@ -252,7 +268,8 @@ export const budgetsRouter = router({
       return { success: true, message: "Orçamento deletado com sucesso" };
     }),
 
-  exportPDF: publicProcedure
+  // Exportar PDF \u2014 somente admin. Use exportPDFByToken para a p\u00E1gina p\u00FAblica de aprova\u00E7\u00E3o.
+  exportPDF: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const pdfGen = await import("../pdfGenerator");
@@ -267,6 +284,25 @@ export const budgetsRouter = router({
         success: true,
         pdf: pdfBuffer.toString('base64'),
         filename: `${num}_${clientSlug}.pdf`,
+      };
+    }),
+
+  // Exportar PDF via token \u2014 usado na p\u00E1gina p\u00FAblica de aprova\u00E7\u00E3o (/orcamento/:token)
+  exportPDFByToken: publicProcedure
+    .input(z.object({ token: z.string().min(10) }))
+    .mutation(async ({ input }) => {
+      const budgetsDb = await import("../budgetsDb");
+      const budget = await budgetsDb.getBudgetByToken(input.token);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Or\u00E7amento n\u00E3o encontrado" });
+      const pdfGen = await import("../pdfGenerator");
+      const pdfBuffer = await pdfGen.generateBudgetPDF(budget.id);
+      const clientSlug = budget.clientName
+        ? budget.clientName.trim().replace(/[^\w\u00C0-\u00FF]/g, '_').replace(/_+/g, '_').substring(0, 40)
+        : 'cliente';
+      return {
+        success: true,
+        pdf: pdfBuffer.toString('base64'),
+        filename: `${budget.budgetNumber}_${clientSlug}.pdf`,
       };
     }),
 
@@ -325,12 +361,12 @@ export const budgetsRouter = router({
       return { success: true };
     }),
 
-  getForPortal: publicProcedure
-    .input(z.object({ clientId: z.number() }))
-    .query(async ({ input }) => {
+  // Orçamentos visíveis no portal do cliente — usa ctx.clientId do JWT, sem ID no input.
+  getForPortal: protectedClientProcedure
+    .query(async ({ ctx }) => {
       const budgetsDb = await import("../budgetsDb");
       return await budgetsDb.listBudgets({
-        clientId: input.clientId,
+        clientId: ctx.clientId,
         sortBy: "createdAt",
         sortOrder: "desc",
         limit: 50,
