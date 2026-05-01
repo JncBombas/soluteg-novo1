@@ -165,13 +165,18 @@ Afeta: `inspectionTasks.create`, `updateStatus`, `complete`, `delete`, `instance
 
 ## ✅ Resolvido
 
-> Mover itens para cá após a correção, com data.
-
-<!-- Exemplo:
 | Data | Item | O que foi feito |
 |---|---|---|
-| 2026-05-01 | CRIT-06 | resetPassword corrigido para buscar admin pelo token |
--->
+| 2026-05-01 | CRIT-06 | `resetPassword` corrigido: valida token via Map em memória, atualiza o admin correto |
+| 2026-05-01 | CRIT-04 | Router `checklists` inteiro migrado para `adminLocalProcedure` |
+| 2026-05-01 | CRIT-02 | `budgets.create` → `adminLocalProcedure` com `ctx.adminId` |
+| 2026-05-01 | CRIT-02 | `budgets.approve` e `budgets.reject` aceitam token opaco em vez de ID sequencial |
+| 2026-05-01 | CRIT-03 | `budgets.getItems` e `exportPDF` → `adminLocalProcedure`; variantes `ByToken` adicionadas para uso público |
+| 2026-05-01 | CRIT-03 | `budgets.getForPortal` → `protectedClientProcedure` com `ctx.clientId` |
+| 2026-05-01 | CRIT-05 | `clients.list`, `.create`, `.broadcastMessage`, `adminDocuments.list` passam a usar `ctx.adminId` |
+| 2026-05-01 | CRIT-07 | `clientProfile.uploadPhoto` → `adminLocalProcedure`; novo `uploadMyPhoto` → `protectedClientProcedure` |
+| 2026-05-01 | MED-03 | `requestReset` retorna mensagem genérica (anti user-enumeration) |
+| 2026-05-01 | S05 | `crypto.randomBytes()` substitui `Math.random()` na geração de senhas de clientes |
 
 ---
 
