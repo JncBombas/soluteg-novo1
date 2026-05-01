@@ -7,6 +7,7 @@
  
 import "dotenv/config";        // Carrega variáveis de ambiente (.env), como senhas e chaves secretas
 import express from "express"; // Framework que cria o servidor web
+import type { Request, Response, NextFunction } from "express";
 import { createServer } from "http"; // Cria o servidor HTTP nativo do Node.js
 import multer from "multer";   // Biblioteca para receber arquivos (fotos, PDFs) via upload
 import { createExpressMiddleware } from "@trpc/server/adapters/express"; // Integração com tRPC (camada de API tipada)
@@ -15,6 +16,53 @@ import { appRouter } from "./routers";                 // Todas as rotas tRPC do
 import { createContext } from "./_core/context";       // Contexto compartilhado entre as requisições
 import { setupVite, serveStatic } from "./vite";       // Configuração do frontend (React)
 import { initMqtt, addSseClient, removeSseClient } from "./mqttService"; // MQTT + SSE
+import { verifyToken, verifyClientToken, verifyTechnicianToken } from "./adminAuth"; // Verificação de JWT
+
+// ============================================================
+// 🔐 UTILITÁRIO: Extrai e valida o JWT dos cookies da requisição
+// Usado pelos middlewares de autenticação abaixo.
+// ============================================================
+
+// Parseia o header "Cookie" da requisição HTTP em um objeto chave→valor
+function parseCookies(req: Request): Record<string, string> {
+  const header = req.headers.cookie || "";
+  return Object.fromEntries(
+    header.split(";").map(c => {
+      const idx = c.indexOf("=");
+      return [c.slice(0, idx).trim(), c.slice(idx + 1).trim()];
+    })
+  );
+}
+
+// Middleware: bloqueia requisições sem cookie válido de admin
+function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+  const token = parseCookies(req)["admin_token"];
+  if (!token || !verifyToken(token)) {
+    return res.status(401).json({ message: "Não autorizado" });
+  }
+  next();
+}
+
+// Middleware: bloqueia requisições sem cookie válido de cliente
+function requireClientAuth(req: Request, res: Response, next: NextFunction) {
+  const token = parseCookies(req)["client_token"];
+  if (!token || !verifyClientToken(token)) {
+    return res.status(401).json({ message: "Não autorizado" });
+  }
+  next();
+}
+
+// Middleware: aceita admin OU técnico autenticado
+// Usado nos endpoints de laudos (editor de fotos acessível pelos dois tipos)
+function requireAdminOrTechAuth(req: Request, res: Response, next: NextFunction) {
+  const cookies = parseCookies(req);
+  const adminOk = cookies["admin_token"] && verifyToken(cookies["admin_token"]);
+  const techOk  = cookies["technician_token"] && verifyTechnicianToken(cookies["technician_token"]);
+  if (!adminOk && !techOk) {
+    return res.status(401).json({ message: "Não autorizado" });
+  }
+  next();
+}
  
 // ============================================================
 // 📦 CONFIGURAÇÃO DO MULTER (Gerenciador de Upload de Arquivos)
@@ -59,7 +107,7 @@ async function startServer() {
   // upload.array('files', 10) → aceita até 10 arquivos de uma vez,
   // com o nome de campo "files" no formulário.
   // ============================================================
-  app.post("/api/work-orders/upload", upload.array('files', 10), async (req, res) => {
+  app.post("/api/work-orders/upload", requireAdminOrTechAuth, upload.array('files', 10), async (req, res) => {
     try {
       // req.files contém os arquivos que chegaram na requisição
       const files = req.files as Express.Multer.File[];
@@ -121,7 +169,7 @@ async function startServer() {
   // converte para Buffer e salva no Cloudinary na pasta "laudo_anotadas".
   // Retorna a URL pública para ser salva no banco (url_anotada ou url_recorte).
   // ============================================================
-  app.post("/api/laudos/upload-anotada", async (req, res) => {
+  app.post("/api/laudos/upload-anotada", requireAdminOrTechAuth, async (req, res) => {
     try {
       const { base64, filename } = req.body as { base64?: string; filename?: string };
 
@@ -161,7 +209,7 @@ async function startServer() {
   // Chamada pelo frontend antes de fazer upload de nova versão anotada/recortada,
   // para evitar acúmulo de imagens órfãs no Cloudinary.
   // ============================================================
-  app.post("/api/laudos/delete-cloudinary", async (req, res) => {
+  app.post("/api/laudos/delete-cloudinary", requireAdminOrTechAuth, async (req, res) => {
     try {
       const { url } = req.body as { url?: string };
       if (!url || typeof url !== "string") {
@@ -194,7 +242,7 @@ async function startServer() {
   // com os arquivos existentes na pasta laudo_anotadas/ do Cloudinary.
   // Deleta qualquer arquivo no Cloudinary que não esteja referenciado no banco.
   // ============================================================
-  app.post("/api/admin/laudos/cleanup-cloudinary", async (req, res) => {
+  app.post("/api/admin/laudos/cleanup-cloudinary", requireAdminAuth, async (req, res) => {
     try {
       const { v2: cld } = await import("cloudinary");
       cld.config({
@@ -416,20 +464,17 @@ async function startServer() {
   // Retorna todos os documentos (contratos, laudos, etc.)
   // vinculados a um cliente específico.
   // ============================================================
-  app.get("/api/client-documents", async (req, res) => {
+  // clientId vem do JWT do cliente autenticado — não aceita clientId externo por query string
+  app.get("/api/client-documents", requireClientAuth, async (req, res) => {
     try {
-      // clientId vem como parâmetro na URL: ?clientId=123
-      const clientId = req.query.clientId as string;
- 
-      if (!clientId) {
-        return res.status(400).json({ message: "clientId é obrigatório" });
-      }
- 
+      const cookies = parseCookies(req);
+      const payload = verifyClientToken(cookies["client_token"]);
+      if (!payload) return res.status(401).json({ message: "Não autorizado" });
+
       const { getDocumentsByClientId } = await import("./db");
-      const documents = await getDocumentsByClientId(parseInt(clientId));
- 
-      res.json(documents); // Retorna a lista de documentos em formato JSON
- 
+      const documents = await getDocumentsByClientId(payload.clientId);
+
+      res.json(documents);
     } catch (error) {
       res.status(500).json({ message: "Erro ao carregar documentos" });
     }
@@ -442,15 +487,11 @@ async function startServer() {
   //
   // Remove um documento do banco de dados pelo ID.
   // ============================================================
-  app.delete("/api/client-documents/:id", async (req, res) => {
+  app.delete("/api/client-documents/:id", requireAdminAuth, async (req, res) => {
     try {
       const { deleteClientDocument } = await import("./db");
- 
-      // req.params.id → pega o número da URL (ex: /client-documents/456 → id = 456)
       await deleteClientDocument(parseInt(req.params.id));
- 
       res.json({ success: true });
- 
     } catch (error) {
       res.status(500).json({ message: "Erro ao deletar documento" });
     }
@@ -464,16 +505,22 @@ async function startServer() {
   // Recebe a solicitação do cliente, cria a OS no banco e
   // envia notificação via WhatsApp para o admin.
   // ============================================================
-  app.post("/api/work-orders", async (req, res) => {
+  // clientId vem do JWT do cliente autenticado — ignoramos qualquer clientId do body
+  app.post("/api/work-orders", requireClientAuth, async (req, res) => {
     try {
-      const { clientId, type, title, description, serviceType, priority } = req.body;
+      const cookies = parseCookies(req);
+      const payload = verifyClientToken(cookies["client_token"]);
+      if (!payload) return res.status(401).json({ message: "Não autorizado" });
 
-      if (!clientId || !title || !type) {
-        return res.status(400).json({ message: "clientId, title e type são obrigatórios" });
+      const { type, title, description, serviceType, priority } = req.body;
+      const clientId = payload.clientId;
+
+      if (!title || !type) {
+        return res.status(400).json({ message: "title e type são obrigatórios" });
       }
 
       const { getClientById } = await import("./db");
-      const client = await getClientById(parseInt(clientId));
+      const client = await getClientById(clientId);
 
       if (!client) {
         return res.status(404).json({ message: "Cliente não encontrado" });
@@ -482,7 +529,7 @@ async function startServer() {
       const workOrdersDb = await import("./workOrdersDb");
       const result = await workOrdersDb.createWorkOrder({
         adminId: client.adminId,
-        clientId: parseInt(clientId),
+        clientId: clientId,
         type,
         title,
         description: description || null,
@@ -522,7 +569,7 @@ async function startServer() {
   //
   // Retorna os dados completos de uma OS específica.
   // ============================================================
-  app.get("/api/work-orders/:id", async (req, res) => {
+  app.get("/api/work-orders/:id", requireAdminAuth, async (req, res) => {
     try {
       const { getWorkOrderById } = await import("./db");
       const workOrder = await getWorkOrderById(parseInt(req.params.id));
@@ -642,7 +689,7 @@ async function startServer() {
   // Usado enquanto o sensor físico ainda não está instalado,
   // ou para sobrescrever um valor manualmente.
   // ============================================================
-  app.post("/api/water-tank-monitoring", async (req, res) => {
+  app.post("/api/water-tank-monitoring", requireAdminAuth, async (req, res) => {
     try {
       const { clientId, adminId, tankName, levelPercentage, capacity, notes } = req.body;
 
