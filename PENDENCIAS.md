@@ -7,22 +7,7 @@
 
 ## 🔴 Crítico — Resolver antes de qualquer nova feature
 
-### [CRIT-01] 8 endpoints REST sem autenticação — `server/index.ts`
-
-Qualquer pessoa na internet consegue executar as ações abaixo sem estar logada.
-
-| Rota | Risco |
-|---|---|
-| `GET /api/work-orders/:id` | Lê qualquer OS por ID — BOLA completo |
-| `DELETE /api/client-documents/:id` | Deleta qualquer documento de qualquer cliente |
-| `GET /api/client-documents?clientId=X` | Lista documentos de qualquer cliente |
-| `POST /api/water-tank-monitoring` | Insere leituras falsas de sensor (clientId/adminId do body) |
-| `POST /api/work-orders` | Cria OS em nome de qualquer cliente |
-| `POST /api/admin/laudos/cleanup-cloudinary` | Deleta arquivos em massa do Cloudinary |
-| `POST /api/laudos/upload-anotada` | Upload gratuito no Cloudinary (abuso de storage) |
-| `POST /api/laudos/delete-cloudinary` | Deleta qualquer arquivo do Cloudinary por URL |
-
-**Como corrigir:** Adicionar `requireAdminAuth` antes do handler em cada rota.
+> Nenhum item crítico em aberto. Todos os CRITs (01 a 07) foram resolvidos em 2026-05-01.
 
 ---
 
@@ -89,3 +74,4 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 | 2026-05-01 | CRIT-07 | `clientProfile.uploadPhoto` → `adminLocalProcedure`; novo `uploadMyPhoto` → `protectedClientProcedure` |
 | 2026-05-01 | MED-03 | `requestReset` retorna mensagem genérica (não revela se e-mail existe) |
 | 2026-05-01 | S05 | `crypto.randomBytes()` substitui `Math.random()` na geração de senhas de clientes |
+| 2026-05-01 | CRIT-01 | 8 endpoints REST protegidos com `requireAdminAuth`, `requireClientAuth` ou `requireAdminOrTechAuth`; clientId agora vem do JWT nos endpoints do cliente |
