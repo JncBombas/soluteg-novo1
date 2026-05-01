@@ -81,13 +81,13 @@ export const budgetsRouter = router({
       totalValue: z.number().optional(),
       internalNotes: z.string().optional(),
       clientNotes: z.string().optional(),
-      changedBy: z.string(),
       saveSnapshot: z.boolean().default(false),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // changedBy vem do JWT (ctx.adminId), não do frontend (MED-04)
       const budgetsDb = await import("../budgetsDb");
-      const { id, changedBy, saveSnapshot, ...data } = input;
-      await budgetsDb.updateBudget(id, data as any, changedBy, saveSnapshot);
+      const { id, saveSnapshot, ...data } = input;
+      await budgetsDb.updateBudget(id, data as any, String(ctx.adminId), saveSnapshot);
       return { success: true, message: "Orçamento atualizado com sucesso" };
     }),
 
@@ -243,6 +243,21 @@ export const budgetsRouter = router({
       if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
       if (budget.status !== "finalizado") throw new TRPCError({ code: "BAD_REQUEST", message: "Orçamento não está disponível para reprovação" });
       await budgetsDb.rejectBudget(budget.id, input.rejectionReason, input.rejectedBy, "client");
+      return { success: true, message: "Orçamento reprovado" };
+    }),
+
+  // Reprovar orçamento pelo painel admin — usa ID direto (adminLocalProcedure).
+  // O "reject" público usa token opaco; este é exclusivo para ação interna do admin.
+  rejectByAdmin: adminLocalProcedure
+    .input(z.object({
+      id: z.number(),
+      rejectionReason: z.string().min(1),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const budgetsDb = await import("../budgetsDb");
+      const budget = await budgetsDb.getBudgetById(input.id);
+      if (!budget) throw new TRPCError({ code: "NOT_FOUND", message: "Orçamento não encontrado" });
+      await budgetsDb.rejectBudget(budget.id, input.rejectionReason, `admin-${ctx.adminId}`, "admin");
       return { success: true, message: "Orçamento reprovado" };
     }),
 

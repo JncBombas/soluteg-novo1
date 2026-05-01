@@ -120,17 +120,16 @@ export const workOrdersRouter = router({
     .input(z.object({
       id: z.number(),
       newStatus: z.string(),
-      changedBy: z.string(),
-      changedByType: z.enum(["admin", "client"]),
       notes: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // changedBy e changedByType vêm do JWT, não do frontend (MED-04)
       const workOrdersDb = await import("../workOrdersDb");
       await workOrdersDb.updateWorkOrderStatus(
         input.id,
         input.newStatus,
-        input.changedBy,
-        input.changedByType,
+        `admin-${ctx.adminId}`,
+        "admin",
         input.notes
       );
       return { success: true, message: "Status atualizado com sucesso" };

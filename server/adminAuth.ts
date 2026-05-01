@@ -172,11 +172,8 @@ export async function authenticateAdmin(username: string, password: string) {
     throw new Error('Admin não encontrado ou inativo');
   }
 
-  // Suporta senhas em texto puro (legado) e hasheadas com bcrypt
-  const isBcryptHash = admin.password.startsWith("$2b$") || admin.password.startsWith("$2a$");
-  const isPasswordValid = isBcryptHash
-    ? await verifyPassword(password, admin.password)
-    : password === admin.password;
+  // Apenas senhas hasheadas com bcrypt são aceitas (MED-01: fallback em texto puro removido)
+  const isPasswordValid = await verifyPassword(password, admin.password);
 
   if (!isPasswordValid) {
     throw new Error('Senha incorreta');

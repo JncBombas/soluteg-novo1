@@ -67,7 +67,7 @@ export default function AdminWorkOrderKanban() {
     const workOrder = workOrders.find((wo) => wo.id === workOrderId);
     if (!workOrder || workOrder.status === newStatus) return;
     try {
-      await updateStatusMutation.mutateAsync({ id: workOrderId, newStatus, changedBy: "Admin", changedByType: "admin", notes: "Alterado via Kanban" });
+      await updateStatusMutation.mutateAsync({ id: workOrderId, newStatus, notes: "Alterado via Kanban" });
       toast.success("Status atualizado!");
       refetch();
     } catch (e) { toast.error("Erro ao atualizar"); }

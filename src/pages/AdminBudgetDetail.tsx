@@ -155,7 +155,7 @@ export default function AdminBudgetDetail() {
     },
     onError: (e: any) => toast.error(e.message),
   });
-  const rejectMutation = trpc.budgets.reject.useMutation({
+  const rejectMutation = trpc.budgets.rejectByAdmin.useMutation({
     onSuccess: () => { toast.success("Orçamento reprovado."); setRejectModalOpen(false); refetchBudget(); },
     onError: (e: any) => toast.error(e.message),
   });
@@ -317,7 +317,6 @@ export default function AdminBudgetDetail() {
         internalNotes: internalNotes || undefined,
         clientNotes: clientNotes || undefined,
         totalValue: grandTotal || undefined,
-        changedBy: String(adminId),
         saveSnapshot: budget?.status === "finalizado",
       });
     }
@@ -996,7 +995,7 @@ export default function AdminBudgetDetail() {
                 variant="destructive"
                 className="flex-1 gap-2"
                 disabled={rejectMutation.isPending || !rejectReason.trim()}
-                onClick={() => rejectMutation.mutate({ id: budgetId!, rejectionReason: rejectReason, rejectedBy: adminName, changedByType: "admin" })}
+                onClick={() => rejectMutation.mutate({ id: budgetId!, rejectionReason: rejectReason })}
               >
                 {rejectMutation.isPending ? <Loader2 className="animate-spin w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                 Confirmar Reprovação

@@ -171,8 +171,6 @@ export default function AdminWorkOrderDetail() {
     updateStatusMutation.mutate({
       id: workOrderId,
       newStatus,
-      changedBy: "Admin",
-      changedByType: "admin",
       notes: `Status alterado para ${getStatusLabel(newStatus)}`,
     });
   };
