@@ -13,17 +13,9 @@
 
 ## 🟡 Média Prioridade
 
-### [MED-01] Senha em texto puro ainda aceita como fallback — `server/adminAuth.ts` ~linha 179
-Contas criadas antes do bcrypt ainda autenticam com senha em texto puro. Vulnerável a dump do banco.  
-**Correção:** Verificar no banco se algum admin ainda tem senha sem hash `$2b$`. Forçar troca e remover o fallback.
-
 ### [MED-02] `documents.getById` público com ID sequencial — `server/routers/documents.router.ts`
 Qualquer pessoa acessa qualquer documento (contratos, NFs) por ID numérico.  
 **Correção:** `protectedClientProcedure` com verificação de ownership, ou `adminLocalProcedure`.
-
-### [MED-04] `changedBy` vem do input — `budgets.router.ts` e `workOrders.router.ts`
-O campo de auditoria ("quem fez a alteração") pode ser falsificado pelo frontend.  
-**Correção:** Construir `changedBy` a partir de `ctx.adminId` no servidor.
 
 ### [MED-05] `citacoesTecnico.update` e `.remove` sem ownership check — `server/routers/laudos.router.ts`
 Técnico pode alterar citações de laudos de outros técnicos se souber o ID.  
@@ -72,6 +64,8 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 | 2026-05-01 | CRIT-03 | `budgets.getForPortal` → `protectedClientProcedure` com `ctx.clientId` |
 | 2026-05-01 | CRIT-05 | `clients.list`, `.create`, `.broadcastMessage`, `adminDocuments.list` — `adminId` removido do input, usa `ctx.adminId` |
 | 2026-05-01 | CRIT-07 | `clientProfile.uploadPhoto` → `adminLocalProcedure`; novo `uploadMyPhoto` → `protectedClientProcedure` |
+| 2026-05-01 | MED-01 | Fallback de senha em texto puro removido de `authenticateAdmin`; admins legados devem redefinir senha |
+| 2026-05-01 | MED-04 | `changedBy`/`changedByType` agora derivados de `ctx.adminId` em `workOrders.updateStatus` e `budgets.update`; `budgets.rejectByAdmin` criado para admin reprovar por ID |
 | 2026-05-01 | MED-03 | `requestReset` retorna mensagem genérica (não revela se e-mail existe) |
 | 2026-05-01 | S05 | `crypto.randomBytes()` substitui `Math.random()` na geração de senhas de clientes |
 | 2026-05-01 | CRIT-01 | 8 endpoints REST protegidos com `requireAdminAuth`, `requireClientAuth` ou `requireAdminOrTechAuth`; clientId agora vem do JWT nos endpoints do cliente |
