@@ -73,7 +73,6 @@ export default function AdminCreateWorkOrderNew() {
 
     try {
       await createClientMutation.mutateAsync({
-        adminId,
         name: clientForm.name,
         email: clientForm.email || "",
         username: clientForm.username,

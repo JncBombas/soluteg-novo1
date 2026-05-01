@@ -187,11 +187,12 @@ export const budgetsRouter = router({
       let osId: number | null = null;
       if (input.createOs) {
         const workOrdersDb = await import("../workOrdersDb");
+        const b = budget as any;
         const osResult = await workOrdersDb.createWorkOrder({
-          adminId: budget.adminId,
-          clientId: budget.clientId,
-          type: budget.serviceType as any,
-          priority: budget.priority as any,
+          adminId: b.adminId,
+          clientId: b.clientId,
+          type: b.serviceType,
+          priority: b.priority,
           title: budget.title,
           description: `${budget.description ?? ''}\n\n[Gerado a partir do Orçamento ${budget.budgetNumber}]`.trim(),
           status: "aberta",

@@ -131,7 +131,7 @@ export default function AdminClients() {
       }
     }
 
-    createClient.mutate({ ...formData, adminId });
+    createClient.mutate({ ...formData });
   };
 
   const handleDeleteClient = (client: Client) => {

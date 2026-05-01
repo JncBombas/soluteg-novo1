@@ -1,6 +1,5 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
 import { verifyToken, verifyClientToken, verifyTechnicianToken } from "../adminAuth";
 
 export type TrpcContext = {
@@ -20,13 +19,7 @@ export async function createContext(
   let clientId: number | null = null;
   let technicianId: number | null = null;
 
-  try {
-    user = await sdk.authenticateRequest(opts.req);
-  } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
-  }
-
+  // SDK Manus removido — autenticação feita via JWT nos blocos abaixo
   const cookieHeader = opts.req.headers.cookie || "";
   const cookies = Object.fromEntries(
     cookieHeader.split(";").map(c => {

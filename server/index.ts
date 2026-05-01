@@ -11,7 +11,6 @@ import type { Request, Response, NextFunction } from "express";
 import { createServer } from "http"; // Cria o servidor HTTP nativo do Node.js
 import multer from "multer";   // Biblioteca para receber arquivos (fotos, PDFs) via upload
 import { createExpressMiddleware } from "@trpc/server/adapters/express"; // Integração com tRPC (camada de API tipada)
-import { registerOAuthRoutes } from "./_core/oauth";   // Rotas de autenticação OAuth (login com Google, etc.)
 import { appRouter } from "./routers";                 // Todas as rotas tRPC do sistema
 import { createContext } from "./_core/context";       // Contexto compartilhado entre as requisições
 import { setupVite, serveStatic } from "./vite";       // Configuração do frontend (React)
@@ -89,10 +88,6 @@ async function startServer() {
   // ----------------------------------------------------------
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
- 
-  // Registra as rotas de login OAuth (ex: "Entrar com Google")
-  registerOAuthRoutes(app);
- 
  
   // ============================================================
   // 📸 ROTA: Upload Múltiplo de Fotos/PDFs

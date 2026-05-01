@@ -348,11 +348,10 @@ export default function AdminBudgetDetail() {
     if (!clientSignature) { toast.error("Assinatura do cliente é obrigatória"); return; }
     if (!clientSigName.trim()) { toast.error("Informe o nome do aprovador"); return; }
     approveMutation.mutate({
-      id: budgetId!,
+      token: budget!.approvalToken!,
       clientSignature,
       clientSignatureName: clientSigName,
       approvedBy: clientSigName,
-      changedByType: "admin",
       createOs: true,
     });
   };

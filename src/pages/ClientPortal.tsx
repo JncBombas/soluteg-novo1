@@ -347,7 +347,6 @@ export default function ClientPortal() {
 
     if (osType === "orcamento") {
       createBudgetMutation.mutate({
-        adminId: 1,
         clientId: clientId!,
         serviceType: osFormData.serviceType as any,
         priority: osFormData.priority,
