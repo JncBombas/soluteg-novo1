@@ -17,13 +17,13 @@ export default function ClientLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Carregar credenciais salvas ao montar o componente
+  // Carregar apenas o nome de usuário salvo (senha NUNCA é salva no localStorage)
   useEffect(() => {
     const savedUsername = localStorage.getItem("rememberedUsername");
-    const savedPassword = localStorage.getItem("rememberedPassword");
-    if (savedUsername && savedPassword) {
+    // Limpar senha salva de versões anteriores (segurança)
+    localStorage.removeItem("rememberedPassword");
+    if (savedUsername) {
       setUsername(savedUsername);
-      setPassword(savedPassword);
       setRememberMe(true);
     }
   }, []);
@@ -61,14 +61,14 @@ export default function ClientLogin() {
       localStorage.setItem("clientToken", data.token);
       localStorage.setItem("clientType", data.type);
       
-      // Salvar ou limpar credenciais conforme o checkbox
+      // Salvar ou limpar apenas o nome de usuário (nunca salvar senha no localStorage)
       if (rememberMe) {
         localStorage.setItem("rememberedUsername", username);
-        localStorage.setItem("rememberedPassword", password);
       } else {
         localStorage.removeItem("rememberedUsername");
-        localStorage.removeItem("rememberedPassword");
       }
+      // Limpar senha salva de versões anteriores (segurança)
+      localStorage.removeItem("rememberedPassword");
       
       toast.success("Login realizado com sucesso!");
       // Usar window.location.href para garantir navegação completa
@@ -87,14 +87,13 @@ export default function ClientLogin() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
-      <header className="bg-black text-white py-4 border-b border-gray-700">
-        <div className="container mx-auto px-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <img src={APP_LOGO} alt="JNC Logo" className="h-10" />
-            <div className="text-sm">
-              <div className="font-semibold">JNC Comércio</div>
-              <div className="text-xs text-gray-400">(Soluteg)</div>
-            </div>
+      {/* Header — mesma aparência do portal do cliente para consistência visual */}
+      <header className="bg-slate-900 text-white shadow-md">
+        <div className="max-w-md mx-auto px-4 h-14 flex items-center gap-3">
+          <img src={APP_LOGO} alt="Soluteg" className="h-8 object-contain" />
+          <div className="leading-tight">
+            <p className="font-bold text-sm text-white">Portal do Cliente</p>
+            <p className="text-[10px] text-slate-400">JNC Elétrica &amp; Bombas</p>
           </div>
         </div>
       </header>
@@ -138,7 +137,7 @@ export default function ClientLogin() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     disabled={isLoading}
-                    className="bg-slate-700/50 border-gray-600 text-white placeholder:text-gray-500 focus:border-orange-500 focus:ring-orange-500"
+                    className="bg-slate-700/50 border-gray-600 text-white placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                     required
                   />
                 </div>
@@ -155,7 +154,7 @@ export default function ClientLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="bg-slate-700/50 border-gray-600 text-white placeholder:text-gray-500 focus:border-orange-500 focus:ring-orange-500"
+                    className="bg-slate-700/50 border-gray-600 text-white placeholder:text-slate-400 focus:border-amber-500 focus:ring-amber-500"
                     required
                   />
                 </div>
@@ -167,10 +166,10 @@ export default function ClientLogin() {
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                     disabled={isLoading}
-                    className="border-gray-600 text-orange-500"
+                    className="border-gray-600 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
                   />
                   <Label htmlFor="remember" className="text-gray-300 font-normal cursor-pointer">
-                    Lembrar login e senha
+                    Lembrar meu usuário
                   </Label>
                 </div>
 
@@ -178,7 +177,7 @@ export default function ClientLogin() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 gap-2"
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 gap-2"
                 >
                   <LogIn className="w-4 h-4" />
                   {isLoading ? "Entrando..." : "Entrar"}
@@ -193,24 +192,22 @@ export default function ClientLogin() {
               </div>
 
               {/* Link para o portal do técnico */}
+              {/* Link para o portal do técnico — touch target de 44px mín. para mobile */}
               <div className="mt-4 text-center">
-                <p className="text-sm text-gray-400">
-                  É técnico?{" "}
-                  <a
-                    href="/technician/login"
-                    className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
-                  >
-                    Acesse o Portal do Técnico
-                  </a>
-                </p>
+                <a
+                  href="/technician/login"
+                  className="inline-flex items-center justify-center gap-1 px-4 py-2.5 text-sm text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                >
+                  É técnico? Acesse o Portal do Técnico
+                </a>
               </div>
             </CardContent>
           </Card>
 
-          {/* Footer */}
+          {/* Footer — ano dinâmico para não ficar desatualizado */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
-              © 2024 JNC Comércio e Serviços Técnicos. Todos os direitos reservados.
+              © {new Date().getFullYear()} JNC Comércio e Serviços Técnicos. Todos os direitos reservados.
             </p>
           </div>
         </div>
