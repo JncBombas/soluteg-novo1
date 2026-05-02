@@ -36,7 +36,8 @@
       "Bash(grep -l \"laudos\\\\b\" \"c:/Users/thiag/OneDrive/Documentos/GitHub/soluteg-novo1/drizzle/\"*.sql)",
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(ls -la drizzle/0030_*.sql drizzle/0031_*.sql drizzle/0032_*.sql drizzle/0033_*.sql drizzle/0034_*.sql drizzle/0035_*.sql drizzle/0036_*.sql)"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\.claude\\projects\\c--Users-thiag-OneDrive-Documentos-GitHub-soluteg-novo1\\memory"
