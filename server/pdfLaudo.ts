@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
 import axios from "axios";
-import { getLaudoById, getConfiguracoesTecnico } from "./laudosDb";
+import { getLaudoById, getConfiguracoesTecnico, listLaudoTipos } from "./laudosDb";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,15 +16,26 @@ function formatDate(d: Date | string | null | undefined): string {
   return dt.toLocaleDateString("pt-BR");
 }
 
-function tipoLabel(tipo: string): string {
-  const map: Record<string, string> = {
+function tipoLabel(tipo: string, tiposMap?: Record<string, string>): string {
+  // Usa o mapa dinâmico (laudoTipos do banco) se disponível
+  if (tiposMap && tiposMap[tipo]) return tiposMap[tipo];
+  // Fallback estático para os tipos originais (garante compatibilidade se DB indisponível)
+  const fallback: Record<string, string> = {
     instalacao_eletrica: "Instalação Elétrica",
     inspecao_predial: "Inspeção Predial",
     nr10_nr12: "NR-10 / NR-12",
     grupo_gerador: "Grupo Gerador",
     adequacoes: "Adequações",
+    tubulacao_hidraulica: "Tubulação Hidráulica",
+    spda_adequacao: "SPDA — Adequação e Execução",
+    motores_eletricos: "Motores Elétricos",
+    bombas_dagua: "Bombas D'água",
+    motores_diesel: "Motores Diesel",
+    combate_incendio: "Sistema de Combate a Incêndio",
+    paineis_distribuicao: "Painéis de Distribuição",
+    estruturas_metalicas: "Estruturas Metálicas",
   };
-  return map[tipo] ?? tipo;
+  return fallback[tipo] ?? tipo;
 }
 
 function parecerLabel(p: string): string {
@@ -84,6 +95,18 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
 
   const tecnico = await getConfiguracoesTecnico();
   const logoPath = findLogoPath();
+
+  // Carrega tipos dinâmicos para rótulo e aviso_legal no PDF
+  const tiposRows = await listLaudoTipos().catch(() => []);
+  // Mapa codigo → label para tipoLabel()
+  const tiposMap: Record<string, string> = {};
+  // Mapa codigo → avisoLegal para o bloco de aviso na capa
+  const tiposAvisoMap: Record<string, string | null> = {};
+  for (const t of tiposRows) {
+    tiposMap[t.codigo as string] = t.label as string;
+    tiposAvisoMap[t.codigo as string] = (t as any).avisoLegal ?? null;
+  }
+  const avisoLegal = tiposAvisoMap[laudo.tipo] ?? null;
 
   const laudoRef = laudo; // non-null reference for closures
 
@@ -172,7 +195,7 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
         .text("LAUDO TECNICO", L, y, { width: CW, align: "center" });
       y += 26;
       doc.fontSize(13).font("Helvetica").fillColor(GOLD)
-        .text(tipoLabel(laudoRef.tipo), L, y, { width: CW, align: "center" });
+        .text(tipoLabel(laudoRef.tipo, tiposMap), L, y, { width: CW, align: "center" });
       y = 140;
 
       // Número do laudo
@@ -201,6 +224,27 @@ export async function generateLaudoPDF(laudoId: number): Promise<Buffer> {
       infoBox("Validade", `${laudoRef.validadeMeses} meses`, col1, y, colW);
       infoBox("Status", laudoRef.status.charAt(0).toUpperCase() + laudoRef.status.slice(1), col2, y, colW);
       y += 60;
+
+      // Bloco aviso legal — exibido apenas para tipos com restrição (ex: SPDA)
+      if (avisoLegal) {
+        // Borda e fundo âmbar
+        doc.rect(L, y, CW, 2).fill("#f59e0b");
+        y += 4;
+        doc.save();
+        doc.rect(L, y, CW, 14).fill("#fef3c7");
+        doc.restore();
+        doc.fontSize(8).font("Helvetica-Bold").fillColor("#92400e")
+          .text("⚠  AVISO IMPORTANTE", L + 8, y + 3, { width: CW - 16 });
+        y += 16;
+        // Calcula a altura necessária para o texto do aviso
+        const avisoTextHeight = doc.heightOfString(avisoLegal, { width: CW - 16, fontSize: 7 });
+        doc.save();
+        doc.rect(L, y, CW, avisoTextHeight + 12).fill("#fef3c7");
+        doc.restore();
+        doc.fontSize(7).font("Helvetica").fillColor("#78350f")
+          .text(avisoLegal, L + 8, y + 6, { width: CW - 16, lineGap: 1.5 });
+        y += avisoTextHeight + 16;
+      }
 
       // Bloco cliente
       doc.rect(L, y, CW, 2).fill(GOLD);

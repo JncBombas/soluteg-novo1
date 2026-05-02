@@ -2,8 +2,8 @@ import { eq, desc, and, like, or, inArray, asc } from "drizzle-orm";
 import { v2 as cloudinary } from "cloudinary";
 import { getDb } from "./db";
 import {
-  laudos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos, normasBiblioteca,
-  normaTrechos, laudoCitacoes,
+  laudos, laudoTipos, laudoFotos, laudoMedicoes, configuracoesTecnico, laudoTecnicos,
+  normasBiblioteca, normaTrechos, laudoCitacoes,
   InsertLaudo, InsertLaudoFoto, InsertLaudoMedicao, InsertConfiguracoesTecnico,
 } from "../drizzle/schema";
 
@@ -511,6 +511,24 @@ export async function upsertConfiguracoesTecnico(data: {
   } else {
     await db.insert(configuracoesTecnico).values(data as any);
   }
+}
+
+// ── Tipos de laudo dinâmicos ─────────────────────────────────────────────────
+
+/**
+ * Retorna todos os tipos de laudo ativos, ordenados pelo campo `ordem`.
+ * Usado pelos formulários (AdminLaudoForm, TecnicoLaudoForm) para popular
+ * o select de tipo dinamicamente — sem precisar alterar código ao criar tipos novos.
+ */
+export async function listLaudoTipos() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(laudoTipos)
+    .where(eq(laudoTipos.ativo, 1 as any))
+    .orderBy(asc(laudoTipos.ordem));
 }
 
 // ── Biblioteca de normas ─────────────────────────────────────────────────────

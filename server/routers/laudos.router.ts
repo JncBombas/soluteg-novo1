@@ -369,6 +369,22 @@ export const laudosRouter = router({
       };
     }),
 
+  // ── Tipos de laudo dinâmicos ──────────────────────────────────────────────
+
+  // Admin: lista todos os tipos ativos ordenados por `ordem`
+  "tiposLaudo.list": adminLocalProcedure
+    .query(async () => {
+      const db = await import("../laudosDb");
+      return await db.listLaudoTipos();
+    }),
+
+  // Técnico: mesma listagem com protectedTechnicianProcedure
+  "tiposLaudo.listTecnico": protectedTechnicianProcedure
+    .query(async () => {
+      const db = await import("../laudosDb");
+      return await db.listLaudoTipos();
+    }),
+
   // ── Biblioteca de normas ──────────────────────────────────────────────────
   listNormasBiblioteca: adminLocalProcedure
     .input(z.object({ tipoLaudo: z.string().optional() }))

@@ -717,12 +717,39 @@ export type InsertBudgetAttachment = typeof budgetAttachments.$inferInsert;
 export * from "../server/pdvSchema";
 
 /**
+ * Tipos de laudo dinâmicos — substitui o enum fixo da coluna tipo em laudos.
+ * O campo aviso_legal é exibido como banner no formulário e na capa do PDF
+ * quando o tipo exige restrições legais (ex: SPDA requer Eng. Eletricista habilitado).
+ */
+export const laudoTipos = mysqlTable("laudoTipos", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Código único, ex: "instalacao_eletrica" — compatível com valores do enum anterior */
+  codigo: text("codigo").notNull(),
+  /** Rótulo exibido ao usuário, ex: "Instalação Elétrica" */
+  label: text("label").notNull(),
+  /** Descrição opcional do tipo */
+  descricao: text("descricao"),
+  /** Texto de aviso legal exibido no formulário e na capa do PDF (nullable) */
+  avisoLegal: text("aviso_legal"),
+  /** Controla visibilidade nas listagens (soft delete) */
+  ativo: tinyint("ativo").default(1).notNull(),
+  /** Posição no select — tipos com menor ordem aparecem primeiro */
+  ordem: int("ordem").default(0).notNull(),
+});
+
+export type LaudoTipo = typeof laudoTipos.$inferSelect;
+export type InsertLaudoTipo = typeof laudoTipos.$inferInsert;
+
+/**
  * Laudos Técnicos
  */
 export const laudos = mysqlTable("laudos", {
   id: int("id").autoincrement().primaryKey(),
   numero: varchar("numero", { length: 20 }).notNull().unique(),
-  tipo: mysqlEnum("tipo", ["instalacao_eletrica", "inspecao_predial", "nr10_nr12", "grupo_gerador", "adequacoes"]).notNull(),
+  /** Código textual do tipo — migrado de enum para text; compatível com laudoTipos.codigo */
+  tipo: text("tipo").notNull(),
+  /** FK opcional para laudoTipos — null em registros criados antes da migração */
+  tipoId: int("tipo_id"),
   titulo: varchar("titulo", { length: 255 }).notNull(),
   clienteId: int("clienteId"),
   osId: int("osId"),

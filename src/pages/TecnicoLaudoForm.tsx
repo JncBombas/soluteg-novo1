@@ -94,13 +94,7 @@ interface Foto {
 
 // ── Constantes ─────────────────────────────────────────────────────────────
 
-const TIPOS = [
-  { value: "instalacao_eletrica", label: "Instalação Elétrica" },
-  { value: "inspecao_predial", label: "Inspeção Predial" },
-  { value: "nr10_nr12", label: "NR-10 / NR-12" },
-  { value: "grupo_gerador", label: "Grupo Gerador" },
-  { value: "adequacoes", label: "Adequações" },
-];
+// TIPOS estático removido — select agora usa tiposLaudo da tabela dinâmica
 
 const STATUS_CONSTATACAO = [
   { value: "conforme", label: "Conforme", color: "bg-green-100 text-green-800 border-green-300" },
@@ -189,6 +183,11 @@ export default function TecnicoLaudoForm() {
   // ── Dados de suporte
   const { data: normasBibliotecaData = [] } = (trpc as any).laudos.listNormasBibliotecaTecnico.useQuery(
     {},
+    { staleTime: 300_000 }
+  );
+  // Tipos dinâmicos — carregados da tabela laudoTipos via procedure de técnico
+  const { data: tiposLaudo = [] } = (trpc as any).laudos["tiposLaudo.listTecnico"].useQuery(
+    undefined,
     { staleTime: 300_000 }
   );
   const { data: workOrdersData } = (trpc as any).workOrders.list.useQuery(
@@ -705,9 +704,22 @@ export default function TecnicoLaudoForm() {
                     <Select value={tipo} onValueChange={handleTipoChange} disabled={isFinalized}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {TIPOS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                        {(tiposLaudo as any[]).map((t: any) => (
+                          <SelectItem key={t.codigo} value={t.codigo}>{t.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
+                    {/* Banner de aviso legal — exibido quando o tipo tem restrição (ex: SPDA) */}
+                    {(() => {
+                      const tipoAtual = (tiposLaudo as any[]).find((t: any) => t.codigo === tipo);
+                      if (!tipoAtual?.avisoLegal) return null;
+                      return (
+                        <div className="mt-2 flex gap-2 rounded-md border border-amber-400 bg-amber-50 p-3">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                          <p className="text-xs text-amber-800 leading-relaxed">{tipoAtual.avisoLegal}</p>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Título *</Label>
