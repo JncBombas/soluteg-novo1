@@ -683,9 +683,9 @@ export default function AdminWaterTanks() {
             <Button
               type="submit"
               className="w-full bg-orange-500 hover:bg-orange-600"
-              disabled={!assignForm.clientId || !assignForm.tankName.trim() || assignMutation.isLoading}
+              disabled={!assignForm.clientId || !assignForm.tankName.trim() || assignMutation.isPending}
             >
-              {assignMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {assignMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Atribuir e ativar sensor
             </Button>
           </form>
@@ -705,9 +705,9 @@ export default function AdminWaterTanks() {
             />
             <Button
               type="submit" className="w-full bg-orange-500 hover:bg-orange-600"
-              disabled={updateMutation.isLoading}
+              disabled={updateMutation.isPending}
             >
-              {updateMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {updateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Salvar alterações
             </Button>
           </form>
@@ -730,9 +730,9 @@ export default function AdminWaterTanks() {
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700"
               onClick={() => deleteTarget && adminId && deleteMutation.mutate({ adminId, sensorId: deleteTarget.id })}
-              disabled={deleteMutation.isLoading}
+              disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {deleteMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Remover
             </AlertDialogAction>
           </div>

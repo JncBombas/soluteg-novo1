@@ -149,7 +149,7 @@ export default function EditClient() {
     );
   }
 
-  const isSaving = updateMutation.isLoading || updatePasswordMutation.isLoading;
+  const isSaving = updateMutation.isPending || updatePasswordMutation.isPending;
   const isFormValid =
     formData.name.trim() !== "" &&
     (formData.cnpjCpf === "" || isValidCnpjCpf(formData.cnpjCpf)) &&

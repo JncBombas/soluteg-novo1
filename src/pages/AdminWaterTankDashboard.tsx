@@ -651,9 +651,9 @@ export default function AdminWaterTankDashboard() {
             <Button
               className="bg-orange-500 hover:bg-orange-600"
               onClick={handleRegisterFault}
-              disabled={!faultType || registerFaultMutation.isLoading}
+              disabled={!faultType || registerFaultMutation.isPending}
             >
-              {registerFaultMutation.isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              {registerFaultMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Salvar
             </Button>
           </DialogFooter>

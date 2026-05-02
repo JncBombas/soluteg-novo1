@@ -429,10 +429,10 @@ export default function AdminMassMessage() {
 
             <Button
               className="w-full gap-2 bg-orange-500 hover:bg-orange-600"
-              disabled={!canSend || broadcast.isLoading}
+              disabled={!canSend || broadcast.isPending}
               onClick={() => setConfirmOpen(true)}
             >
-              {broadcast.isLoading ? (
+              {broadcast.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Enviando...
@@ -495,9 +495,9 @@ export default function AdminMassMessage() {
             <AlertDialogAction
               onClick={handleSend}
               className="bg-orange-500 hover:bg-orange-600"
-              disabled={broadcast.isLoading}
+              disabled={broadcast.isPending}
             >
-              {broadcast.isLoading ? (
+              {broadcast.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Enviando...

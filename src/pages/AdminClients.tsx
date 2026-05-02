@@ -362,9 +362,9 @@ export default function AdminClients() {
               <Button
                 type="submit"
                 className="w-full bg-orange-500 hover:bg-orange-600"
-                disabled={!isFormValid() || createClient.isLoading}
+                disabled={!isFormValid() || createClient.isPending}
               >
-                {createClient.isLoading ? (
+                {createClient.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Criando...
@@ -551,9 +551,9 @@ export default function AdminClients() {
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700"
-              disabled={deleteClient.isLoading}
+              disabled={deleteClient.isPending}
             >
-              {deleteClient.isLoading ? (
+              {deleteClient.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Deletando...

@@ -258,10 +258,10 @@ export default function AdminDashboard() {
               size="sm"
               variant="outline"
               className="h-7 text-xs"
-              disabled={reconnectMutation.isLoading}
+              disabled={reconnectMutation.isPending}
               onClick={() => reconnectMutation.mutate()}
             >
-              {reconnectMutation.isLoading ? "Reconectando..." : "Reconectar"}
+              {reconnectMutation.isPending ? "Reconectando..." : "Reconectar"}
             </Button>
           </CardHeader>
           {!waStatus?.isReady && waStatus?.qrCodeDataUrl && (
