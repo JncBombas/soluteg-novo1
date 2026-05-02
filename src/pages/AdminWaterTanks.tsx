@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import {
   Droplet, Loader2, Copy, Check, Pencil, Trash2, AlertTriangle,
-  Wifi, Flame, BarChart2, Radio, ClipboardCheck,
+  Wifi, WifiOff, Flame, BarChart2, Radio, ClipboardCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -103,6 +103,46 @@ function timeAgo(date: Date | null) {
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h atrás`;
   return d.toLocaleDateString("pt-BR");
+}
+
+// Retorna o status do sinal com base no tempo desde a última leitura
+// < 3 min → ao vivo | 3–10 min → sem sinal | > 10 min → fora do ar
+function getSensorSignalStatus(lastSeenAt: Date | null): "live" | "delayed" | "offline" {
+  if (!lastSeenAt) return "offline";
+  const mins = (Date.now() - new Date(lastSeenAt).getTime()) / 60_000;
+  if (mins < 3) return "live";
+  if (mins < 10) return "delayed";
+  return "offline";
+}
+
+// Badge visual de status de sinal do sensor
+function SignalBadge({ lastSeenAt }: { lastSeenAt: Date | null }) {
+  const status = getSensorSignalStatus(lastSeenAt);
+  if (status === "live") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+        </span>
+        Ao vivo
+      </span>
+    );
+  }
+  if (status === "delayed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700">
+        <span className="inline-flex rounded-full h-2 w-2 bg-yellow-500" />
+        Sem sinal
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+      <WifiOff className="w-3 h-3" />
+      Fora do ar
+    </span>
+  );
 }
 
 function MqttDeviceCell({ deviceId }: { deviceId: string | null }) {
@@ -475,8 +515,11 @@ export default function AdminWaterTanks() {
                         <TableCell className="text-sm text-slate-500">
                           {new Date(p.createdAt).toLocaleString("pt-BR")}
                         </TableCell>
-                        <TableCell className="text-sm text-slate-500">
-                          {timeAgo(p.lastSeenAt)}
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <SignalBadge lastSeenAt={p.lastSeenAt} />
+                            <span className="text-xs text-slate-400">{timeAgo(p.lastSeenAt)}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -571,8 +614,11 @@ export default function AdminWaterTanks() {
                               {!dead && !a1 && !a2 && <span className="text-slate-400">—</span>}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-500">
-                            {timeAgo(s.lastSeenAt)}
+                          <TableCell>
+                            <div className="flex flex-col gap-0.5">
+                              <SignalBadge lastSeenAt={s.lastSeenAt} />
+                              <span className="text-xs text-slate-400">{timeAgo(s.lastSeenAt)}</span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <MqttDeviceCell deviceId={s.deviceId} />
