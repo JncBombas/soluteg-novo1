@@ -13,21 +13,7 @@
 
 ## 🟡 Média Prioridade
 
-### [MED-02] `documents.getById` público com ID sequencial — `server/routers/documents.router.ts`
-Qualquer pessoa acessa qualquer documento (contratos, NFs) por ID numérico.  
-**Correção:** `protectedClientProcedure` com verificação de ownership, ou `adminLocalProcedure`.
-
-### [MED-05] `citacoesTecnico.update` e `.remove` sem ownership check — `server/routers/laudos.router.ts`
-Técnico pode alterar citações de laudos de outros técnicos se souber o ID.  
-**Correção:** Verificar que a citação pertence a um laudo acessível pelo `ctx.technicianId`.
-
-### [MED-06] Upload REST sem whitelist de MIME type — `server/index.ts` (`POST /api/work-orders/upload`)
-Aceita qualquer tipo de arquivo. SVGs com JavaScript embutido podem causar XSS.  
-**Correção:** Whitelist: `["image/jpeg", "image/png", "image/webp", "application/pdf"]`
-
-### [MED-07] `server/cloudinaryService.ts` com placeholders de credenciais
-Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem induzir erros.  
-**Correção:** Remover o arquivo (o sistema usa `server/storage.ts` com variáveis de ambiente).
+> Todos os itens de prioridade média identificados na auditoria inicial foram resolvidos.
 
 ---
 
@@ -35,12 +21,8 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 
 | ID | Onde | O que fazer |
 |---|---|---|
-| S01 | `/api/client-login`, `/api/technician-login`, `adminAuth.login` | Rate limiting — `express-rate-limit` com 10 tentativas/15 min por IP |
-| S02 | `pdv.router.ts` — `importBatch` | `z.array(...).max(500)` para evitar DoS por array gigante |
-| S03 | `workOrders.router.ts` — `exportBatch` | `z.array(z.number()).max(50)` — exportar centenas de PDFs sobrecarrega o servidor |
-| S04 | `pdv.router.ts` — `sales.getWithFilters` | Mover filtros de data para SQL (`WHERE`) — atualmente filtra tudo em memória JS |
-| S06 | `server/index.ts` | Verificar configuração CORS em produção — confirmar que `origin` não é `'*'` |
-| S07 | `laudos.router.ts` — `anotacoesJson` | Limite de 200.000 chars por foto pode impactar performance — considerar compressão |
+| S06 | `server/index.ts` | Configuração CORS verificada: não existe origin '*' (seguro por padrão) |
+| S07 | `laudos.router.ts` | Limite de 200.000 chars já presente no Zod (verificado) |
 
 ---
 
@@ -64,8 +46,6 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 | `server/pdfLaudo.ts` | 295 | `fontSize` não existe em `TextOptions` | Verificar API da lib PDF usada |
 | `server/waterTankAlertService.ts` | 84, 105 | Function em bloco strict + null check | Mover função para fora do bloco; adicionar null check |
 | `server/whatsapp.ts` | múltiplas | Parâmetros `any` implícitos | Adicionar tipos nos callbacks |
-| `server/cloudinaryService.ts` | 2 | Types de `streamifier` ausentes | `npm i -D @types/streamifier` |
-| `server/pdvBarcodeService.ts` | 26 | Types de `bwip-js` ausentes | `npm i -D @types/bwip-js` ou `declare module 'bwip-js'` |
 
 - **App mobile:** Checklists e laudos do portal do técnico ainda não portados para o app mobile (`mobile/`)
 - **Landing page Astro:** `jnc.soluteg.com.br` reservado mas o projeto Astro ainda não foi criado
@@ -78,15 +58,23 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 
 | Data | Item | O que foi feito |
 |---|---|---|
-| 2026-05-01 | CRIT-06 | `resetPassword` corrigido — valida token (Map em memória), atualiza o admin correto (não mais ID 1 fixo) |
-| 2026-05-01 | CRIT-04 | Router `checklists` inteiro migrado de `publicProcedure` → `adminLocalProcedure` |
-| 2026-05-01 | CRIT-02 | `budgets.create` → `adminLocalProcedure` com `ctx.adminId`; approve/reject aceitam token opaco |
-| 2026-05-01 | CRIT-03 | `budgets.getItems` e `exportPDF` → `adminLocalProcedure`; variantes `ByToken` para acesso público |
-| 2026-05-01 | CRIT-03 | `budgets.getForPortal` → `protectedClientProcedure` com `ctx.clientId` |
-| 2026-05-01 | CRIT-05 | `clients.list`, `.create`, `.broadcastMessage`, `adminDocuments.list` — `adminId` removido do input, usa `ctx.adminId` |
-| 2026-05-01 | CRIT-07 | `clientProfile.uploadPhoto` → `adminLocalProcedure`; novo `uploadMyPhoto` → `protectedClientProcedure` |
-| 2026-05-01 | MED-01 | Fallback de senha em texto puro removido de `authenticateAdmin`; admins legados devem redefinir senha |
-| 2026-05-01 | MED-04 | `changedBy`/`changedByType` agora derivados de `ctx.adminId` em `workOrders.updateStatus` e `budgets.update`; `budgets.rejectByAdmin` criado para admin reprovar por ID |
-| 2026-05-01 | MED-03 | `requestReset` retorna mensagem genérica (não revela se e-mail existe) |
-| 2026-05-01 | S05 | `crypto.randomBytes()` substitui `Math.random()` na geração de senhas de clientes |
-| 2026-05-01 | CRIT-01 | 8 endpoints REST protegidos com `requireAdminAuth`, `requireClientAuth` ou `requireAdminOrTechAuth`; clientId agora vem do JWT nos endpoints do cliente |
+| 2026-05-02 | [AG-UI-04] | Monitoramento de Caixas d'Água integrado na navegação SPA do Portal do Cliente |
+| 2026-05-02 | [MED-02] | `documents.getById` protegido com `adminLocalProcedure`. `adminId` removido do input. |
+| 2026-05-02 | [MED-05] | Ownership check em `citacoesTecnico.update` e `.remove` com verificação de `criadoPorTipo` (evita ID collision entre admins e técnicos) |
+| 2026-05-02 | [MED-06] | Whitelist de MIME types (`image/*`, `pdf`) implementada no upload REST |
+| 2026-05-02 | [MED-07] | Remoção do arquivo obsoleto `server/cloudinaryService.ts` |
+| 2026-05-02 | S01 | Rate Limiting (10 req/15min) nos logins de cliente, técnico e admin (REST + tRPC adminAuth.login) |
+| 2026-05-02 | S02 | Limite de 500 itens no `importBatch` (PDV) e 100 itens no `sales.create` |
+| 2026-05-02 | S03 | Limite de 50 itens no `exportBatch` e 100 no `deleteBatch` (WorkOrders) |
+| 2026-05-02 | S04 | Filtros de vendas no PDV migrados para SQL (`WHERE`) |
+| 2026-05-01 | CRIT-06 | `resetPassword` corrigido — valida token, atualiza admin dinâmico |
+| 2026-05-01 | CRIT-04 | Router `checklists` inteiro migrado para `adminLocalProcedure` |
+| 2026-05-01 | CRIT-02 | `budgets.create` → `adminLocalProcedure`; approve/reject seguros |
+| 2026-05-01 | CRIT-03 | Procedures de orçamentos protegidas ou com tokens opacos |
+| 2026-05-01 | CRIT-05 | Remoção de `adminId` do input; usa `ctx.adminId` do token |
+| 2026-05-01 | CRIT-07 | `clientProfile.uploadMyPhoto` criado para o portal do cliente |
+| 2026-05-01 | MED-01 | Fallback de senha em texto puro removido |
+| 2026-05-01 | MED-04 | Audit fields (`changedBy`) derivados do token JWT |
+| 2026-05-01 | MED-03 | Mensagens de erro genéricas no reset de senha |
+| 2026-05-01 | S05 | `crypto.randomBytes()` na geração de senhas |
+| 2026-05-01 | CRIT-01 | 8 endpoints REST protegidos e IDs movidos para o token JWT |

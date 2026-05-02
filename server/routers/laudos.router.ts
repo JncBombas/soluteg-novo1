@@ -499,7 +499,8 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.laudoId);
       if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
-      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      // criadoPorTipo garante que não confunde ID de admin com ID de técnico (tabelas independentes)
+      const foiCriador = laudo.criadoPor === ctx.technicianId && laudo.criadoPorTipo === "tecnico";
       const atribuido = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
       if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       const nova = await db.addLaudoCitacao(input);
@@ -513,17 +514,41 @@ export const laudosRouter = router({
       aplicacao: z.string().optional(),
       ordem: z.number().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { id, ...data } = input;
       const db = await import("../laudosDb");
+      
+      const citacao = await db.getLaudoCitacaoById(id);
+      if (!citacao) throw new TRPCError({ code: "NOT_FOUND", message: "Citação não encontrada" });
+
+      const laudo = await db.getLaudoById(citacao.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+
+      // criadoPorTipo garante que não confunde ID de admin com ID de técnico (tabelas independentes)
+      const foiCriador = laudo.criadoPor === ctx.technicianId && laudo.criadoPorTipo === "tecnico";
+      const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+
       await db.updateLaudoCitacao(id, data);
       return { success: true };
     }),
 
   "citacoesTecnico.remove": protectedTechnicianProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await import("../laudosDb");
+
+      const citacao = await db.getLaudoCitacaoById(input.id);
+      if (!citacao) throw new TRPCError({ code: "NOT_FOUND", message: "Citação não encontrada" });
+
+      const laudo = await db.getLaudoById(citacao.laudoId);
+      if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
+
+      // criadoPorTipo garante que não confunde ID de admin com ID de técnico (tabelas independentes)
+      const foiCriador = laudo.criadoPor === ctx.technicianId && laudo.criadoPorTipo === "tecnico";
+      const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
+      if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
+
       await db.removeLaudoCitacao(input.id);
       return { success: true };
     }),
@@ -555,7 +580,8 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.laudoId);
       if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
-      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      // criadoPorTipo garante que não confunde ID de admin com ID de técnico (tabelas independentes)
+      const foiCriador = laudo.criadoPor === ctx.technicianId && laudo.criadoPorTipo === "tecnico";
       const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
       if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       const ia = await import("../iaLaudos");
@@ -569,7 +595,8 @@ export const laudosRouter = router({
       const db = await import("../laudosDb");
       const laudo = await db.getLaudoById(input.laudoId);
       if (!laudo) throw new TRPCError({ code: "NOT_FOUND", message: "Laudo não encontrado" });
-      const foiCriador = laudo.criadoPor === ctx.technicianId;
+      // criadoPorTipo garante que não confunde ID de admin com ID de técnico (tabelas independentes)
+      const foiCriador = laudo.criadoPor === ctx.technicianId && laudo.criadoPorTipo === "tecnico";
       const atribuido  = laudo.tecnicos?.some((t: any) => t.tecnicoId === ctx.technicianId);
       if (!foiCriador && !atribuido) throw new TRPCError({ code: "FORBIDDEN", message: "Acesso negado" });
       const ia = await import("../iaLaudos");

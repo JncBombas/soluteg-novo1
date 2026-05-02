@@ -156,6 +156,27 @@ export async function getAllSales() {
   return await db.select().from(sales).orderBy(desc(sales.createdAt));
 }
 
+export async function getSalesWithFilters(filters: {
+  startDate?: Date;
+  endDate?: Date;
+  paymentMethod?: string;
+  searchId?: number;
+}) {
+  const db = await getPdvDb();
+  const conditions = [];
+
+  if (filters.startDate) conditions.push(gte(sales.createdAt, filters.startDate));
+  if (filters.endDate) conditions.push(lte(sales.createdAt, filters.endDate));
+  if (filters.paymentMethod && filters.paymentMethod !== "all") {
+    conditions.push(eq(sales.paymentMethod, filters.paymentMethod as any));
+  }
+  if (filters.searchId) conditions.push(eq(sales.id, filters.searchId));
+
+  return await db.select().from(sales)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(sales.createdAt));
+}
+
 export async function getSalesByDateRange(startDate: Date, endDate: Date) {
   const db = await getPdvDb();
   return await db.select().from(sales).where(

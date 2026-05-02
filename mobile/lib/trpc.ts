@@ -35,7 +35,13 @@ export function makeTrpcClient(getToken: () => string | null) {
         async headers() {
           const token = getToken();
           if (!token) return {};
-          // Autenticação via Bearer token (não usa cookie — mobile não suporta)
+
+          if (__DEV__) {
+            // Log útil para debugar autenticação em desenvolvimento
+            console.log("[tRPC] Enviando request com Bearer Token");
+          }
+
+          // Autenticação via Bearer token (não usa cookie — mobile não suporta no Expo)
           return { Authorization: `Bearer ${token}` };
         },
       }),

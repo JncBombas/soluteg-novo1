@@ -169,7 +169,7 @@ export const pdvRouter = router({
           minStock: z.number().int().min(0).default(5),
           unit: z.string().max(10).default("un"),
           categoryId: z.number().optional(),
-        })),
+        })).max(500),
       }))
       .mutation(async ({ input }) => {
         let imported = 0;
@@ -213,28 +213,20 @@ export const pdvRouter = router({
         searchId: z.string().optional(),
       }))
       .query(async ({ input }) => {
-        let filtered = await db.getAllSales();
+        const startDate = input.startDate ? new Date(input.startDate) : undefined;
+        if (startDate) startDate.setHours(0, 0, 0, 0);
 
-        if (input.startDate) {
-          const start = new Date(input.startDate);
-          start.setHours(0, 0, 0, 0);
-          filtered = filtered.filter(s => new Date(s.createdAt) >= start);
-        }
-        if (input.endDate) {
-          const end = new Date(input.endDate);
-          end.setHours(23, 59, 59, 999);
-          filtered = filtered.filter(s => new Date(s.createdAt) <= end);
-        }
-        if (input.paymentMethod && input.paymentMethod !== "all") {
-          filtered = filtered.filter(s => s.paymentMethod === input.paymentMethod);
-        }
-        if (input.searchId) {
-          const n = parseInt(input.searchId);
-          if (!isNaN(n)) filtered = filtered.filter(s => s.id === n);
-        }
+        const endDate = input.endDate ? new Date(input.endDate) : undefined;
+        if (endDate) endDate.setHours(23, 59, 59, 999);
 
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        return filtered;
+        const searchId = input.searchId ? parseInt(input.searchId) : undefined;
+
+        return await db.getSalesWithFilters({
+          startDate,
+          endDate,
+          paymentMethod: input.paymentMethod,
+          searchId: isNaN(searchId as any) ? undefined : searchId,
+        });
       }),
 
     create: adminLocalProcedure
@@ -244,7 +236,7 @@ export const pdvRouter = router({
           productName: z.string(),
           quantity: z.number().int().min(1),
           unitPrice: z.string(),
-        })),
+        })).max(100),
         discount: z.number().min(0).default(0),
         discountType: z.enum(["percentage", "fixed"]).default("fixed"),
         paymentMethod: z.enum(["dinheiro", "cartao_debito", "cartao_credito", "pix"]).default("dinheiro"),

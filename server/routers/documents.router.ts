@@ -16,21 +16,19 @@ export const documentsRouter = router({
 
   listAll: adminLocalProcedure
     .input(z.object({
-      adminId: z.number(),
       search: z.string().optional(),
       clientId: z.number().optional(),
       documentType: z.enum(["relatorio_servico", "relatorio_visita", "nota_fiscal", "outro", "all"]).optional(),
       startDate: z.string().optional(),
       endDate: z.string().optional(),
     }))
-    .query(async ({ input }) => {
-      return await db.getAllDocumentsWithFilters(input);
+    .query(async ({ input, ctx }) => {
+      return await db.getAllDocumentsWithFilters({ ...input, adminId: ctx.adminId });
     }),
 
   create: adminLocalProcedure
     .input(z.object({
       clientId: z.number(),
-      adminId: z.number(),
       title: z.string().min(1),
       description: z.string().optional(),
       documentType: z.enum(["vistoria", "visita", "nota_fiscal", "servico", "relatorio_servico", "relatorio_visita"]),
@@ -39,8 +37,8 @@ export const documentsRouter = router({
       fileSize: z.number().optional(),
       mimeType: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
-      await db.createClientDocument(input);
+    .mutation(async ({ input, ctx }) => {
+      await db.createClientDocument({ ...input, adminId: ctx.adminId });
       return { success: true, message: "Documento enviado com sucesso" };
     }),
 
@@ -51,7 +49,7 @@ export const documentsRouter = router({
       return { success: true, message: "Documento deletado com sucesso" };
     }),
 
-  getById: publicProcedure
+  getById: adminLocalProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await db.getDocumentById(input.id);

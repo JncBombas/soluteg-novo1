@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find src:*)",
       "Bash(wc -l src/hooks/* src/lib/* src/Config/*)",
-      "Bash(grep -E \"\\\\.tsx$\")"
+      "Bash(grep -E \"\\\\.tsx$\")",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

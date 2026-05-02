@@ -162,7 +162,7 @@ export const workOrdersRouter = router({
     }),
 
   deleteBatch: adminLocalProcedure
-    .input(z.object({ ids: z.array(z.number()).min(1) }))
+    .input(z.object({ ids: z.array(z.number()).min(1).max(100) }))
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
       await workOrdersDb.deleteMultipleWorkOrders(input.ids);
@@ -566,7 +566,7 @@ export const workOrdersRouter = router({
     }),
 
   exportBatch: adminLocalProcedure
-    .input(z.object({ ids: z.array(z.number()) }))
+    .input(z.object({ ids: z.array(z.number()).max(50) }))
     .mutation(async ({ input }) => {
       const JSZip = (await import('jszip')).default;
       const pdfGen = await import("../pdfGenerator");

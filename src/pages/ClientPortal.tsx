@@ -17,8 +17,9 @@ import { APP_LOGO } from "@/const";
 import { SolutegFooter } from "@/components/SolutegFooter";
 import { trpc } from "@/lib/trpc";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { WaterTankContent } from "./WaterTankMonitoring";
 
-type Page = "home" | "documents";
+type Page = "home" | "documents" | "monitoring";
 
 interface Document {
   id: number;
@@ -663,7 +664,7 @@ export default function ClientPortal() {
                 <ChevronRight className="w-4 h-4 text-slate-400" />
               </button>
               <button
-                onClick={() => window.location.href = "/client/water-tank"}
+                onClick={() => setActivePage("monitoring")}
                 className="w-full flex items-center gap-3 bg-white rounded-xl p-4 border hover:border-amber-300 transition-colors"
               >
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -796,6 +797,14 @@ export default function ClientPortal() {
         </div>
       )}
 
+      {/* ── Page: Monitoring ── */}
+      {activePage === "monitoring" && clientId && (
+        <div className="max-w-2xl mx-auto px-4 py-5">
+          <h2 className="text-lg font-bold mb-4">Monitoramento</h2>
+          <WaterTankContent clientId={clientId} clientName={clientName} />
+        </div>
+      )}
+
       {/* ── Footer ── */}
       <div className="mb-20">
         <SolutegFooter full={false} />
@@ -823,8 +832,10 @@ export default function ClientPortal() {
             <span>Documentos</span>
           </button>
           <button
-            onClick={() => window.location.href = "/client/water-tank"}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-xs text-slate-400 hover:text-slate-200 transition-colors"
+            onClick={() => setActivePage("monitoring")}
+            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs transition-colors ${
+              activePage === "monitoring" ? "text-amber-400" : "text-slate-400 hover:text-slate-200"
+            }`}
           >
             <Activity className="w-5 h-5" />
             <span>Monitoramento</span>

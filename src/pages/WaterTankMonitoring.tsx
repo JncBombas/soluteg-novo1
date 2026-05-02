@@ -658,21 +658,12 @@ function TankCard({ tank, sparkData, clientId }: {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function WaterTankMonitoring() {
-  const [clientId, setClientId]         = useState<number | null>(null);
-  const [clientName, setClientName]     = useState("");
-  const [sseConnected, setSseConnected] = useState(false);
+// ── Content Component (reusable in SPA) ───────────────────────────────────────
+
+export function WaterTankContent({ clientId, clientName, sseConnected: propSse }: { clientId: number; clientName: string; sseConnected?: boolean }) {
+  const [sseConnected, setSseConnected] = useState(propSse || false);
   const [tanks, setTanks]               = useState<WaterTank[]>([]);
   const sseRef = useRef<EventSource | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("clientToken");
-    const id    = localStorage.getItem("clientId");
-    const name  = localStorage.getItem("clientName");
-    if (!token || !id) { window.location.href = "/client/login"; return; }
-    setClientId(parseInt(id));
-    setClientName(name || "Cliente");
-  }, []);
 
   const { data: initialTanks = [], isLoading } = trpc.waterTankMonitoring.getLatest.useQuery(
     undefined,
@@ -711,6 +702,59 @@ export default function WaterTankMonitoring() {
     return () => { es.close(); setSseConnected(false); };
   }, [clientId]);
 
+  if (isLoading) {
+    return (
+      <div className="py-12 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      {tanks.length > 0 && <SummaryStrip tanks={tanks} sseConnected={sseConnected} />}
+
+      {tanks.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
+          {tanks.map((tank) => (
+            <TankCard
+              key={tank.tankName}
+              tank={tank}
+              clientId={clientId}
+              sparkData={(histories as Record<string, Array<{ level: number; time: string }>>)[tank.tankName]}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
+            <Droplet className="w-8 h-8 text-blue-200" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-700">Aguardando sensores</h3>
+            <p className="text-slate-500 text-sm mt-1">Os níveis aparecem aqui automaticamente quando os sensores enviarem dados.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Full Page ─────────────────────────────────────────────────────────────────
+
+export default function WaterTankMonitoring() {
+  const [clientId, setClientId]         = useState<number | null>(null);
+  const [clientName, setClientName]     = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("clientToken");
+    const id    = localStorage.getItem("clientId");
+    const name  = localStorage.getItem("clientName");
+    if (!token || !id) { window.location.href = "/client/login"; return; }
+    setClientId(parseInt(id));
+    setClientName(name || "Cliente");
+  }, []);
+
   const handleLogout = () => {
     fetch("/api/client-logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem("clientToken");
@@ -719,17 +763,10 @@ export default function WaterTankMonitoring() {
     window.location.href = "/";
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
-      </div>
-    );
-  }
+  if (!clientId) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           <Droplet className="w-6 h-6 text-blue-500 shrink-0" />
@@ -738,10 +775,6 @@ export default function WaterTankMonitoring() {
             <p className="text-xs text-slate-500 truncate">{clientName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {sseConnected
-              ? <span className="hidden sm:flex items-center gap-1 text-xs text-green-600"><Wifi className="w-3.5 h-3.5" /> Ao vivo</span>
-              : <span className="hidden sm:flex items-center gap-1 text-xs text-slate-400"><WifiOff className="w-3.5 h-3.5" /> Reconectando…</span>
-            }
             <Button onClick={() => window.location.href = "/client/portal"} variant="outline" size="sm" className="gap-1">
               <ArrowLeft className="w-4 h-4" /><span className="hidden sm:inline">Voltar</span>
             </Button>
@@ -752,33 +785,8 @@ export default function WaterTankMonitoring() {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-        {tanks.length > 0 && <SummaryStrip tanks={tanks} sseConnected={sseConnected} />}
-
-        {tanks.length > 0 ? (
-          /* Desktop: full-width (1 col) · Mobile: 2 col when possible */
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
-            {tanks.map((tank) => (
-              <TankCard
-                key={tank.tankName}
-                tank={tank}
-                clientId={clientId!}
-                sparkData={(histories as Record<string, Array<{ level: number; time: string }>>)[tank.tankName]}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
-              <Droplet className="w-10 h-10 text-blue-200" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-700">Aguardando sensores</h3>
-              <p className="text-slate-500 text-sm mt-1">Os níveis aparecem aqui automaticamente quando os sensores enviarem dados.</p>
-            </div>
-          </div>
-        )}
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <WaterTankContent clientId={clientId} clientName={clientName} />
       </div>
     </div>
   );

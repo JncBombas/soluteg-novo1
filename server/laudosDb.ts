@@ -656,6 +656,17 @@ export async function getLaudoCitacoes(laudoId: number) {
   }
 }
 
+export async function getLaudoCitacaoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [citacao] = await db
+    .select()
+    .from(laudoCitacoes)
+    .where(eq(laudoCitacoes.id, id))
+    .limit(1);
+  return citacao ?? null;
+}
+
 /**
  * Adiciona uma citação normativa a um laudo.
  * Retorna o id inserido.

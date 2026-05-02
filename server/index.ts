@@ -10,6 +10,7 @@ import express from "express"; // Framework que cria o servidor web
 import type { Request, Response, NextFunction } from "express";
 import { createServer } from "http"; // Cria o servidor HTTP nativo do Node.js
 import multer from "multer";   // Biblioteca para receber arquivos (fotos, PDFs) via upload
+import { rateLimit } from "express-rate-limit"; // Proteção contra força bruta (Rate Limiting)
 import { createExpressMiddleware } from "@trpc/server/adapters/express"; // Integração com tRPC (camada de API tipada)
 import { appRouter } from "./routers";                 // Todas as rotas tRPC do sistema
 import { createContext } from "./_core/context";       // Contexto compartilhado entre as requisições
@@ -69,7 +70,18 @@ function requireAdminOrTechAuth(req: Request, res: Response, next: NextFunction)
 // "memoryStorage" significa que o arquivo fica na RAM
 // temporariamente, antes de ser enviado para o Cloudinary.
 // ============================================================
-const upload = multer({ storage: multer.memoryStorage() });
+// Whitelist de tipos de arquivos permitidos (Segurança MED-06)
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+ 
+// Configuração de Rate Limiting para logins (Segurança S01)
+// Bloqueia após 10 tentativas falhas/sucessos por IP a cada 15 minutos.
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // limite de 10 requisições por IP
+  message: { message: "Muitas tentativas de login. Tente novamente em 15 minutos." },
+  standardHeaders: true, // Retorna info de limite nos headers RateLimit-*
+  legacyHeaders: false, // Desabilita headers X-RateLimit-* antigos
+});
  
  
 // ============================================================
@@ -113,6 +125,15 @@ async function startServer() {
       // Se não veio nenhum arquivo, retorna erro 400 (Bad Request)
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, message: "Nenhum arquivo enviado" });
+      }
+
+      // Validação de MIME Type (Whitelist) — Segurança MED-06
+      const invalidFiles = files.filter(f => !ALLOWED_MIME_TYPES.includes(f.mimetype));
+      if (invalidFiles.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Tipo de arquivo não permitido: ${invalidFiles.map(f => f.mimetype).join(", ")}. Apenas imagens (JPG, PNG, WebP) e PDFs são aceitos.` 
+        });
       }
  
       // Importa a função de salvar arquivos na nuvem (Cloudinary)
@@ -313,7 +334,7 @@ async function startServer() {
   //
   // Recebe usuário e senha, valida, e retorna um token de acesso.
   // ============================================================
-  app.post("/api/client-login", async (req, res) => {
+  app.post("/api/client-login", loginRateLimiter, async (req, res) => {
     try {
       // Valida se os dados enviados têm o formato correto (usuário e senha)
       const { clientLoginSchema } = await import("./validation");
@@ -394,7 +415,7 @@ async function startServer() {
   // 🔑 ROTA: Login do Técnico (Portal do Técnico)
   // Endereço: POST /api/technician-login
   // ============================================================
-  app.post("/api/technician-login", async (req, res) => {
+  app.post("/api/technician-login", loginRateLimiter, async (req, res) => {
     try {
       const { username, password } = req.body;
 
@@ -740,6 +761,11 @@ async function startServer() {
   // de forma tipada e segura. A maioria das operações do sistema
   // (criar OS, listar clientes, etc.) passa por aqui.
   // ============================================================
+  // Rate limiting no login admin via tRPC — Segurança S01
+  // O login admin passa por /api/trpc/adminAuth.login (POST), por isso precisa de um
+  // middleware separado antes do bloco geral do tRPC.
+  app.use("/api/trpc/adminAuth.login", loginRateLimiter);
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
