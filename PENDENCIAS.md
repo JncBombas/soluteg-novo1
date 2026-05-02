@@ -46,6 +46,27 @@ Arquivo não usado em produção, mas com strings como `'sua_api_key'` que podem
 
 ## 📌 Dívida Técnica (não urgente)
 
+### Erros TypeScript pré-existentes (não travam o build do Vite, mas poluem o IDE)
+
+> Estes erros estavam ocultos atrás de uma cascata causada pelo caminho errado em `src/lib/trpc.ts`.
+> Foram revelados em 2026-05-02 ao corrigir o caminho. Não afetam o funcionamento em produção.
+
+| Arquivo | Linha | Erro | Correção |
+|---|---|---|---|
+| Vários (`AdminClients`, `AdminMassMessage`, `AdminWaterTanks`, `AdminWaterTankDashboard`, `EditClient`) | múltiplas | `.isLoading` não existe — tRPC v11 renomeou para `.isPending` | Substituir `.isLoading` por `.isPending` em todas as mutations |
+| `src/App.tsx` | 29 | `Cannot find module './pages/AdminViewWorkOrder'` | Verificar se o arquivo foi deletado ou renomeado |
+| `src/pages/AdminLaudoForm.tsx` | 534, 708 | Tipo `Constatacao[]` incompatível | Alinhar tipo do estado com o tipo Zod do input |
+| `src/pages/TecnicoLaudoForm.tsx` | 616 | Mesmo que acima | Mesma correção |
+| `src/pages/AdminWorkOrders.tsx` | 64, 163 | Enum de tipo/prioridade desatualizado | Alinhar com os enums do `workOrders.router.ts` |
+| `src/pages/BudgetApproval.tsx` | 62 | `res` implicitly has `any` type | Tipar o parâmetro do callback |
+| `src/pages/WaterTankMonitoring.tsx` | 356 | `Date` vs `string` no array de alertas | Converter `sentAt` para string ou ajustar o tipo |
+| `server/pdfGenerator.ts` | 424, 590, 591, 679, 984 | Iteração de Set + type errors | Corrigir com `Array.from()` e null checks |
+| `server/pdfLaudo.ts` | 295 | `fontSize` não existe em `TextOptions` | Verificar API da lib PDF usada |
+| `server/waterTankAlertService.ts` | 84, 105 | Function em bloco strict + null check | Mover função para fora do bloco; adicionar null check |
+| `server/whatsapp.ts` | múltiplas | Parâmetros `any` implícitos | Adicionar tipos nos callbacks |
+| `server/cloudinaryService.ts` | 2 | Types de `streamifier` ausentes | `npm i -D @types/streamifier` |
+| `server/pdvBarcodeService.ts` | 26 | Types de `bwip-js` ausentes | `npm i -D @types/bwip-js` ou `declare module 'bwip-js'` |
+
 - **App mobile:** Checklists e laudos do portal do técnico ainda não portados para o app mobile (`mobile/`)
 - **Landing page Astro:** `jnc.soluteg.com.br` reservado mas o projeto Astro ainda não foi criado
 - **Tabelas duplicadas:** `inspectionReports` e `reports` têm propósitos sobrepostos — consolidar futuramente
