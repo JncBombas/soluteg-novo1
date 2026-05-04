@@ -72,6 +72,19 @@ function requireAdminOrTechAuth(req: Request, res: Response, next: NextFunction)
 // ============================================================
 // Whitelist de tipos de arquivos permitidos (Segurança MED-06)
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+// Instância do multer com armazenamento em memória e filtro de MIME
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB por arquivo
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`));
+    }
+  },
+});
  
 // Configuração de Rate Limiting para logins (Segurança S01)
 // Bloqueia após 10 tentativas falhas/sucessos por IP a cada 15 minutos.
