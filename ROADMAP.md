@@ -5,6 +5,7 @@
 **Princípio:** uma fase por vez. Não pula. Não mistura.
 
 **Última atualização:** 04/05/2026
+**Fase 2 pulada deliberadamente** — hardware será definido em paralelo com Fase 3, fora do código.
 
 ---
 
@@ -38,10 +39,10 @@
 - [x] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
 - [x] Validar que mensagens chegam no WhatsApp do admin e cliente
 - [x] Validar que OS é criada corretamente
-- [ ] Validar que técnico é notificado
+- [x] Validar que técnico é notificado
 - [x] Rodar 48h em ambiente real sem falhas
 
-**Status da fase:** [ ] Não iniciada [x] Em andamento [ ] Concluída em ___/___/___
+**Status da fase:** [ ] Não iniciada [ ] Em andamento [x] Concluída em 04/05/2026
 
 ---
 
@@ -79,7 +80,7 @@
 - [ ] Operar por 30 dias coletando feedback
 - [ ] Ajustar documentação baseado nos problemas reais
 
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [ ] Concluída em ___/___/___
+**Status da fase:** [x] Pulada deliberadamente — hardware definido fora do código, em paralelo
 
 ---
 
