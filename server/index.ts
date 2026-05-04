@@ -111,6 +111,8 @@ async function startServer() {
   // 50mb é importante para fotos de alta resolução não serem
   // bloqueadas antes de chegar na rota de upload.
   // ----------------------------------------------------------
+  // Necessário para que o rate limiter identifique o IP real atrás do nginx
+  app.set("trust proxy", 1);
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
