@@ -151,14 +151,6 @@ async function flushBuffer(deviceId: string) {
     currentLevel,
   });
 
-  broadcastTankUpdate(entry.sensor.clientId, {
-    type: "level_update",
-    tankName: entry.sensor.tankName,
-    currentLevel,
-    trend: isGoingDown ? "down" : isGoingUp ? "up" : "stable",
-    measuredAt: new Date().toISOString(),
-  });
-
   const state = getOrCreateAlertState(deviceId);
   const previousZone = state.currentZone;
 
@@ -177,6 +169,15 @@ async function flushBuffer(deviceId: string) {
 
   const isGoingDown = strictlyDown || stableInAlarm;
   const isGoingUp   = strictlyUp;
+
+  // Broadcast SSE após calcular tendência (isGoingDown/Up já declarados)
+  broadcastTankUpdate(entry.sensor.clientId, {
+    type: "level_update",
+    tankName: entry.sensor.tankName,
+    currentLevel,
+    trend: isGoingDown ? "down" : isGoingUp ? "up" : "stable",
+    measuredAt: new Date().toISOString(),
+  });
 
   if (isGoingDown) {
     state.consecutiveDownCount++;
