@@ -257,25 +257,41 @@ export async function getCashBalance() {
 export async function getDashboardStats() {
   const db = await getPdvDb();
 
-  // Debug: verificar vendas do dia para diagnosticar problemas
-  const debugSales = await db.select({
+  // Buscar TODAS as vendas para filtrar em JS (evita problemas de timezone do MySQL)
+  const allSales = await db.select({
     id: sales.id,
     total: sales.total,
     canceled: sales.canceled,
     createdAt: sales.createdAt,
-  }).from(sales).orderBy(desc(sales.createdAt)).limit(5);
-  console.log("[PDV Dashboard] Últimas 5 vendas:", JSON.stringify(debugSales, null, 2));
-  console.log("[PDV Dashboard] NOW() do JS:", new Date().toISOString());
+  }).from(sales).orderBy(desc(sales.createdAt));
 
-  const [todaySales, lowStock, topProducts, balance] = await Promise.all([
-    // Usa INTERVAL para ajustar ao fuso de Brasília (UTC-3).
-    // Evita CONVERT_TZ que pode retornar NULL se timezone tables não estiverem carregadas.
-    db.select({
-      total: sql<number>`COALESCE(SUM(${sales.total}), 0)`,
-      count: sql<number>`COUNT(${sales.id})`,
-    }).from(sales).where(
-      sql`DATE(${sales.createdAt} - INTERVAL 3 HOUR) = DATE(NOW() - INTERVAL 3 HOUR) AND ${sales.canceled} = false`
-    ),
+  // Data de hoje em BRT (UTC-3)
+  const now = new Date();
+  const brtNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const todayStr = brtNow.toISOString().split("T")[0]; // "YYYY-MM-DD" em BRT
+
+  console.log("[PDV Dashboard] Total de vendas no banco:", allSales.length);
+  console.log("[PDV Dashboard] Data hoje (BRT):", todayStr);
+  console.log("[PDV Dashboard] NOW JS:", now.toISOString());
+  if (allSales.length > 0) {
+    console.log("[PDV Dashboard] Últimas 3 vendas:", JSON.stringify(allSales.slice(0, 3)));
+  }
+
+  // Filtrar vendas de hoje (comparando a data em BRT)
+  const todaysSales = allSales.filter((s) => {
+    if (s.canceled) return false; // ignorar canceladas
+    const saleDate = new Date(s.createdAt);
+    const saleBRT = new Date(saleDate.getTime() - 3 * 60 * 60 * 1000);
+    const saleDateStr = saleBRT.toISOString().split("T")[0];
+    return saleDateStr === todayStr;
+  });
+
+  const todayTotal = todaysSales.reduce((sum, s) => sum + Number(s.total || 0), 0);
+  const todayCount = todaysSales.length;
+
+  console.log("[PDV Dashboard] Vendas hoje filtradas:", todayCount, "| Total:", todayTotal);
+
+  const [lowStock, topProducts, balance] = await Promise.all([
     getLowStockProducts(),
     db.select({
       productId: saleItems.productId,
@@ -289,10 +305,8 @@ export async function getDashboardStats() {
     getCashBalance(),
   ]);
 
-  console.log("[PDV Dashboard] todaySales resultado:", JSON.stringify(todaySales));
-
   return {
-    todaySales: { total: Number(todaySales[0]?.total ?? 0), count: Number(todaySales[0]?.count ?? 0) },
+    todaySales: { total: todayTotal, count: todayCount },
     lowStockCount: lowStock.length,
     lowStockProducts: lowStock,
     topProducts,
