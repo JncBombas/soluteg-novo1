@@ -159,8 +159,21 @@ async function flushBuffer(deviceId: string) {
   const state = getOrCreateAlertState(deviceId);
   const previousZone = state.currentZone;
 
-  const isGoingDown = currentLevel < (state.lastKnownLevel ?? currentLevel);
-  const isGoingUp   = currentLevel > (state.lastKnownLevel ?? currentLevel);
+  // Primeira leitura: assume nível anterior como 101% para que qualquer nível
+  // abaixo do normal seja detectado como "descida" já no primeiro flush.
+  const prevLevel = state.lastKnownLevel ?? 101;
+  const strictlyDown = currentLevel < prevLevel;
+  const strictlyUp   = currentLevel > prevLevel;
+
+  // Nível estável em zona de alarme: se o nível não subiu e já estava acumulando
+  // contagem de descida, continua contando — resolve o caso em que o nível trava
+  // em 0% e não consegue mais diminuir (ex: caixa vazia).
+  const stableInAlarm = !strictlyDown && !strictlyUp
+    && state.consecutiveDownCount > 0
+    && currentLevel <= entry.sensor.alarm1Pct;
+
+  const isGoingDown = strictlyDown || stableInAlarm;
+  const isGoingUp   = strictlyUp;
 
   if (isGoingDown) {
     state.consecutiveDownCount++;
