@@ -392,17 +392,19 @@ export async function checkAndSendAlerts(params: {
         await fire("filling", cfg.alarm1Pct, "up", "Reservatório enchendo", getAdminPhones());
         state.fillingNotified = true;
       }
+    }
 
-      // Normalizado — nível atingiu 85% após ciclo de alarme
-      // Indica que o reservatório está bem abastecido e o problema foi resolvido
-      if (currentLevel >= 85 && state.currentZone !== "normal" && !state.normalizedNotified) {
-        await fire("level_restored", 85, "up", "Nível normalizado — 85%", getPhones());
-        state.normalizedNotified = true;
-        state.currentZone = "normal";
-        state.lastDropAlertLevel = null;
-        state.fillingNotified = false;
-        state.consecutiveDownCount = 0;
-      }
+    // Normalizado — nível atingiu 85% após ciclo de alarme (fora do bloco CONFIRM)
+    // Não exige CONFIRM: chega em 85% e para de subir é sinal suficiente.
+    // Acionado em todo flush enquanto a condição for verdadeira, mas
+    // normalizedNotified garante disparo único por ciclo de alarme.
+    if (currentLevel >= 85 && state.currentZone !== "normal" && !state.normalizedNotified) {
+      await fire("level_restored", 85, "up", "Nível normalizado — 85%", getPhones());
+      state.normalizedNotified = true;
+      state.currentZone = "normal";
+      state.lastDropAlertLevel = null;
+      state.fillingNotified = false;
+      state.consecutiveDownCount = 0;
     }
   } catch (err: any) {
     console.error("[ALERTA CAIXA] Erro ao verificar alertas:", err?.message);
