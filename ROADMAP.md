@@ -36,8 +36,8 @@
 
 ### Validação
 - [x] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
-- [ ] Validar que mensagens chegam no WhatsApp do admin e cliente
-- [ ] Validar que OS é criada corretamente
+- [x] Validar que mensagens chegam no WhatsApp do admin e cliente
+- [x] Validar que OS é criada corretamente
 - [ ] Validar que técnico é notificado
 - [x] Rodar 48h em ambiente real sem falhas
 

@@ -4,7 +4,7 @@
 //    Ele "liga" o servidor, registra todas as rotas (endereços
 //    que o sistema responde) e conecta o banco de dados.
 // ============================================================
- 
+
 import "dotenv/config";        // Carrega variáveis de ambiente (.env), como senhas e chaves secretas
 import express from "express"; // Framework que cria o servidor web
 import type { Request, Response, NextFunction } from "express";
@@ -57,13 +57,13 @@ function requireClientAuth(req: Request, res: Response, next: NextFunction) {
 function requireAdminOrTechAuth(req: Request, res: Response, next: NextFunction) {
   const cookies = parseCookies(req);
   const adminOk = cookies["admin_token"] && verifyToken(cookies["admin_token"]);
-  const techOk  = cookies["technician_token"] && verifyTechnicianToken(cookies["technician_token"]);
+  const techOk = cookies["technician_token"] && verifyTechnicianToken(cookies["technician_token"]);
   if (!adminOk && !techOk) {
     return res.status(401).json({ message: "Não autorizado" });
   }
   next();
 }
- 
+
 // ============================================================
 // 📦 CONFIGURAÇÃO DO MULTER (Gerenciador de Upload de Arquivos)
 // O multer intercepta arquivos enviados pelo usuário.
@@ -85,7 +85,7 @@ const upload = multer({
     }
   },
 });
- 
+
 // Configuração de Rate Limiting para logins (Segurança S01)
 // Bloqueia após 10 tentativas falhas/sucessos por IP a cada 15 minutos.
 const loginRateLimiter = rateLimit({
@@ -95,8 +95,8 @@ const loginRateLimiter = rateLimit({
   standardHeaders: true, // Retorna info de limite nos headers RateLimit-*
   legacyHeaders: false, // Desabilita headers X-RateLimit-* antigos
 });
- 
- 
+
+
 // ============================================================
 // 🚀 FUNÇÃO PRINCIPAL: Inicia o servidor
 // Tudo dentro dessa função só roda quando o sistema é ligado.
@@ -104,7 +104,7 @@ const loginRateLimiter = rateLimit({
 async function startServer() {
   const app = express();              // Cria a aplicação Express
   const server = createServer(app);   // Cria o servidor HTTP com base na aplicação
- 
+
   // ----------------------------------------------------------
   // ⚙️ CONFIGURAÇÕES GLOBAIS
   // Define o tamanho máximo de dados que o servidor aceita.
@@ -113,7 +113,7 @@ async function startServer() {
   // ----------------------------------------------------------
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
- 
+
   // ============================================================
   // 📸 ROTA: Upload Múltiplo de Fotos/PDFs
   // Endereço: POST /api/work-orders/upload
@@ -131,10 +131,10 @@ async function startServer() {
     try {
       // req.files contém os arquivos que chegaram na requisição
       const files = req.files as Express.Multer.File[];
- 
+
       // Log útil para monitorar no terminal (pm2 logs)
       console.log(`[JNC Upload] Recebidos ${files?.length || 0} arquivos.`);
- 
+
       // Se não veio nenhum arquivo, retorna erro 400 (Bad Request)
       if (!files || files.length === 0) {
         return res.status(400).json({ success: false, message: "Nenhum arquivo enviado" });
@@ -143,15 +143,15 @@ async function startServer() {
       // Validação de MIME Type (Whitelist) — Segurança MED-06
       const invalidFiles = files.filter(f => !ALLOWED_MIME_TYPES.includes(f.mimetype));
       if (invalidFiles.length > 0) {
-        return res.status(400).json({ 
-          success: false, 
-          message: `Tipo de arquivo não permitido: ${invalidFiles.map(f => f.mimetype).join(", ")}. Apenas imagens (JPG, PNG, WebP) e PDFs são aceitos.` 
+        return res.status(400).json({
+          success: false,
+          message: `Tipo de arquivo não permitido: ${invalidFiles.map(f => f.mimetype).join(", ")}. Apenas imagens (JPG, PNG, WebP) e PDFs são aceitos.`
         });
       }
- 
+
       // Importa a função de salvar arquivos na nuvem (Cloudinary)
       const { storagePut } = await import("./storage");
- 
+
       // Sobe TODOS os arquivos ao mesmo tempo (em paralelo) para economizar tempo
       // Promise.all → espera todas as operações terminarem antes de continuar
       const uploadPromises = files.map(async (file) => {
@@ -161,7 +161,7 @@ async function startServer() {
           file.buffer,       // Conteúdo do arquivo em bytes (vem da memória RAM)
           file.mimetype      // Tipo do arquivo (ex: "image/jpeg", "application/pdf")
         );
- 
+
         // Retorna um objeto com as informações do arquivo já salvo na nuvem
         return {
           url,                        // Link público para acessar o arquivo
@@ -171,25 +171,25 @@ async function startServer() {
           fileSize: file.size          // Tamanho em bytes
         };
       });
- 
+
       // Aguarda todos os uploads terminarem
       const results = await Promise.all(uploadPromises);
- 
+
       // Retorna os dados para o frontend (componente WorkOrderAttachments.tsx)
       // 'urls' é um array com as informações de cada arquivo enviado
       res.json({
         success: true,
         urls: results
       });
- 
+
     } catch (error: any) {
       // Se qualquer coisa der errado, registra o erro e avisa o frontend
       console.error("Erro no upload JNC:", error);
       res.status(500).json({ success: false, message: error.message || "Erro no processamento" });
     }
   });
- 
- 
+
+
   // ============================================================
   // 🖊️ ROTA: Upload de imagem anotada/recortada do editor de fotos dos laudos
   // Endereço: POST /api/laudos/upload-anotada
@@ -352,42 +352,42 @@ async function startServer() {
       // Valida se os dados enviados têm o formato correto (usuário e senha)
       const { clientLoginSchema } = await import("./validation");
       const validation = clientLoginSchema.safeParse(req.body);
- 
+
       if (!validation.success) {
         // Dados mal formatados (ex: senha em branco)
         return res.status(400).json({ message: "Dados inválidos", errors: validation.error.flatten() });
       }
- 
+
       const { username, password } = validation.data;
- 
+
       // Importa as funções necessárias do banco de dados e autenticação
       const { getClientByUsername, updateClientLastLogin } = await import("./db");
       const { comparePassword } = await import("./adminAuth");
- 
+
       // Busca o cliente no banco pelo nome de usuário
       const client = await getClientByUsername(username);
       if (!client) {
         // Usuário não existe — usamos mensagem genérica por segurança
         return res.status(401).json({ message: "Usuário ou senha inválidos" });
       }
- 
+
       // Compara a senha enviada com o hash salvo no banco
       const isValid = await comparePassword(password, client.password);
       if (!isValid) {
         // Senha errada
         return res.status(401).json({ message: "Usuário ou senha inválidos" });
       }
- 
+
       // Verifica se o cadastro do cliente está ativo
       if (!client.active) {
         return res.status(403).json({ message: "Cliente inativo" });
       }
- 
+
       // Regra da JNC: clientes do tipo "sem_portal" não podem acessar o portal
       if (client.type === "sem_portal") {
         return res.status(403).json({ message: "Este cliente não possui acesso ao portal." });
       }
- 
+
       // Atualiza a data/hora do último login no banco
       await updateClientLastLogin(client.id);
 
@@ -422,8 +422,8 @@ async function startServer() {
     res.clearCookie("client_token", { httpOnly: true, sameSite: "strict" });
     res.json({ success: true });
   });
- 
- 
+
+
   // ============================================================
   // 🔑 ROTA: Login do Técnico (Portal do Técnico)
   // Endereço: POST /api/technician-login
@@ -466,12 +466,12 @@ async function startServer() {
       });
 
       res.json({
-        success:      true,
-        token:        `technician-${technician.id}`,
+        success: true,
+        token: `technician-${technician.id}`,
         // jwt: enviado para o app mobile usar como Bearer token
-        jwt:          techJwt,
+        jwt: techJwt,
         technicianId: technician.id,
-        name:         technician.name,
+        name: technician.name,
       });
     } catch (error) {
       console.error("Technician login error:", error);
@@ -508,8 +508,8 @@ async function startServer() {
       res.status(500).json({ message: "Erro ao carregar documentos" });
     }
   });
- 
- 
+
+
   // ============================================================
   // 🗑️ ROTA: Deletar um Documento
   // Endereço: DELETE /api/client-documents/456
@@ -525,8 +525,8 @@ async function startServer() {
       res.status(500).json({ message: "Erro ao deletar documento" });
     }
   });
- 
- 
+
+
   // ============================================================
   // 📋 ROTA: Criar OS pelo Portal do Cliente
   // Endereço: POST /api/work-orders
@@ -602,20 +602,20 @@ async function startServer() {
     try {
       const { getWorkOrderById } = await import("./db");
       const workOrder = await getWorkOrderById(parseInt(req.params.id));
- 
+
       if (!workOrder) {
         // OS não encontrada no banco
         return res.status(404).json({ message: "OS não encontrada" });
       }
- 
+
       res.json(workOrder);
- 
+
     } catch (error) {
       res.status(500).json({ message: "Erro ao carregar OS" });
     }
   });
- 
- 
+
+
   // ============================================================
   // 📊 ROTA: Métricas do Dashboard Admin
   // Endereço: GET /api/admin-metrics?adminId=X
@@ -786,8 +786,8 @@ async function startServer() {
       createContext,        // Contexto da requisição (usuário logado, banco de dados, etc.)
     })
   );
- 
- 
+
+
   // ============================================================
   // 🖥️ CONFIGURAÇÃO DO FRONTEND (React/Vite)
   //
@@ -800,8 +800,8 @@ async function startServer() {
   } else {
     serveStatic(app); // Modo produção: arquivos estáticos
   }
- 
- 
+
+
   // ============================================================
   // ▶️ INICIA O SERVIDOR
   // Porta 3000 | Aceita conexões de qualquer IP (0.0.0.0)
@@ -809,12 +809,13 @@ async function startServer() {
   const PORT = 3000;
   server.listen(PORT, "0.0.0.0", () => {
     console.log("=========================================");
-    console.log(`🚀 SERVIDOR JNC ELÉTRICA RODANDO`);
-    console.log(`- Acesse: http://jnc.soluteg.com.br`);
+    console.log(`🚀 SERVIDOR SOLUTEG RODANDO`);
+    console.log(`- Acesse: http://jnc.soluteg.com.br p/ landing JNC`);
+    console.log(`- Acesse: http://app.soluteg.com.br p/ login Admin, Técnico e Clientes`);
     console.log("=========================================");
     initMqtt(); // Inicia o subscriber MQTT (desabilita sozinho se MQTT_BROKER_URL não estiver no .env)
   });
 }
- 
+
 // Inicia tudo — se der erro grave na inicialização, mostra no console
 startServer().catch(console.error);

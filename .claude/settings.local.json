@@ -12,7 +12,9 @@
       "Bash(git commit -m 'feat\\(alarmes\\): direcionamento automático ao técnico no alarm2 *)",
       "Bash(git commit -m 'docs\\(roadmap\\): direcionamento ao técnico concluído — toda implementação da Fase 1 feita *)",
       "Bash(git commit -m 'fix\\(build\\): corrige erros TypeScript em waterTankAlertService *)",
-      "Bash(git commit -m 'feat\\(alarmes\\): indicador de tendência, técnico em todos alertas e normalizado 85% *)"
+      "Bash(git commit -m 'feat\\(alarmes\\): indicador de tendência, técnico em todos alertas e normalizado 85% *)",
+      "Bash(git commit -m 'fix\\(mqtt\\): corrige ReferenceError — broadcastTankUpdate usava isGoingDown antes da declaração *)",
+      "Bash(git commit -m 'fix\\(ui\\): corrige trend sempre estável + atualiza tudo a cada 30s *)"
     ]
   }
 }
