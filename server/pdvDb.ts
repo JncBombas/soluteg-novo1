@@ -258,13 +258,14 @@ export async function getDashboardStats() {
   const db = await getPdvDb();
 
   const [todaySales, lowStock, topProducts, balance] = await Promise.all([
-    // Usa DATE(createdAt) = CURDATE() do MySQL para evitar problema de serialização
-    // de objeto Date JS pelo mysql2 (que enviaria string inválida como bind param)
+    // Converte createdAt para horário de Brasília antes de comparar com a data atual
+    // em Brasília. Isso garante que vendas entre 00:00–02:59 BRT (ainda "ontem" em UTC)
+    // sejam contadas corretamente como "hoje".
     db.select({
-      total: sql<number>`SUM(${sales.total})`,
+      total: sql<number>`COALESCE(SUM(${sales.total}), 0)`,
       count: sql<number>`COUNT(${sales.id})`,
     }).from(sales).where(
-      sql`DATE(${sales.createdAt}) = CURDATE() AND ${sales.canceled} = 0`
+      sql`DATE(CONVERT_TZ(${sales.createdAt}, '+00:00', '-03:00')) = DATE(CONVERT_TZ(NOW(), '+00:00', '-03:00')) AND ${sales.canceled} = 0`
     ),
     getLowStockProducts(),
     db.select({
@@ -280,7 +281,7 @@ export async function getDashboardStats() {
   ]);
 
   return {
-    todaySales: { total: todaySales[0]?.total || 0, count: todaySales[0]?.count || 0 },
+    todaySales: { total: Number(todaySales[0]?.total ?? 0), count: Number(todaySales[0]?.count ?? 0) },
     lowStockCount: lowStock.length,
     lowStockProducts: lowStock,
     topProducts,
