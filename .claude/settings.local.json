@@ -4,7 +4,9 @@
       "Bash(find src:*)",
       "Bash(wc -l src/hooks/* src/lib/* src/Config/*)",
       "Bash(grep -E \"\\\\.tsx$\")",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(node -e \"require\\('nodemailer'\\); console.log\\('ok'\\)\")",
+      "Bash(git commit -m 'fix\\(upload\\): corrige ReferenceError — upload \\(multer\\) nunca foi instanciado em index.ts *)"
     ]
   }
 }
