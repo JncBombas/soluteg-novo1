@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -195,15 +195,19 @@ export default function AdminWaterTankDashboard() {
   const { sensor, history, alerts } = data;
   const dead = sensor.deadVolumePct ?? 0;
 
-  // Tendência: compara os 2 últimos pontos do histórico
+  // Tendência: compara o nível atual com o da refetch anterior (a cada 30s)
+  // Muito mais preciso do que comparar buckets do histórico (que têm 15 min cada)
+  const prevLevelRef = useRef<number | null>(null);
   const trend: "up" | "down" | "stable" = (() => {
-    if (history.length < 2) return "stable";
-    const last = (history[history.length - 1] as any)?.currentLevel ?? 0;
-    const prev = (history[history.length - 2] as any)?.currentLevel ?? 0;
-    if (last > prev) return "up";
-    if (last < prev) return "down";
+    const curr = sensor.currentLevel ?? null;
+    if (curr === null || prevLevelRef.current === null) return "stable";
+    if (curr > prevLevelRef.current + 1) return "up";
+    if (curr < prevLevelRef.current - 1) return "down";
     return "stable";
   })();
+  useEffect(() => {
+    if (sensor.currentLevel != null) prevLevelRef.current = sensor.currentLevel;
+  }, [sensor.currentLevel]);
   const a1   = sensor.alarm1Pct ?? 30;
   const a2   = sensor.alarm2Pct ?? 15;
   const a3   = (sensor as any).alarm3BoiaPct ?? 90;
