@@ -148,7 +148,7 @@ export default function AdminWaterTankDashboard() {
 
   const { data, isLoading, isError } = trpc.waterTankAdmin.getSensorDashboard.useQuery(
     { adminId: adminId ?? 0, sensorId, days },
-    { enabled: !!adminId && !!sensorId, refetchInterval: 60_000 },
+    { enabled: !!adminId && !!sensorId, refetchInterval: 30_000 },
   );
 
   const { data: faults = [], refetch: refetchFaults } = trpc.waterTankAdmin.listFaults.useQuery(
@@ -198,8 +198,8 @@ export default function AdminWaterTankDashboard() {
   // Tendência: compara os 2 últimos pontos do histórico
   const trend: "up" | "down" | "stable" = (() => {
     if (history.length < 2) return "stable";
-    const last = history[history.length - 1]?.value ?? 0;
-    const prev = history[history.length - 2]?.value ?? 0;
+    const last = (history[history.length - 1] as any)?.currentLevel ?? 0;
+    const prev = (history[history.length - 2] as any)?.currentLevel ?? 0;
     if (last > prev) return "up";
     if (last < prev) return "down";
     return "stable";

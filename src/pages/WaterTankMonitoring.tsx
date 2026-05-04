@@ -266,7 +266,7 @@ function TankChart({ clientId, tankName, alarm1, alarm2, dead, height = 220 }: {
 
   const { data = [], isFetching } = trpc.waterTankMonitoring.getTankHistory.useQuery(
     { tankName, days },
-    { staleTime: 60_000 },
+    { refetchInterval: 30_000 },
   );
 
   const timeFormat = (iso: string) => {
@@ -336,7 +336,7 @@ function TankChart({ clientId, tankName, alarm1, alarm2, dead, height = 220 }: {
 function AlarmLog({ clientId, tankName }: { clientId: number; tankName: string }) {
   const { data = [], isLoading } = trpc.waterTankMonitoring.getAlarmHistory.useQuery(
     { tankName },
-    { staleTime: 5 * 60_000 },
+    { refetchInterval: 30_000 },
   );
 
   if (isLoading) {
@@ -688,12 +688,12 @@ export function WaterTankContent({ clientId, clientName, sseConnected: propSse }
 
   const { data: initialTanks = [], isLoading } = trpc.waterTankMonitoring.getLatest.useQuery(
     undefined,
-    { enabled: !!clientId },
+    { enabled: !!clientId, refetchInterval: 30_000 },
   );
 
   const { data: histories = {} } = trpc.waterTankMonitoring.getAllHistory.useQuery(
     undefined,
-    { enabled: !!clientId, staleTime: 60_000 },
+    { enabled: !!clientId, refetchInterval: 30_000 },
   );
 
   useEffect(() => {
