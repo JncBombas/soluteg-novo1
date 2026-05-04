@@ -309,11 +309,21 @@ export async function checkAndSendAlerts(params: {
       console.log(`[ALERTA CAIXA] ${alertType.toUpperCase()} — ${tankName} (${cfg.tankType}): ${currentLevel}% | delivered=${delivered}`);
     }
 
-    // Destinatários padrão: cliente + telefone extra do sensor
+    // Destinatários padrão: cliente + telefone extra do sensor + técnico
     const getPhones = (): string[] => {
       const phones: string[] = [];
       if (cfg.clientPhone) phones.push(cfg.clientPhone);
       if (cfg.alertPhone && cfg.alertPhone !== cfg.clientPhone) phones.push(cfg.alertPhone);
+      if (cfg.technicianPhone && !phones.includes(cfg.technicianPhone)) phones.push(cfg.technicianPhone);
+      return phones;
+    };
+
+    // Destinatários admin/técnico (sem cliente) — para alertas operacionais
+    const getAdminPhones = (): string[] => {
+      const phones: string[] = [];
+      if (cfg.alertPhone) phones.push(cfg.alertPhone);
+      else if (cfg.clientPhone) phones.push(cfg.clientPhone);
+      if (cfg.technicianPhone && !phones.includes(cfg.technicianPhone)) phones.push(cfg.technicianPhone);
       return phones;
     };
 
@@ -327,39 +337,16 @@ export async function checkAndSendAlerts(params: {
         state.currentZone = "sci";
       }
 
-      // Alarm2 — cria OS emergencial + notifica admin + cliente + técnico
+      // Alarm2 — cria OS emergencial + notifica todos (admin, cliente, técnico via getPhones)
       if (zone === "alarm2" && previousZone !== "alarm2" && previousZone !== "sci") {
         const osId = await createEmergencyWorkOrder(cfg, tankName, currentLevel);
         await fire("alarm2", cfg.alarm2Pct, "down", `Nível crítico — ${cfg.tankType}`, getPhones(), osId);
-
-        // Notifica o técnico responsável (canal separado — mensagem específica de acionamento)
-        if (cfg.technicianPhone) {
-          const tankLabel = cfg.tankType === "superior" ? "Caixa Superior" : "Cisterna (Inferior)";
-          const techMsg = [
-            `🚨 ACIONAMENTO TÉCNICO — ${tankLabel}`,
-            `Cliente: ${cfg.clientName}`,
-            `Caixa: ${tankName}  |  Nível: ${currentLevel}%`,
-            ``,
-            cfg.tankType === "superior"
-              ? `Nível crítico detectado. Verificar bomba de recalque, painel elétrico e eletroboias.`
-              : `Nível crítico detectado. DESLIGAR BOMBA imediatamente. Verificar boia inferior.`,
-            ``,
-            osId ? `OS Emergencial criada — verifique o portal.` : `Acionar serviço emergencial.`,
-          ].join("\n");
-
-          const { sendWhatsappToNumber } = await import("./whatsapp");
-          try {
-            await sendWhatsappToNumber(cfg.technicianPhone, techMsg);
-            console.log(`[ALERTA CAIXA] Técnico ${cfg.technicianName} (${cfg.technicianPhone}) notificado`);
-          } catch (err: any) {
-            console.error(`[ALERTA CAIXA] Erro ao notificar técnico ${cfg.technicianPhone}:`, err?.message);
-          }
-        } else {
+        if (!cfg.technicianPhone) {
           console.warn(`[ALERTA CAIXA] alarm2 disparado mas sensor_id=${sensorId} não tem técnico configurado`);
         }
-
         state.lastDropAlertLevel = currentLevel;
         state.currentZone = "alarm2";
+        state.normalizedNotified = false;
       }
 
       // Alerta progressivo dentro de alarm1
@@ -370,11 +357,12 @@ export async function checkAndSendAlerts(params: {
         }
       }
 
-      // Alarm1 — notifica admin + cliente (inclui vinda de boia_high)
+      // Alarm1 — notifica admin + cliente + técnico (inclui vinda de boia_high)
       if (zone === "alarm1" && (previousZone === "normal" || previousZone === "boia_high")) {
         await fire("alarm1", cfg.alarm1Pct, "down", `Nível de atenção — ${cfg.tankType}`, getPhones());
         state.lastDropAlertLevel = currentLevel;
         state.currentZone = "alarm1";
+        state.normalizedNotified = false;
       }
 
       // Boia fault — cisterna continua baixando sem recuperação
@@ -394,29 +382,22 @@ export async function checkAndSendAlerts(params: {
 
       // Alarm3 boia — nível alto (pane na boia de corte) — só se habilitado
       if (zone === "boia_high" && previousZone !== "boia_high" && cfg.alarm3BoiaEnabled) {
-        // Alarm3_boia: apenas para admin (alertPhone), não para o cliente
-        const adminPhones: string[] = [];
-        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
-        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone); // fallback se não houver alertPhone
-        await fire("alarm3_boia", cfg.alarm3BoiaPct, "up", `Nível alto — ${cfg.tankType}`, adminPhones);
+        await fire("alarm3_boia", cfg.alarm3BoiaPct, "up", `Nível alto — ${cfg.tankType}`, getAdminPhones());
         state.currentZone = "boia_high";
       }
 
-      // Filling — estava em alarme e começou a encher
+      // Filling — estava em alarme há pelo menos 2,5 min e começou a encher
+      // 2,5 min = CONFIRM (5) × 30s de buffer — confirma que não é leitura espúria
       if (previousZone !== "normal" && previousZone !== "boia_high" && !state.fillingNotified) {
-        const adminPhones: string[] = [];
-        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
-        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone);
-        await fire("filling", cfg.alarm1Pct, "up", null, adminPhones);
+        await fire("filling", cfg.alarm1Pct, "up", "Reservatório enchendo", getAdminPhones());
         state.fillingNotified = true;
       }
 
-      // Level restored — voltou ao normal
-      if (zone === "normal" && previousZone !== "normal") {
-        const adminPhones: string[] = [];
-        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
-        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone);
-        await fire("level_restored", cfg.alarm1Pct, "up", null, adminPhones);
+      // Normalizado — nível atingiu 85% após ciclo de alarme
+      // Indica que o reservatório está bem abastecido e o problema foi resolvido
+      if (currentLevel >= 85 && state.currentZone !== "normal" && !state.normalizedNotified) {
+        await fire("level_restored", 85, "up", "Nível normalizado — 85%", getPhones());
+        state.normalizedNotified = true;
         state.currentZone = "normal";
         state.lastDropAlertLevel = null;
         state.fillingNotified = false;

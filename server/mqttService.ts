@@ -71,11 +71,12 @@ export function invalidateSensorCache(deviceId: string) {
 export type SensorZone = "normal" | "alarm1" | "alarm2" | "sci" | "boia_high";
 
 export type SensorAlertState = {
-  consecutiveDownCount: number;     // flushes consecutivos confirmando descida
-  consecutiveUpCount: number;       // flushes consecutivos confirmando subida
-  currentZone: SensorZone;          // zona atual confirmada
+  consecutiveDownCount: number;      // flushes consecutivos confirmando descida
+  consecutiveUpCount: number;        // flushes consecutivos confirmando subida
+  currentZone: SensorZone;           // zona atual confirmada
   lastDropAlertLevel: number | null; // nível no último alerta progressivo disparado
-  fillingNotified: boolean;         // já notificou "enchendo" neste ciclo
+  fillingNotified: boolean;          // já notificou "enchendo" neste ciclo
+  normalizedNotified: boolean;       // já notificou "normalizado (85%)" neste ciclo
   lastKnownLevel: number | null;
 };
 
@@ -89,6 +90,7 @@ function getOrCreateAlertState(deviceId: string): SensorAlertState {
       currentZone: "normal",
       lastDropAlertLevel: null,
       fillingNotified: false,
+      normalizedNotified: false,
       lastKnownLevel: null,
     });
   }
@@ -153,6 +155,7 @@ async function flushBuffer(deviceId: string) {
     type: "level_update",
     tankName: entry.sensor.tankName,
     currentLevel,
+    trend: isGoingDown ? "down" : isGoingUp ? "up" : "stable",
     measuredAt: new Date().toISOString(),
   });
 

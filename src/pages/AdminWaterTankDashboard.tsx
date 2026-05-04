@@ -194,6 +194,16 @@ export default function AdminWaterTankDashboard() {
 
   const { sensor, history, alerts } = data;
   const dead = sensor.deadVolumePct ?? 0;
+
+  // Tendência: compara os 2 últimos pontos do histórico
+  const trend: "up" | "down" | "stable" = (() => {
+    if (history.length < 2) return "stable";
+    const last = history[history.length - 1]?.value ?? 0;
+    const prev = history[history.length - 2]?.value ?? 0;
+    if (last > prev) return "up";
+    if (last < prev) return "down";
+    return "stable";
+  })();
   const a1   = sensor.alarm1Pct ?? 30;
   const a2   = sensor.alarm2Pct ?? 15;
   const a3   = (sensor as any).alarm3BoiaPct ?? 90;
@@ -283,13 +293,20 @@ export default function AdminWaterTankDashboard() {
             <CardContent className="space-y-4">
               {pct != null ? (
                 <>
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-2 flex-wrap">
                     <span className={`text-5xl font-bold ${colors!.text}`}>{pct}%</span>
                     {sensor.capacity && (
                       <span className="text-slate-500 mb-1 text-sm">
                         ≈ {Math.round((sensor.capacity * pct) / 100).toLocaleString("pt-BR")} L
                       </span>
                     )}
+                    <span className={`mb-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      trend === "up"   ? "bg-blue-100 text-blue-700" :
+                      trend === "down" ? "bg-orange-100 text-orange-700" :
+                                        "bg-slate-100 text-slate-500"
+                    }`}>
+                      {trend === "up" ? "▲ Enchendo" : trend === "down" ? "▼ Esvaziando" : "— Estável"}
+                    </span>
                   </div>
 
                   <LevelBar pct={pct} dead={dead} alarm1={a1} alarm2={a2} alarm3={a3} />

@@ -31,6 +31,7 @@ interface WaterTank {
   deadVolumePct: number;
   alarm1Pct: number;
   alarm2Pct: number;
+  trend?: "up" | "down" | "stable";
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -474,6 +475,17 @@ function TankCard({ tank, sparkData, clientId }: {
                         {fmt(Math.round((tank.capacity * pct) / 100))} L
                       </p>
                     )}
+                    {tank.trend && (
+                      <div className={`mt-1.5 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        tank.trend === "up"   ? "bg-blue-100 text-blue-700" :
+                        tank.trend === "down" ? "bg-orange-100 text-orange-700" :
+                                               "bg-slate-100 text-slate-500"
+                      }`}>
+                        {tank.trend === "up"   ? "▲ Enchendo" :
+                         tank.trend === "down" ? "▼ Esvaziando" :
+                                                "— Estável"}
+                      </div>
+                    )}
                   </div>
 
                   {tank.capacity && (
@@ -572,8 +584,17 @@ function TankCard({ tank, sparkData, clientId }: {
               </div>
 
               {pct != null ? (
-                <div className="mt-1 flex items-end gap-2">
+                <div className="mt-1 flex flex-wrap items-end gap-2">
                   <span className={`text-4xl font-extrabold leading-none ${textCol}`}>{pct}%</span>
+                  {tank.trend && (
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${
+                      tank.trend === "up"   ? "bg-blue-100 text-blue-700" :
+                      tank.trend === "down" ? "bg-orange-100 text-orange-700" :
+                                             "bg-slate-100 text-slate-500"
+                    }`}>
+                      {tank.trend === "up" ? "▲ Enchendo" : tank.trend === "down" ? "▼ Esvaziando" : "— Estável"}
+                    </span>
+                  )}
                   {tank.capacity && (
                     <span className="text-sm text-slate-500 mb-0.5">{fmt(Math.round((tank.capacity * pct) / 100))} L</span>
                   )}
@@ -694,7 +715,7 @@ export function WaterTankContent({ clientId, clientName, sseConnected: propSse }
           const idx = prev.findIndex((t) => t.tankName === msg.tankName);
           if (idx === -1) return prev;
           const updated = [...prev];
-          updated[idx] = { ...updated[idx], levelPercentage: msg.currentLevel, recordedAt: new Date(msg.measuredAt) };
+          updated[idx] = { ...updated[idx], levelPercentage: msg.currentLevel, recordedAt: new Date(msg.measuredAt), trend: msg.trend };
           return updated;
         });
       } catch { /* ignore */ }
