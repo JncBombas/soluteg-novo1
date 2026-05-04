@@ -31,7 +31,7 @@
 - [x] Implementar fila de notificações com retry
 - [x] Adicionar fallback: se WhatsApp falhar 3x, enviar email
 - [x] Implementar lógica de OS automática (regras claras de quando criar)
-- [ ] Implementar direcionamento automático ao técnico
+- [x] Implementar direcionamento automático ao técnico
 - [x] Adicionar logs detalhados de cada disparo
 
 ### Validação
@@ -198,7 +198,7 @@ Adiados deliberadamente para não desviar foco:
 
 ## 📊 INDICADOR GERAL DE PROGRESSO
 
-[x] Fase 1 — Alarmes              15/16 itens de implementação/diagnóstico/regras ✅ (falta: direcionar técnico + validação em campo)
+[x] Fase 1 — Alarmes              16/16 itens de implementação/diagnóstico/regras ✅ (falta: validação em campo)
 [ ] Fase 2 — Hardware             0/19 itens
 [ ] Fase 3 — PWA Offline          0/27 itens
 [ ] Fase 4 — Validação comercial  0/13 itens
@@ -218,4 +218,6 @@ Adiados deliberadamente para não desviar foco:
 - alarm3_boia toggle por sensor (habilitável/desabilitável na UI)
 - Fix: listSensorsWithStatus não retornava alarm3BoiaPct, tankType, distVazia, distCheia (formulário de edição sempre em branco)
 - Fix crítico: multer (upload) nunca foi instanciado em index.ts — causava crash no boot do servidor
-- Migration 0039 criada (rodar no VPS)
+- Fix crítico: 2 bugs impediam o alarme de disparar (primeira leitura e nível travado em 0%)
+- Direcionamento automático ao técnico: technicianId no sensor, WhatsApp específico + OS já atribuída
+- Migrations 0039 e 0040 criadas (rodar no VPS)
