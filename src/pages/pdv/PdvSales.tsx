@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShoppingCart, Trash2, Printer, Check } from "lucide-react";
+import { ShoppingCart, Trash2, Printer, Check, Clock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -32,6 +32,12 @@ export default function PdvSales() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [barcodeBuffer, setBarcodeBuffer] = useState("");
   const barcodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getProductByBarcode = trpc.pdv.products.getByBarcode.useQuery({ barcode }, { enabled: false });
   const searchProducts = trpc.pdv.products.search.useQuery({ query: searchName }, { enabled: searchName.length >= 2 });
@@ -131,10 +137,21 @@ export default function PdvSales() {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-slate-700 to-slate-800 rounded-lg p-6 shadow-lg">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight text-white">Ponto de Venda</h1>
             <p className="text-slate-300 mt-1">Use o leitor de código de barras ou digite manualmente</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg border" style={{ borderColor: "#D4A15E", backgroundColor: "rgba(0,0,0,0.25)" }}>
+            <Clock className="h-4 w-4" style={{ color: "#D4A15E" }} />
+            <div className="text-right">
+              <p className="text-sm font-semibold text-white">
+                {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+              </p>
+              <p className="text-lg font-bold tabular-nums" style={{ color: "#D4A15E" }}>
+                {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </p>
+            </div>
           </div>
         </div>
       </div>
