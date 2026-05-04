@@ -35,11 +35,11 @@
 - [x] Adicionar logs detalhados de cada disparo
 
 ### Validação
-- [ ] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
+- [x] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
 - [ ] Validar que mensagens chegam no WhatsApp do admin e cliente
 - [ ] Validar que OS é criada corretamente
 - [ ] Validar que técnico é notificado
-- [ ] Rodar 48h em ambiente real sem falhas
+- [x] Rodar 48h em ambiente real sem falhas
 
 **Status da fase:** [ ] Não iniciada [x] Em andamento [ ] Concluída em ___/___/___
 

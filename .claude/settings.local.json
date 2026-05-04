@@ -6,7 +6,10 @@
       "Bash(grep -E \"\\\\.tsx$\")",
       "Bash(git commit -m ' *)",
       "Bash(node -e \"require\\('nodemailer'\\); console.log\\('ok'\\)\")",
-      "Bash(git commit -m 'fix\\(upload\\): corrige ReferenceError — upload \\(multer\\) nunca foi instanciado em index.ts *)"
+      "Bash(git commit -m 'fix\\(upload\\): corrige ReferenceError — upload \\(multer\\) nunca foi instanciado em index.ts *)",
+      "Bash(git commit -m 'docs\\(roadmap\\): marca progresso da sessão 04/05/2026 — Fase 1 em andamento *)",
+      "Bash(git commit -m 'fix\\(alarmes\\): corrige 2 bugs que impediam disparo do alarme *)",
+      "Bash(git commit -m 'feat\\(alarmes\\): direcionamento automático ao técnico no alarm2 *)"
     ]
   }
 }

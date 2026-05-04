@@ -31,6 +31,8 @@ interface SensorRow {
   alarm2Pct: number;
   alarm3BoiaPct: number;
   alarm3BoiaEnabled: number;
+  technicianId: number | null;
+  technicianName: string | null;
   dropStepPct: number;
   tankType: string;
   alertPhone: string | null;
@@ -61,6 +63,7 @@ type AssignForm = {
   alarm2Pct: string;
   alarm3BoiaPct: string;
   alarm3BoiaEnabled: string; // "1" = habilitado, "0" = desabilitado
+  technicianId: string;      // "" = nenhum, ou ID numérico
   dropStepPct: string;
   tankType: string;
   alertPhone: string;
@@ -71,7 +74,7 @@ type AssignForm = {
 const defaultAssign: AssignForm = {
   clientId: "", tankName: "", capacity: "", notes: "",
   deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15",
-  alarm3BoiaPct: "90", alarm3BoiaEnabled: "1", dropStepPct: "10",
+  alarm3BoiaPct: "90", alarm3BoiaEnabled: "1", technicianId: "", dropStepPct: "10",
   tankType: "superior", alertPhone: "", distVazia: "", distCheia: "",
 };
 
@@ -168,11 +171,12 @@ function MqttDeviceCell({ deviceId }: { deviceId: string | null }) {
 // ── Sub-form for assigning / editing ─────────────────────────────────────────
 
 function AssignFormFields({
-  form, setForm, clients,
+  form, setForm, clients, technicians,
 }: {
   form: AssignForm;
   setForm: (f: AssignForm) => void;
   clients: Array<{ id: number; name: string }>;
+  technicians: Array<{ id: number; name: string }>;
 }) {
   return (
     <>
@@ -197,6 +201,25 @@ function AssignFormFields({
           required
         />
         <p className="text-xs text-slate-500">Nome exibido no portal do cliente.</p>
+      </div>
+
+      <div className="rounded-md border border-orange-200 bg-orange-50 p-3 space-y-1">
+        <label className="text-sm font-semibold text-orange-800">🔧 Técnico responsável</label>
+        <Select
+          value={form.technicianId || "none"}
+          onValueChange={(v) => setForm({ ...form, technicianId: v === "none" ? "" : v })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Nenhum técnico configurado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Nenhum</SelectItem>
+            {technicians.map((t) => (
+              <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-orange-700">Acionado automaticamente via WhatsApp quando o alarm2 (nível crítico) disparar.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -394,6 +417,10 @@ export default function AdminWaterTanks() {
     );
 
   const { data: clients = [] } = trpc.clients.list.useQuery(undefined);
+  const { data: techniciansList = [] } = trpc.technicians.list.useQuery(
+    { adminId: adminId ?? 0 },
+    { enabled: !!adminId },
+  );
 
   const refetch = () => { refetchPending(); refetchSensors(); };
 
@@ -422,6 +449,7 @@ export default function AdminWaterTanks() {
     alarm2Pct: parseInt(f.alarm2Pct) || 15,
     alarm3BoiaPct: parseInt(f.alarm3BoiaPct) || 90,
     alarm3BoiaEnabled: f.alarm3BoiaEnabled === "0" ? 0 : 1,
+    technicianId: f.technicianId ? parseInt(f.technicianId) : null,
     dropStepPct: parseInt(f.dropStepPct) || 10,
     tankType: (f.tankType || "superior") as "superior" | "inferior",
     alertPhone: f.alertPhone || null,
@@ -453,6 +481,7 @@ export default function AdminWaterTanks() {
       alarm2Pct: String(s.alarm2Pct ?? 15),
       alarm3BoiaPct: String(s.alarm3BoiaPct ?? 90),
       alarm3BoiaEnabled: String(s.alarm3BoiaEnabled ?? 1),
+      technicianId: s.technicianId ? String(s.technicianId) : "",
       dropStepPct: String(s.dropStepPct ?? 10),
       tankType: s.tankType ?? "superior",
       alertPhone: s.alertPhone ?? "",
@@ -702,6 +731,7 @@ export default function AdminWaterTanks() {
               form={assignForm}
               setForm={setAssignForm}
               clients={clients as Array<{ id: number; name: string }>}
+              technicians={techniciansList as Array<{ id: number; name: string }>}
             />
 
             <Button
@@ -726,6 +756,7 @@ export default function AdminWaterTanks() {
               form={editForm}
               setForm={setEditForm}
               clients={clients as Array<{ id: number; name: string }>}
+              technicians={techniciansList as Array<{ id: number; name: string }>}
             />
             <Button
               type="submit" className="w-full bg-orange-500 hover:bg-orange-600"

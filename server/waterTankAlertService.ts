@@ -50,6 +50,9 @@ interface SensorConfig {
   alarm2Pct: number;
   alarm3BoiaPct: number;
   alarm3BoiaEnabled: number; // 0 ou 1
+  technicianId: number | null;
+  technicianPhone: string | null;
+  technicianName: string | null;
   dropStepPct: number;
   alertPhone: string | null;
 }
@@ -177,7 +180,7 @@ function buildGenericMessage(
 
 async function createEmergencyWorkOrder(cfg: SensorConfig, tankName: string, currentLevel: number): Promise<number | null> {
   try {
-    const { createWorkOrder, generateOsNumber } = await import("./workOrdersDb");
+    const { createWorkOrder } = await import("./workOrdersDb");
 
     const tankLabel = cfg.tankType === "superior" ? "Caixa Superior" : "Cisterna (Inferior)";
     const title = `[AUTOMÁTICO] Nível crítico — ${tankName} (${tankLabel})`;
@@ -189,6 +192,7 @@ async function createEmergencyWorkOrder(cfg: SensorConfig, tankName: string, cur
     const result = await createWorkOrder({
       adminId: cfg.adminId,
       clientId: cfg.clientId,
+      technicianId: cfg.technicianId ?? null,
       type: "emergencial",
       status: "aberta",
       priority: "alta",
@@ -196,7 +200,7 @@ async function createEmergencyWorkOrder(cfg: SensorConfig, tankName: string, cur
       description,
     } as any);
 
-    console.log(`[ALERTA CAIXA] OS emergencial criada: ${result.osNumber} (id=${result.id})`);
+    console.log(`[ALERTA CAIXA] OS emergencial criada: ${result.osNumber} (id=${result.id})${cfg.technicianId ? ` — técnico id=${cfg.technicianId}` : ""}`);
     return result.id;
   } catch (err: any) {
     console.error("[ALERTA CAIXA] Erro ao criar OS emergencial:", err?.message);
@@ -238,10 +242,12 @@ export async function checkAndSendAlerts(params: {
       SELECT
         s.id, s.adminId, s.clientId, s.tankType, s.deadVolumePct,
         s.alarm1Pct, s.alarm2Pct, s.alarm3BoiaPct, s.alarm3BoiaEnabled,
-        s.dropStepPct, s.alertPhone,
-        c.name AS clientName, c.phone AS clientPhone
+        s.technicianId, s.dropStepPct, s.alertPhone,
+        c.name AS clientName, c.phone AS clientPhone,
+        t.name AS technicianName, t.phone AS technicianPhone
       FROM waterTankSensors s
       JOIN clients c ON c.id = s.clientId
+      LEFT JOIN technicians t ON t.id = s.technicianId
       WHERE s.id = ${sensorId}
       LIMIT 1
     `);
@@ -325,10 +331,37 @@ export async function checkAndSendAlerts(params: {
         state.currentZone = "sci";
       }
 
-      // Alarm2 — cria OS emergencial + notifica admin + cliente
+      // Alarm2 — cria OS emergencial + notifica admin + cliente + técnico
       if (zone === "alarm2" && previousZone !== "alarm2" && previousZone !== "sci") {
         const osId = await createEmergencyWorkOrder(cfg, tankName, currentLevel);
         await fire("alarm2", cfg.alarm2Pct, "down", `Nível crítico — ${cfg.tankType}`, getPhones(), osId);
+
+        // Notifica o técnico responsável (canal separado — mensagem específica de acionamento)
+        if (cfg.technicianPhone) {
+          const tankLabel = cfg.tankType === "superior" ? "Caixa Superior" : "Cisterna (Inferior)";
+          const techMsg = [
+            `🚨 ACIONAMENTO TÉCNICO — ${tankLabel}`,
+            `Cliente: ${cfg.clientName}`,
+            `Caixa: ${tankName}  |  Nível: ${currentLevel}%`,
+            ``,
+            cfg.tankType === "superior"
+              ? `Nível crítico detectado. Verificar bomba de recalque, painel elétrico e eletroboias.`
+              : `Nível crítico detectado. DESLIGAR BOMBA imediatamente. Verificar boia inferior.`,
+            ``,
+            osId ? `OS Emergencial criada — verifique o portal.` : `Acionar serviço emergencial.`,
+          ].join("\n");
+
+          const { sendWhatsappToNumber } = await import("./whatsapp");
+          try {
+            await sendWhatsappToNumber(cfg.technicianPhone, techMsg);
+            console.log(`[ALERTA CAIXA] Técnico ${cfg.technicianName} (${cfg.technicianPhone}) notificado`);
+          } catch (err: any) {
+            console.error(`[ALERTA CAIXA] Erro ao notificar técnico ${cfg.technicianPhone}:`, err?.message);
+          }
+        } else {
+          console.warn(`[ALERTA CAIXA] alarm2 disparado mas sensor_id=${sensorId} não tem técnico configurado`);
+        }
+
         state.lastDropAlertLevel = currentLevel;
         state.currentZone = "alarm2";
       }

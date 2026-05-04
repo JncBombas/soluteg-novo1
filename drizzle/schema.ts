@@ -538,6 +538,7 @@ export const waterTankSensors = mysqlTable("waterTankSensors", {
   tankType: mysqlEnum("tankType", ["superior", "inferior"]).default("superior").notNull(),
   alarm3BoiaPct: int("alarm3BoiaPct").default(90).notNull(),
   alarm3BoiaEnabled: tinyint("alarm3BoiaEnabled").default(1).notNull(), // 1 = alarme de boia alta ativo
+  technicianId: int("technicianId"),                                    // técnico acionado automaticamente no alarm2
   dropStepPct: int("dropStepPct").default(10).notNull(),
   active: tinyint("active").default(1).notNull(),
   lastSeenAt: timestamp("lastSeenAt"),

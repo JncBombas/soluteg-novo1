@@ -87,6 +87,9 @@ export async function listSensorsWithStatus(adminId: number): Promise<Array<{
   alarm2Pct: number;
   alarm3BoiaPct: number;
   alarm3BoiaEnabled: number;
+  technicianId: number | null;
+  technicianName: string | null;
+  technicianPhone: string | null;
   dropStepPct: number;
   tankType: string;
   alertPhone: string | null;
@@ -107,12 +110,14 @@ export async function listSensorsWithStatus(adminId: number): Promise<Array<{
       s.id, s.deviceId, s.clientId, c.name AS clientName,
       s.tankName, s.capacity, s.notes,
       s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alarm3BoiaPct,
-      s.alarm3BoiaEnabled, s.dropStepPct, s.tankType,
+      s.alarm3BoiaEnabled, s.technicianId, s.dropStepPct, s.tankType,
       s.alertPhone, s.distVazia, s.distCheia,
       s.active, s.lastSeenAt, s.createdAt,
+      t.name AS technicianName, t.phone AS technicianPhone,
       latest.currentLevel, latest.measuredAt AS lastUpdate, latest.status
     FROM waterTankSensors s
     LEFT JOIN clients c ON c.id = s.clientId
+    LEFT JOIN technicians t ON t.id = s.technicianId
     LEFT JOIN (
       SELECT w1.*
       FROM waterTankMonitoring w1
@@ -142,6 +147,7 @@ export type AssignData = {
   alarm2Pct?: number;
   alarm3BoiaPct?: number;
   alarm3BoiaEnabled?: number; // 1 = habilitado, 0 = desabilitado
+  technicianId?: number | null;
   dropStepPct?: number;
   tankType?: "superior" | "inferior";
   alertPhone?: string | null;
@@ -166,6 +172,7 @@ export async function assignSensor(sensorId: number, data: AssignData) {
       alarm2Pct: data.alarm2Pct ?? 15,
       alarm3BoiaPct: data.alarm3BoiaPct ?? 90,
       alarm3BoiaEnabled: data.alarm3BoiaEnabled ?? 1,
+      technicianId: data.technicianId ?? null,
       dropStepPct: data.dropStepPct ?? 10,
       tankType: data.tankType ?? "superior",
       alertPhone: data.alertPhone ?? null,
