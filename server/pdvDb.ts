@@ -257,15 +257,24 @@ export async function getCashBalance() {
 export async function getDashboardStats() {
   const db = await getPdvDb();
 
+  // Debug: verificar vendas do dia para diagnosticar problemas
+  const debugSales = await db.select({
+    id: sales.id,
+    total: sales.total,
+    canceled: sales.canceled,
+    createdAt: sales.createdAt,
+  }).from(sales).orderBy(desc(sales.createdAt)).limit(5);
+  console.log("[PDV Dashboard] Últimas 5 vendas:", JSON.stringify(debugSales, null, 2));
+  console.log("[PDV Dashboard] NOW() do JS:", new Date().toISOString());
+
   const [todaySales, lowStock, topProducts, balance] = await Promise.all([
-    // Converte createdAt para horário de Brasília antes de comparar com a data atual
-    // em Brasília. Isso garante que vendas entre 00:00–02:59 BRT (ainda "ontem" em UTC)
-    // sejam contadas corretamente como "hoje".
+    // Usa INTERVAL para ajustar ao fuso de Brasília (UTC-3).
+    // Evita CONVERT_TZ que pode retornar NULL se timezone tables não estiverem carregadas.
     db.select({
       total: sql<number>`COALESCE(SUM(${sales.total}), 0)`,
       count: sql<number>`COUNT(${sales.id})`,
     }).from(sales).where(
-      sql`DATE(CONVERT_TZ(${sales.createdAt}, '+00:00', '-03:00')) = DATE(CONVERT_TZ(NOW(), '+00:00', '-03:00')) AND ${sales.canceled} = 0`
+      sql`DATE(${sales.createdAt} - INTERVAL 3 HOUR) = DATE(NOW() - INTERVAL 3 HOUR) AND ${sales.canceled} = false`
     ),
     getLowStockProducts(),
     db.select({
@@ -279,6 +288,8 @@ export async function getDashboardStats() {
       .limit(10),
     getCashBalance(),
   ]);
+
+  console.log("[PDV Dashboard] todaySales resultado:", JSON.stringify(todaySales));
 
   return {
     todaySales: { total: Number(todaySales[0]?.total ?? 0), count: Number(todaySales[0]?.count ?? 0) },
