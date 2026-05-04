@@ -4,7 +4,7 @@
 **Dedicação:** ~3h/dia
 **Princípio:** uma fase por vez. Não pula. Não mistura.
 
-**Última atualização:** _______________
+**Última atualização:** 04/05/2026
 
 ---
 
@@ -14,25 +14,25 @@
 **Critério de saída:** alarme dispara de forma confiável em ambiente real, sem falsos positivos nem falsos negativos.
 
 ### Diagnóstico
-- [ ] Auditar logs do sistema atual: onde o alarme falha?
-- [ ] Identificar se o problema é detecção (sensor → backend) ou notificação (backend → cliente/admin)
-- [ ] Documentar todos os tipos de alarme existentes hoje
-- [ ] Listar bugs específicos encontrados
+- [x] Auditar logs do sistema atual: onde o alarme falha?
+- [x] Identificar se o problema é detecção (sensor → backend) ou notificação (backend → cliente/admin)
+- [x] Documentar todos os tipos de alarme existentes hoje
+- [x] Listar bugs específicos encontrados
 
 ### Regras de negócio (definir antes de codar)
-- [ ] Definir tipos de alerta: aviso (WhatsApp para admin), crítico (OS automática), emergência (OS + técnico direcionado)
-- [ ] Definir thresholds: porcentagem de nível, tempo de inatividade do sensor, etc
-- [ ] Definir destinatários: quem recebe cada tipo (cliente, admin, técnico)
-- [ ] Definir cooldown: tempo mínimo entre dois alarmes do mesmo sensor
-- [ ] Documentar tudo num arquivo `ALARMS.md` no repositório
+- [x] Definir tipos de alerta: aviso (WhatsApp para admin), crítico (OS automática), emergência (OS + técnico direcionado)
+- [x] Definir thresholds: porcentagem de nível, tempo de inatividade do sensor, etc
+- [x] Definir destinatários: quem recebe cada tipo (cliente, admin, técnico)
+- [x] Definir cooldown: tempo mínimo entre dois alarmes do mesmo sensor
+- [x] Documentar tudo num arquivo `ALARMS.md` no repositório
 
 ### Implementação
-- [ ] Refatorar lógica de detecção no backend
-- [ ] Implementar fila de notificações com retry
-- [ ] Adicionar fallback: se WhatsApp falhar 3x, enviar email
-- [ ] Implementar lógica de OS automática (regras claras de quando criar)
+- [x] Refatorar lógica de detecção no backend
+- [x] Implementar fila de notificações com retry
+- [x] Adicionar fallback: se WhatsApp falhar 3x, enviar email
+- [x] Implementar lógica de OS automática (regras claras de quando criar)
 - [ ] Implementar direcionamento automático ao técnico
-- [ ] Adicionar logs detalhados de cada disparo
+- [x] Adicionar logs detalhados de cada disparo
 
 ### Validação
 - [ ] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
@@ -41,7 +41,7 @@
 - [ ] Validar que técnico é notificado
 - [ ] Rodar 48h em ambiente real sem falhas
 
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [ ] Concluída em ___/___/___
+**Status da fase:** [ ] Não iniciada [x] Em andamento [ ] Concluída em ___/___/___
 
 ---
 
@@ -198,23 +198,24 @@ Adiados deliberadamente para não desviar foco:
 
 ## 📊 INDICADOR GERAL DE PROGRESSO
 
-[ ] Fase 1 — Alarmes              ___/30 itens
-[ ] Fase 2 — Hardware             ___/19 itens
-[ ] Fase 3 — PWA Offline          ___/27 itens
-[ ] Fase 4 — Validação comercial  ___/13 itens
-[ ] Fase 5 — Landing Soluteg      ___/7 itens
+[x] Fase 1 — Alarmes              15/16 itens de implementação/diagnóstico/regras ✅ (falta: direcionar técnico + validação em campo)
+[ ] Fase 2 — Hardware             0/19 itens
+[ ] Fase 3 — PWA Offline          0/27 itens
+[ ] Fase 4 — Validação comercial  0/13 itens
+[ ] Fase 5 — Landing Soluteg      0/7 itens
 
 ---
 
 ## 📝 LOG DE PROGRESSO
 
-Anote aqui o que avançou em cada sessão de trabalho. Ajuda a manter memória de progresso e não desanimar.
-
-### Sessão ___/___/___
-- 
-
-### Sessão ___/___/___
-- 
-
-### Sessão ___/___/___
--
+### Sessão 04/05/2026
+- Diagnóstico completo: WhatsApp falhava silenciosamente (alerta perdido para sempre quando !isReady)
+- Definidas regras de negócio por tipo de caixa (superior/inferior) para alarm1, alarm2, SCI e alarm3_boia
+- Mensagens contextuais por tipo: alarm1 superior orienta verificar cisterna/painel; alarm1 inferior orienta verificar entrada de água
+- alarm2 cria OS emergencial automaticamente + notifica admin e cliente
+- Implementada fila de retry: alertas com delivered=0 são reenviados ao WhatsApp reconectar
+- Fallback email via nodemailer quando WhatsApp falha
+- alarm3_boia toggle por sensor (habilitável/desabilitável na UI)
+- Fix: listSensorsWithStatus não retornava alarm3BoiaPct, tankType, distVazia, distCheia (formulário de edição sempre em branco)
+- Fix crítico: multer (upload) nunca foi instanciado em index.ts — causava crash no boot do servidor
+- Migration 0039 criada (rodar no VPS)
