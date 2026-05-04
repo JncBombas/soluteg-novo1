@@ -48,6 +48,14 @@ client.on('ready', async () => {
         } catch (err) {
             console.error('❌ Erro no envio inicial:', err.message);
         }
+
+        // Reprocessa alertas de caixa d'água que não foram entregues enquanto o Zap estava offline
+        try {
+            const { retryUndeliveredAlerts } = await import("./waterTankAlertService");
+            await retryUndeliveredAlerts();
+        } catch (err: any) {
+            console.error('❌ Erro ao reprocessar alertas pendentes:', err?.message);
+        }
     }, 8000);
 });
 
@@ -122,8 +130,8 @@ export const reconnectWhatsapp = async () => {
  */
 export const sendWhatsappToNumber = async (phone: string, message: string) => {
     if (!isReady) {
-        console.error('❌ ERRO: Zap não está pronto para envio ao cliente.');
-        return;
+        // Lança erro para que o chamador possa registrar a falha e acionar retry/fallback
+        throw new Error("WhatsApp não está conectado");
     }
 
     // Normaliza o número: remove tudo que não é dígito, garante prefixo 55

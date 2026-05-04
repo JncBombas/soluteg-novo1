@@ -22,6 +22,7 @@ const calibrationFields = {
 const sensorTypeFields = {
   tankType: z.enum(["superior", "inferior"]).default("superior"),
   alarm3BoiaPct: z.number().min(0).max(100).default(90),
+  alarm3BoiaEnabled: z.number().int().min(0).max(1).default(1), // 1 = habilitado
   dropStepPct: z.number().min(1).max(50).default(10),
 };
 
@@ -84,6 +85,7 @@ export const waterTankAdminRouter = router({
         alarm1Pct: input.alarm1Pct ?? 30,
         alarm2Pct: input.alarm2Pct ?? 15,
         alarm3BoiaPct: input.alarm3BoiaPct,
+        alarm3BoiaEnabled: input.alarm3BoiaEnabled,
         dropStepPct: input.dropStepPct,
         tankType: input.tankType,
         alertPhone: input.alertPhone ?? null,
@@ -115,6 +117,7 @@ export const waterTankAdminRouter = router({
         alarm1Pct: input.alarm1Pct ?? 30,
         alarm2Pct: input.alarm2Pct ?? 15,
         alarm3BoiaPct: input.alarm3BoiaPct,
+        alarm3BoiaEnabled: input.alarm3BoiaEnabled,
         dropStepPct: input.dropStepPct,
         tankType: input.tankType,
         alertPhone: input.alertPhone ?? null,

@@ -537,6 +537,7 @@ export const waterTankSensors = mysqlTable("waterTankSensors", {
   distCheia: int("distCheia"),   // distância sensor→água com caixa CHEIA
   tankType: mysqlEnum("tankType", ["superior", "inferior"]).default("superior").notNull(),
   alarm3BoiaPct: int("alarm3BoiaPct").default(90).notNull(),
+  alarm3BoiaEnabled: tinyint("alarm3BoiaEnabled").default(1).notNull(), // 1 = alarme de boia alta ativo
   dropStepPct: int("dropStepPct").default(10).notNull(),
   active: tinyint("active").default(1).notNull(),
   lastSeenAt: timestamp("lastSeenAt"),
@@ -562,6 +563,9 @@ export const waterTankAlertLog = mysqlTable("waterTankAlertLog", {
   direction: mysqlEnum("direction", ["down", "up"]).notNull(),
   tankType: mysqlEnum("tankType", ["superior", "inferior"]).notNull(),
   observation: text("observation"),
+  delivered: tinyint("delivered").default(0).notNull(), // 0 = pendente/falhou, 1 = entregue
+  deliveryError: text("deliveryError"),                  // mensagem de erro em caso de falha
+  osId: int("osId"),                                     // ID da OS criada automaticamente (alarm2)
 });
 
 /**

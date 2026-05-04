@@ -30,6 +30,7 @@ interface SensorRow {
   alarm1Pct: number;
   alarm2Pct: number;
   alarm3BoiaPct: number;
+  alarm3BoiaEnabled: number;
   dropStepPct: number;
   tankType: string;
   alertPhone: string | null;
@@ -59,6 +60,7 @@ type AssignForm = {
   alarm1Pct: string;
   alarm2Pct: string;
   alarm3BoiaPct: string;
+  alarm3BoiaEnabled: string; // "1" = habilitado, "0" = desabilitado
   dropStepPct: string;
   tankType: string;
   alertPhone: string;
@@ -69,8 +71,8 @@ type AssignForm = {
 const defaultAssign: AssignForm = {
   clientId: "", tankName: "", capacity: "", notes: "",
   deadVolumePct: "0", alarm1Pct: "30", alarm2Pct: "15",
-  alarm3BoiaPct: "90", dropStepPct: "10", tankType: "superior",
-  alertPhone: "", distVazia: "", distCheia: "",
+  alarm3BoiaPct: "90", alarm3BoiaEnabled: "1", dropStepPct: "10",
+  tankType: "superior", alertPhone: "", distVazia: "", distCheia: "",
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -290,6 +292,26 @@ function AssignFormFields({
           </div>
         </div>
 
+        <div className="flex items-center gap-3 rounded-md border border-purple-200 bg-purple-50 p-3">
+          <input
+            id="alarm3BoiaEnabled"
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300 accent-purple-600"
+            checked={form.alarm3BoiaEnabled !== "0"}
+            onChange={(e) => setForm({ ...form, alarm3BoiaEnabled: e.target.checked ? "1" : "0" })}
+          />
+          <div>
+            <label htmlFor="alarm3BoiaEnabled" className="text-sm font-medium text-purple-800 cursor-pointer">
+              Habilitar alarme de nível alto (boia)
+            </label>
+            <p className="text-xs text-purple-600">
+              {form.tankType === "inferior"
+                ? "Alerta admin quando cisterna ultrapassar o limiar — pane na boia mecânica"
+                : "Alerta admin quando caixa superior ultrapassar o limiar — pane na boia de corte da bomba"}
+            </p>
+          </div>
+        </div>
+
         <p className="text-xs text-slate-500">Use 0 para desabilitar os limiares de alarme.</p>
       </div>
 
@@ -399,6 +421,7 @@ export default function AdminWaterTanks() {
     alarm1Pct: parseInt(f.alarm1Pct) || 30,
     alarm2Pct: parseInt(f.alarm2Pct) || 15,
     alarm3BoiaPct: parseInt(f.alarm3BoiaPct) || 90,
+    alarm3BoiaEnabled: f.alarm3BoiaEnabled === "0" ? 0 : 1,
     dropStepPct: parseInt(f.dropStepPct) || 10,
     tankType: (f.tankType || "superior") as "superior" | "inferior",
     alertPhone: f.alertPhone || null,
@@ -429,6 +452,7 @@ export default function AdminWaterTanks() {
       alarm1Pct: String(s.alarm1Pct ?? 30),
       alarm2Pct: String(s.alarm2Pct ?? 15),
       alarm3BoiaPct: String(s.alarm3BoiaPct ?? 90),
+      alarm3BoiaEnabled: String(s.alarm3BoiaEnabled ?? 1),
       dropStepPct: String(s.dropStepPct ?? 10),
       tankType: s.tankType ?? "superior",
       alertPhone: s.alertPhone ?? "",

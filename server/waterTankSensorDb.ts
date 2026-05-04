@@ -85,7 +85,13 @@ export async function listSensorsWithStatus(adminId: number): Promise<Array<{
   deadVolumePct: number;
   alarm1Pct: number;
   alarm2Pct: number;
+  alarm3BoiaPct: number;
+  alarm3BoiaEnabled: number;
+  dropStepPct: number;
+  tankType: string;
   alertPhone: string | null;
+  distVazia: number | null;
+  distCheia: number | null;
   active: number;
   lastSeenAt: Date | null;
   createdAt: Date;
@@ -100,7 +106,9 @@ export async function listSensorsWithStatus(adminId: number): Promise<Array<{
     SELECT
       s.id, s.deviceId, s.clientId, c.name AS clientName,
       s.tankName, s.capacity, s.notes,
-      s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alertPhone,
+      s.deadVolumePct, s.alarm1Pct, s.alarm2Pct, s.alarm3BoiaPct,
+      s.alarm3BoiaEnabled, s.dropStepPct, s.tankType,
+      s.alertPhone, s.distVazia, s.distCheia,
       s.active, s.lastSeenAt, s.createdAt,
       latest.currentLevel, latest.measuredAt AS lastUpdate, latest.status
     FROM waterTankSensors s
@@ -133,6 +141,7 @@ export type AssignData = {
   alarm1Pct?: number;
   alarm2Pct?: number;
   alarm3BoiaPct?: number;
+  alarm3BoiaEnabled?: number; // 1 = habilitado, 0 = desabilitado
   dropStepPct?: number;
   tankType?: "superior" | "inferior";
   alertPhone?: string | null;
@@ -156,6 +165,7 @@ export async function assignSensor(sensorId: number, data: AssignData) {
       alarm1Pct: data.alarm1Pct ?? 30,
       alarm2Pct: data.alarm2Pct ?? 15,
       alarm3BoiaPct: data.alarm3BoiaPct ?? 90,
+      alarm3BoiaEnabled: data.alarm3BoiaEnabled ?? 1,
       dropStepPct: data.dropStepPct ?? 10,
       tankType: data.tankType ?? "superior",
       alertPhone: data.alertPhone ?? null,

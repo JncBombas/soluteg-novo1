@@ -1,14 +1,25 @@
 /**
  * waterTankAlertService.ts
  *
- * Verifica limiares de alarme após cada flush MQTT e dispara alertas WhatsApp.
- * Controle de estado via SensorAlertState — sem cooldown por tempo.
+ * Verifica limiares de alarme após cada flush MQTT e dispara alertas WhatsApp + email.
  *
- * Prioridade de disparos (descendo):
- *   sci → alarm2 → drop_step (progressivo em alarm1) → alarm1 → boia_fault
+ * Regras de negócio (ver ALARMS.md para detalhes completos):
  *
- * Disparos (subindo):
- *   alarm3_boia → filling → level_restored
+ * Caixa Superior:
+ *   alarm1 → WhatsApp admin + cliente: orientar verificação de cisterna, painel, disjuntor, eletroboias
+ *   alarm2 → WhatsApp admin + cliente + cria OS emergencial automaticamente
+ *   sci    → WhatsApp admin + cliente (OS já criada no alarm2)
+ *   alarm3_boia → WhatsApp admin: pane na boia de corte da bomba (habilitável por sensor)
+ *
+ * Caixa Inferior:
+ *   alarm1 → WhatsApp admin + cliente: orientar verificar entrada de água, racionar
+ *   alarm2 → WhatsApp admin + cliente + cria OS emergencial (possível falha na boia inferior)
+ *   sci    → WhatsApp admin + cliente (OS já criada no alarm2)
+ *   alarm3_boia → WhatsApp admin: pane na boia mecânica (habilitável por sensor)
+ *
+ * Garantia de entrega:
+ *   - Se WhatsApp offline: salva delivered=0 no log → reenviado ao reconectar
+ *   - Fallback email se WhatsApp falhar 3x
  */
 
 import { sql } from "drizzle-orm";
@@ -29,6 +40,8 @@ type AlertType =
 
 interface SensorConfig {
   id: number;
+  adminId: number;
+  clientId: number;
   clientName: string;
   clientPhone: string | null;
   tankType: "superior" | "inferior";
@@ -36,6 +49,7 @@ interface SensorConfig {
   alarm1Pct: number;
   alarm2Pct: number;
   alarm3BoiaPct: number;
+  alarm3BoiaEnabled: number; // 0 ou 1
   dropStepPct: number;
   alertPhone: string | null;
 }
@@ -47,6 +61,162 @@ function determineZone(level: number, cfg: SensorConfig): SensorZone {
   if (level > cfg.alarm3BoiaPct) return "boia_high";
   return "normal";
 }
+
+// ── Mensagens por tipo de caixa ───────────────────────────────────────────────
+
+function buildAlarm1Message(tankType: "superior" | "inferior", clientName: string, tankName: string, level: number): string {
+  const base = `Cliente: ${clientName}\nCaixa: ${tankName}\nNível atual: ${level}%`;
+
+  if (tankType === "superior") {
+    return [
+      `⚠️ ATENÇÃO — Caixa d'Água Superior`,
+      base,
+      ``,
+      `Verifique:`,
+      `• Nível da cisterna (caixa inferior)`,
+      `• Alarmes no painel elétrico`,
+      `• Se o disjuntor da bomba está ligado`,
+      `• Se houve queda de energia`,
+      `• Teste as eletroboias`,
+    ].join("\n");
+  }
+
+  return [
+    `⚠️ ATENÇÃO — Cisterna (Caixa Inferior)`,
+    base,
+    ``,
+    `Verifique a entrada de água da rede pública no prédio.`,
+    `Pode haver queda de pressão ou falta d'água.`,
+    `Oriente os moradores a racionar o consumo.`,
+  ].join("\n");
+}
+
+function buildAlarm2Message(tankType: "superior" | "inferior", clientName: string, tankName: string, level: number): string {
+  const base = `Cliente: ${clientName}\nCaixa: ${tankName}\nNível atual: ${level}%`;
+
+  if (tankType === "superior") {
+    return [
+      `🚨 NÍVEL CRÍTICO — Caixa d'Água Superior`,
+      base,
+      ``,
+      `Nível crítico detectado.`,
+      `OS emergencial criada automaticamente.`,
+      `Técnico será acionado.`,
+    ].join("\n");
+  }
+
+  return [
+    `🚨 NÍVEL CRÍTICO — Cisterna (Caixa Inferior)`,
+    base,
+    ``,
+    `ATENÇÃO: Possível falha na boia inferior.`,
+    `DESLIGAR IMEDIATAMENTE A BOMBA DE RECALQUE.`,
+    `OS emergencial criada — técnico será acionado para troca da boia.`,
+  ].join("\n");
+}
+
+function buildAlarm3BoiaMessage(tankType: "superior" | "inferior", clientName: string, tankName: string, level: number, triggerPct: number): string {
+  const base = `Cliente: ${clientName}\nCaixa: ${tankName}\nNível atual: ${level}%`;
+
+  if (tankType === "superior") {
+    return [
+      `🔧 PANE NA BOIA SUPERIOR`,
+      base,
+      ``,
+      `Nível ultrapassou ${triggerPct}%.`,
+      `Possível pane na boia de corte da bomba de recalque.`,
+      `Verificar imediatamente.`,
+    ].join("\n");
+  }
+
+  return [
+    `🔧 PANE NA BOIA MECÂNICA — Cisterna`,
+    base,
+    ``,
+    `Nível ultrapassou ${triggerPct}%.`,
+    `Possível pane na boia mecânica de corte da entrada de água.`,
+    `Verificar imediatamente.`,
+  ].join("\n");
+}
+
+function buildGenericMessage(
+  type: AlertType,
+  tankType: "superior" | "inferior",
+  clientName: string,
+  tankName: string,
+  currentLevel: number,
+  triggerPct: number,
+): string {
+  const base = `Cliente: ${clientName}\nCaixa: ${tankName}\nNível atual: ${currentLevel}%`;
+
+  switch (type) {
+    case "alarm1": return buildAlarm1Message(tankType, clientName, tankName, currentLevel);
+    case "alarm2": return buildAlarm2Message(tankType, clientName, tankName, currentLevel);
+    case "alarm3_boia": return buildAlarm3BoiaMessage(tankType, clientName, tankName, currentLevel, triggerPct);
+
+    case "drop_step":
+      return `📉 NÍVEL CAINDO — Caixa d'Água\n${base}\nSem recuperação desde o último alerta.`;
+
+    case "boia_fault":
+      return `🔧 FALHA DE BOIA — Cisterna\n${base}\nCisterna continua baixando — boia de proteção da bomba pode não ter desligado.`;
+
+    case "filling":
+      return tankType === "superior"
+        ? `📈 ENCHENDO — Caixa d'Água\n${base}\nReservatório começou a encher.`
+        : `📈 ENCHENDO — Cisterna\n${base}\nAbastecimento normalizado.`;
+
+    case "level_restored":
+      return `✅ NÍVEL RESTAURADO — Caixa d'Água\n${base}\nNível voltou ao normal.`;
+
+    case "sci_reserve":
+      return `🔴 EMERGÊNCIA SCI\n${base}\nReserva de incêndio sendo consumida. Acionar abastecimento IMEDIATAMENTE.`;
+  }
+}
+
+// ── Criação automática de OS emergencial ─────────────────────────────────────
+
+async function createEmergencyWorkOrder(cfg: SensorConfig, tankName: string, currentLevel: number): Promise<number | null> {
+  try {
+    const { createWorkOrder, generateOsNumber } = await import("./workOrdersDb");
+
+    const tankLabel = cfg.tankType === "superior" ? "Caixa Superior" : "Cisterna (Inferior)";
+    const title = `[AUTOMÁTICO] Nível crítico — ${tankName} (${tankLabel})`;
+
+    const description = cfg.tankType === "superior"
+      ? `OS criada automaticamente pelo sistema de monitoramento.\n\nNível atual: ${currentLevel}%\nCaixa: ${tankName} (Superior)\n\nOrientações iniciais:\n- Verificar nível da cisterna\n- Verificar painel elétrico e disjuntores\n- Testar eletroboias`
+      : `OS criada automaticamente pelo sistema de monitoramento.\n\nNível atual: ${currentLevel}%\nCaixa: ${tankName} (Cisterna Inferior)\n\nOrientações iniciais:\n- DESLIGAR BOMBA DE RECALQUE IMEDIATAMENTE\n- Verificar boia inferior — possível falha\n- Verificar entrada de água da rede pública`;
+
+    const result = await createWorkOrder({
+      adminId: cfg.adminId,
+      clientId: cfg.clientId,
+      type: "emergencial",
+      status: "aberta",
+      priority: "alta",
+      title,
+      description,
+    } as any);
+
+    console.log(`[ALERTA CAIXA] OS emergencial criada: ${result.osNumber} (id=${result.id})`);
+    return result.id;
+  } catch (err: any) {
+    console.error("[ALERTA CAIXA] Erro ao criar OS emergencial:", err?.message);
+    return null;
+  }
+}
+
+// ── Envio com rastreamento de entrega ─────────────────────────────────────────
+
+async function sendWithTracking(phone: string, message: string): Promise<{ delivered: boolean; error?: string }> {
+  const { sendWhatsappToNumber } = await import("./whatsapp");
+  try {
+    await sendWhatsappToNumber(phone, message);
+    return { delivered: true };
+  } catch (err: any) {
+    return { delivered: false, error: err?.message || "Erro desconhecido" };
+  }
+}
+
+// ── Função principal ───────────────────────────────────────────────────────────
 
 export async function checkAndSendAlerts(params: {
   sensorId: number;
@@ -66,8 +236,9 @@ export async function checkAndSendAlerts(params: {
 
     const configResult = await db.execute(sql`
       SELECT
-        s.id, s.tankType, s.deadVolumePct, s.alarm1Pct, s.alarm2Pct,
-        s.alarm3BoiaPct, s.dropStepPct, s.alertPhone,
+        s.id, s.adminId, s.clientId, s.tankType, s.deadVolumePct,
+        s.alarm1Pct, s.alarm2Pct, s.alarm3BoiaPct, s.alarm3BoiaEnabled,
+        s.dropStepPct, s.alertPhone,
         c.name AS clientName, c.phone AS clientPhone
       FROM waterTankSensors s
       JOIN clients c ON c.id = s.clientId
@@ -79,67 +250,100 @@ export async function checkAndSendAlerts(params: {
 
     const cfg: SensorConfig = configs[0];
     const zone = determineZone(currentLevel, cfg);
-    const tankLabel = cfg.tankType === "superior" ? "Superior" : "Inferior";
 
+    /**
+     * Dispara alerta: envia WhatsApp para os destinatários, registra no log.
+     * Retorna true se ao menos uma mensagem foi entregue.
+     */
     async function fire(
       alertType: AlertType,
       triggerPct: number,
       direction: "down" | "up",
       observation: string | null,
+      phones: string[],
+      osId: number | null = null,
     ) {
-      const message = buildAlertMessage(alertType, cfg.tankType, cfg.clientName, tankName, currentLevel, triggerPct);
+      const message = buildGenericMessage(alertType, cfg.tankType, cfg.clientName, tankName, currentLevel, triggerPct);
 
-      const phones: string[] = [];
-      if (cfg.clientPhone) phones.push(cfg.clientPhone);
-      if (cfg.alertPhone && cfg.alertPhone !== cfg.clientPhone) phones.push(cfg.alertPhone);
+      let delivered = false;
+      const errors: string[] = [];
 
-      const { sendWhatsappToNumber } = await import("./whatsapp");
+      if (phones.length === 0) {
+        errors.push("Nenhum telefone configurado para este sensor/cliente");
+      }
+
       for (const phone of phones) {
-        try {
-          await sendWhatsappToNumber(phone, message);
-        } catch (err: any) {
-          console.error(`[ALERTA CAIXA] Erro ao enviar para ${phone}:`, err?.message);
+        const result = await sendWithTracking(phone, message);
+        if (result.delivered) {
+          delivered = true;
+        } else {
+          errors.push(`${phone}: ${result.error || "falha"}`);
         }
       }
 
+      // Fallback email se todos os WhatsApp falharam
+      if (!delivered && errors.length > 0) {
+        const subject = `[Soluteg] ${alertType.toUpperCase()} — ${tankName} (${currentLevel}%)`;
+        const { sendAlertEmail } = await import("./emailService");
+        const emailSent = await sendAlertEmail(subject, message);
+        if (emailSent) {
+          delivered = true;
+          console.log(`[ALERTA CAIXA] Email de fallback enviado para ${alertType}`);
+        }
+      }
+
+      const deliveryError = errors.length > 0 && !delivered ? errors.join("; ") : null;
+
       await db.execute(sql`
         INSERT INTO waterTankAlertLog
-          (sensorId, clientId, tankName, alertType, triggerPct, currentLevel, sentTo, direction, tankType, observation)
+          (sensorId, clientId, tankName, alertType, triggerPct, currentLevel, sentTo,
+           direction, tankType, observation, delivered, deliveryError, osId)
         VALUES
           (${sensorId}, ${clientId}, ${tankName}, ${alertType}, ${triggerPct},
-           ${currentLevel}, ${phones.join(", ") || null}, ${direction}, ${cfg.tankType}, ${observation})
+           ${currentLevel}, ${phones.join(", ") || null}, ${direction}, ${cfg.tankType},
+           ${observation}, ${delivered ? 1 : 0}, ${deliveryError}, ${osId})
       `);
 
-      console.log(`[ALERTA CAIXA] ${alertType.toUpperCase()} — ${tankName} (${cfg.tankType}): ${currentLevel}% | dir=${direction}`);
+      console.log(`[ALERTA CAIXA] ${alertType.toUpperCase()} — ${tankName} (${cfg.tankType}): ${currentLevel}% | delivered=${delivered}`);
     }
 
-    // ── DESCENDO ───────────────────────────────────────────────────────────────
+    // Destinatários padrão: cliente + telefone extra do sensor
+    function getPhones(): string[] {
+      const phones: string[] = [];
+      if (cfg.clientPhone) phones.push(cfg.clientPhone);
+      if (cfg.alertPhone && cfg.alertPhone !== cfg.clientPhone) phones.push(cfg.alertPhone);
+      return phones;
+    }
+
+    // ── DESCENDO ─────────────────────────────────────────────────────────────
+
     if (isGoingDown && state.consecutiveDownCount >= CONFIRM) {
 
-      // SCI — reserva de incêndio
+      // SCI — reserva de incêndio (OS já criada no alarm2 — só notifica)
       if (zone === "sci" && previousZone !== "sci") {
-        await fire("sci_reserve", cfg.deadVolumePct, "down", "Consumo da reserva SCI");
+        await fire("sci_reserve", cfg.deadVolumePct, "down", "Consumo da reserva SCI", getPhones());
         state.currentZone = "sci";
       }
 
-      // Alarm2 — nível crítico
+      // Alarm2 — cria OS emergencial + notifica admin + cliente
       if (zone === "alarm2" && previousZone !== "alarm2" && previousZone !== "sci") {
-        await fire("alarm2", cfg.alarm2Pct, "down", `Nível baixo — ${tankLabel}`);
+        const osId = await createEmergencyWorkOrder(cfg, tankName, currentLevel);
+        await fire("alarm2", cfg.alarm2Pct, "down", `Nível crítico — ${cfg.tankType}`, getPhones(), osId);
         state.lastDropAlertLevel = currentLevel;
         state.currentZone = "alarm2";
       }
 
-      // Alerta progressivo — apenas dentro de alarm1
+      // Alerta progressivo dentro de alarm1
       if (zone === "alarm1" && state.lastDropAlertLevel !== null) {
         if ((state.lastDropAlertLevel - currentLevel) >= cfg.dropStepPct) {
-          await fire("drop_step", currentLevel, "down", `Nível baixo — ${tankLabel}`);
+          await fire("drop_step", currentLevel, "down", `Nível caindo — ${cfg.tankType}`, getPhones());
           state.lastDropAlertLevel = currentLevel;
         }
       }
 
-      // Alarm1 — nível de atenção (inclui vinda de boia_high para cobrir dreno rápido pós-enchimento)
+      // Alarm1 — notifica admin + cliente (inclui vinda de boia_high)
       if (zone === "alarm1" && (previousZone === "normal" || previousZone === "boia_high")) {
-        await fire("alarm1", cfg.alarm1Pct, "down", `Nível baixo — ${tankLabel}`);
+        await fire("alarm1", cfg.alarm1Pct, "down", `Nível de atenção — ${cfg.tankType}`, getPhones());
         state.lastDropAlertLevel = currentLevel;
         state.currentZone = "alarm1";
       }
@@ -151,28 +355,39 @@ export async function checkAndSendAlerts(params: {
         previousZone === "alarm2" &&
         state.consecutiveDownCount >= CONFIRM * 2
       ) {
-        await fire("boia_fault", cfg.alarm2Pct, "down", "Nível baixo — Inferior");
+        await fire("boia_fault", cfg.alarm2Pct, "down", "Boia inferior com falha", getPhones());
       }
     }
 
-    // ── SUBINDO ────────────────────────────────────────────────────────────────
+    // ── SUBINDO ──────────────────────────────────────────────────────────────
+
     if (isGoingUp && state.consecutiveUpCount >= CONFIRM) {
 
-      // Alarm3 boia — nível ultrapassou limite alto
-      if (zone === "boia_high" && previousZone !== "boia_high") {
-        await fire("alarm3_boia", cfg.alarm3BoiaPct, "up", `Nível alto — ${tankLabel}`);
+      // Alarm3 boia — nível alto (pane na boia de corte) — só se habilitado
+      if (zone === "boia_high" && previousZone !== "boia_high" && cfg.alarm3BoiaEnabled) {
+        // Alarm3_boia: apenas para admin (alertPhone), não para o cliente
+        const adminPhones: string[] = [];
+        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
+        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone); // fallback se não houver alertPhone
+        await fire("alarm3_boia", cfg.alarm3BoiaPct, "up", `Nível alto — ${cfg.tankType}`, adminPhones);
         state.currentZone = "boia_high";
       }
 
       // Filling — estava em alarme e começou a encher
       if (previousZone !== "normal" && previousZone !== "boia_high" && !state.fillingNotified) {
-        await fire("filling", cfg.alarm1Pct, "up", null);
+        const adminPhones: string[] = [];
+        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
+        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone);
+        await fire("filling", cfg.alarm1Pct, "up", null, adminPhones);
         state.fillingNotified = true;
       }
 
       // Level restored — voltou ao normal
       if (zone === "normal" && previousZone !== "normal") {
-        await fire("level_restored", cfg.alarm1Pct, "up", null);
+        const adminPhones: string[] = [];
+        if (cfg.alertPhone) adminPhones.push(cfg.alertPhone);
+        else if (cfg.clientPhone) adminPhones.push(cfg.clientPhone);
+        await fire("level_restored", cfg.alarm1Pct, "up", null, adminPhones);
         state.currentZone = "normal";
         state.lastDropAlertLevel = null;
         state.fillingNotified = false;
@@ -184,45 +399,65 @@ export async function checkAndSendAlerts(params: {
   }
 }
 
-function buildAlertMessage(
-  type: AlertType,
-  tankType: "superior" | "inferior",
-  clientName: string,
-  tankName: string,
-  currentLevel: number,
-  triggerPct: number,
-): string {
-  const base = `Cliente: ${clientName}\nCaixa: ${tankName}\nNível atual: ${currentLevel}%`;
+// ── Reprocessamento de alertas não entregues ──────────────────────────────────
 
-  switch (type) {
-    case "alarm1":
-      return `⚠️ ALERTA — Caixa d'Água\n${base}\nNível atingiu o limiar de atenção.`;
+/**
+ * Chamada ao reconectar o WhatsApp. Busca alertas das últimas 24h com
+ * delivered=0 e tenta reenviá-los.
+ */
+export async function retryUndeliveredAlerts(): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
 
-    case "alarm2":
-      return `🚨 NÍVEL CRÍTICO — Caixa d'Água\n${base}\nAcionar abastecimento urgente.`;
+    const rows = (await db.execute(sql`
+      SELECT
+        al.id, al.sentTo, al.alertType, al.tankName, al.currentLevel,
+        al.triggerPct, al.tankType, al.observation,
+        c.name AS clientName
+      FROM waterTankAlertLog al
+      JOIN waterTankSensors s ON s.id = al.sensorId
+      JOIN clients c ON c.id = al.clientId
+      WHERE al.delivered = 0
+        AND al.sentAt > NOW() - INTERVAL 24 HOUR
+      ORDER BY al.sentAt ASC
+    `) as unknown as [any[], any])[0] as any[];
 
-    case "drop_step":
-      return `📉 NÍVEL CAINDO — Caixa d'Água\n${base}\nSem recuperação desde o último alerta.`;
+    if (!rows.length) return;
 
-    case "alarm3_boia":
-      if (tankType === "superior") {
-        return `🔧 NÍVEL ALTO — Caixa d'Água\n${base}\nBoia de corte pode não ter desligado a bomba de recalque.`;
+    console.log(`[ALERTA CAIXA] Reprocessando ${rows.length} alerta(s) não entregue(s)...`);
+
+    const { sendWhatsappToNumber } = await import("./whatsapp");
+
+    for (const row of rows) {
+      const phones = row.sentTo ? row.sentTo.split(", ").map((p: string) => p.trim()) : [];
+      if (!phones.length) continue;
+
+      const message = buildGenericMessage(
+        row.alertType as AlertType,
+        row.tankType as "superior" | "inferior",
+        row.clientName,
+        row.tankName,
+        row.currentLevel,
+        row.triggerPct,
+      );
+
+      let delivered = false;
+      for (const phone of phones) {
+        try {
+          await sendWhatsappToNumber(phone, message);
+          delivered = true;
+        } catch (_) {}
       }
-      return `🔧 NÍVEL ALTO — Cisterna\n${base}\nBoia de corte da entrada pode não ter fechado.`;
 
-    case "boia_fault":
-      return `🔧 FALHA DE BOIA — Cisterna\n${base}\nCisterna continua baixando — boia de proteção da bomba pode não ter desligado.`;
-
-    case "filling":
-      if (tankType === "superior") {
-        return `📈 ENCHENDO — Caixa d'Água\n${base}\nReservatório começou a encher.`;
+      if (delivered) {
+        await db.execute(sql`
+          UPDATE waterTankAlertLog SET delivered = 1, deliveryError = NULL WHERE id = ${row.id}
+        `);
+        console.log(`[ALERTA CAIXA] Alerta ${row.id} (${row.alertType}) reenviado com sucesso`);
       }
-      return `📈 ENCHENDO — Cisterna\n${base}\nAbastecimento normalizado.`;
-
-    case "level_restored":
-      return `✅ NÍVEL RESTAURADO — Caixa d'Água\n${base}\nNível voltou ao normal.`;
-
-    case "sci_reserve":
-      return `🔴 EMERGÊNCIA SCI\n${base}\nReserva de incêndio sendo consumida. Acionar abastecimento IMEDIATAMENTE.`;
+    }
+  } catch (err: any) {
+    console.error("[ALERTA CAIXA] Erro ao reprocessar alertas:", err?.message);
   }
 }
