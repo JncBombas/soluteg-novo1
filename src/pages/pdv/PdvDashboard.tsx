@@ -1,12 +1,19 @@
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, ShoppingCart, Package, AlertTriangle } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, Clock } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export default function PdvDashboard() {
   const { data: stats, isLoading } = trpc.pdv.dashboard.stats.useQuery();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (isLoading) {
     return (
@@ -30,9 +37,22 @@ export default function PdvDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Visão geral do seu negócio</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do seu negócio</p>
+        </div>
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg border" style={{ backgroundColor: "#2D3748", borderColor: "#D4A15E" }}>
+          <Clock className="h-4 w-4" style={{ color: "#D4A15E" }} />
+          <div className="text-right">
+            <p className="text-sm font-semibold text-white">
+              {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+            </p>
+            <p className="text-lg font-bold tabular-nums" style={{ color: "#D4A15E" }}>
+              {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

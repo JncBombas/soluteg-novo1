@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat, Droplet, Bell, AlertTriangle, Flame } from "lucide-react";
+import { FileText, Users, Wrench, TrendingUp, MessageSquare, ClipboardList, HardHat, Droplet, Bell, AlertTriangle, Flame, Clock } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 function timeAgo(date: Date | string | null) {
@@ -36,6 +36,7 @@ const ALERT_LABELS: Record<string, string> = {
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [adminId, setAdminId] = useState<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [metrics, setMetrics] = useState({
     totalClients: 0,
     openWorkOrders: 0,
@@ -52,6 +53,11 @@ export default function AdminDashboard() {
     const parsed = parseInt(id);
     setAdminId(parsed);
     loadMetrics(parsed);
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -188,9 +194,22 @@ export default function AdminDashboard() {
     <DashboardLayout>
       <div className="max-w-7xl mx-auto w-full space-y-6">
         {/* Título */}
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">Visão geral do sistema Soluteg</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+            <p className="text-sm text-slate-500 mt-1">Visão geral do sistema Soluteg</p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-slate-800">
+            <Clock className="h-4 w-4 text-blue-400" />
+            <div className="text-right">
+              <p className="text-sm font-semibold text-white">
+                {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+              </p>
+              <p className="text-lg font-bold tabular-nums text-blue-400">
+                {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Métricas */}
