@@ -257,18 +257,14 @@ export async function checkAndSendAlerts(params: {
     const cfg: SensorConfig = configs[0];
     const zone = determineZone(currentLevel, cfg);
 
-    /**
-     * Dispara alerta: envia WhatsApp para os destinatários, registra no log.
-     * Retorna true se ao menos uma mensagem foi entregue.
-     */
-    async function fire(
+    const fire = async (
       alertType: AlertType,
       triggerPct: number,
       direction: "down" | "up",
       observation: string | null,
       phones: string[],
       osId: number | null = null,
-    ) {
+    ) => {
       const message = buildGenericMessage(alertType, cfg.tankType, cfg.clientName, tankName, currentLevel, triggerPct);
 
       let delivered = false;
@@ -300,7 +296,7 @@ export async function checkAndSendAlerts(params: {
 
       const deliveryError = errors.length > 0 && !delivered ? errors.join("; ") : null;
 
-      await db.execute(sql`
+      await db!.execute(sql`
         INSERT INTO waterTankAlertLog
           (sensorId, clientId, tankName, alertType, triggerPct, currentLevel, sentTo,
            direction, tankType, observation, delivered, deliveryError, osId)
@@ -314,12 +310,12 @@ export async function checkAndSendAlerts(params: {
     }
 
     // Destinatários padrão: cliente + telefone extra do sensor
-    function getPhones(): string[] {
+    const getPhones = (): string[] => {
       const phones: string[] = [];
       if (cfg.clientPhone) phones.push(cfg.clientPhone);
       if (cfg.alertPhone && cfg.alertPhone !== cfg.clientPhone) phones.push(cfg.alertPhone);
       return phones;
-    }
+    };
 
     // ── DESCENDO ─────────────────────────────────────────────────────────────
 
