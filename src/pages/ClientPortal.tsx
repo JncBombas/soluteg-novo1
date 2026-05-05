@@ -551,7 +551,7 @@ export default function ClientPortal() {
 
       {/* ── Header ── */}
       <header className="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
-        <div className={`mx-auto px-4 h-14 flex items-center justify-between ${activePage === "monitoring" ? "max-w-6xl" : "max-w-2xl"}`}>
+        <div className={`mx-auto px-4 h-14 flex items-center justify-between max-w-2xl ${activePage === "monitoring" ? "md:max-w-6xl" : "md:max-w-5xl"}`}>
           <div className="flex items-center gap-3">
             {activePage !== "home" && (
               <button
