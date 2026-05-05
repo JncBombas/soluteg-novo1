@@ -73,18 +73,15 @@ const plugins = [
       // Cache runtime: estratégia "NetworkFirst" para o app shell
       runtimeCaching: [
         {
-          // Assets estáticos — cache primeiro (raramente mudam)
-          urlPattern: /\.(png|jpg|jpeg|svg|ico|webp|woff2)$/,
-          handler: "CacheFirst",
-          options: {
-            cacheName: "soluteg-assets-v1",
-            expiration: {
-              maxEntries: 60,
-              // 30 dias de cache para assets
-              maxAgeSeconds: 30 * 24 * 60 * 60,
-            },
-          },
+          // API e upload de arquivos — NUNCA cachear, sempre ir à rede.
+          // Sem isso, o SW pode interferir com POST de upload de fotos
+          // e com mutations tRPC, causando falhas silenciosas.
+          urlPattern: /^https?:\/\/[^/]+\/api\//,
+          handler: "NetworkOnly",
         },
+        // Nota: não há CacheFirst para imagens externas (Cloudinary).
+        // Imagens do Cloudinary são cross-origin — respostas opacas quebram o
+        // CacheFirst (status 0). Favicons e logos já estão no pré-cache do Workbox.
         {
           // JS e CSS do bundle — StaleWhileRevalidate: serve do cache imediatamente,
           // atualiza em background para a próxima visita

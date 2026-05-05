@@ -304,11 +304,17 @@ export default function TechnicianWorkOrderDetail() {
   // Helper offline: enfileira mutation de status e atualiza UI imediatamente
   async function mutateStatusOffline(newStatus: string, notes?: string) {
     if (!workOrderId) return;
-    await enqueueMutation("updateStatus", { workOrderId, newStatus, notes });
-    setLocalStatus(newStatus);
-    setPauseOpen(false);
-    setConcludeOpen(false);
-    toast.info("Status salvo localmente — será sincronizado ao voltar online");
+    try {
+      await enqueueMutation("updateStatus", { workOrderId, newStatus, notes });
+      setLocalStatus(newStatus);
+      setPauseOpen(false);
+      setConcludeOpen(false);
+      toast.info("Status salvo localmente — será sincronizado ao voltar online");
+      console.log(`[OFFLINE] Status ${newStatus} enfileirado para OS #${workOrderId}`);
+    } catch (err) {
+      console.error("[OFFLINE] Falha ao enfileirar status:", err);
+      toast.error("Não foi possível salvar offline. Verifique se o app está atualizado.");
+    }
   }
 
   async function handleIniciar() {
@@ -372,18 +378,28 @@ export default function TechnicianWorkOrderDetail() {
 
   async function handleSendComment() {
     if (!workOrderId || !newComment.trim()) return;
+    const commentText = newComment.trim();
+
     if (!isOnline) {
-      await enqueueMutation("createComment", {
-        workOrderId,
-        comment:    newComment.trim(),
-        isInternal: commentIsInternal,
-      });
-      setNewComment("");
-      setCommentIsInternal(true);
-      toast.info("Comentário salvo localmente — será sincronizado ao voltar online");
+      try {
+        await enqueueMutation("createComment", {
+          workOrderId,
+          comment:    commentText,
+          isInternal: commentIsInternal,
+        });
+        setNewComment("");
+        setCommentIsInternal(true);
+        toast.info("Comentário salvo localmente — será sincronizado ao voltar online");
+        console.log("[OFFLINE] Comentário enfileirado para sincronização");
+      } catch (err) {
+        // IndexedDB pode estar bloqueado (migração v1→v2 em outra aba)
+        // Fallback: tenta enviar direto mesmo offline — vai falhar mas mostra erro claro
+        console.error("[OFFLINE] Falha ao enfileirar comentário:", err);
+        toast.error("Não foi possível salvar o comentário offline. Verifique sua conexão.");
+      }
       return;
     }
-    createCommentMutation.mutate({ workOrderId, comment: newComment.trim(), isInternal: commentIsInternal });
+    createCommentMutation.mutate({ workOrderId, comment: commentText, isInternal: commentIsInternal });
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
