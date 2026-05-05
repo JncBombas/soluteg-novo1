@@ -16,11 +16,16 @@ import { useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   saveOrder,
+  saveOrderDetail,
   getAllOrders,
+  getOrder,
   getMetadata,
   setMetadata,
   clearAllOrders,
+  getAllPendingMutations,
+  countPendingMutations,
   OfflineOrder,
+  PendingMutation,
 } from "@/lib/offlineDB";
 
 // ---------------------------------------------------------------------------
@@ -228,4 +233,122 @@ export function useSyncOfflineOrders(technicianId: number | null): UseSyncResult
   }, [isOnline, technicianId, syncStatus, utils]);
 
   return { syncStatus, lastSync, triggerSync, isOnline };
+}
+
+// ---------------------------------------------------------------------------
+// useOfflineOrderDetail — detalhe de uma OS com fallback offline
+// ---------------------------------------------------------------------------
+
+export type UseOrderDetailResult = {
+  os: OfflineOrder | null;
+  isLoading: boolean;
+  isOffline: boolean;
+  refetch: () => void;
+};
+
+/**
+ * Busca o detalhe completo de uma OS.
+ * Online: busca do servidor via tRPC e persiste no IndexedDB.
+ * Offline: lê direto do IndexedDB (campos de detalhe salvos na última visita).
+ */
+export function useOfflineOrderDetail(
+  workOrderId: number | null,
+  technicianId: number | null
+): UseOrderDetailResult {
+  const isOnline = useOnlineStatus();
+  const [cachedOs, setCachedOs] = useState<OfflineOrder | null>(null);
+  const [loadingCache, setLoadingCache] = useState(true);
+
+  // Carrega do IndexedDB ao montar
+  useEffect(() => {
+    if (!workOrderId) { setLoadingCache(false); return; }
+    getOrder(workOrderId)
+      .then(o => setCachedOs(o ?? null))
+      .catch(() => {})
+      .finally(() => setLoadingCache(false));
+  }, [workOrderId]);
+
+  const {
+    data: serverOs,
+    isLoading: loadingServer,
+    refetch,
+  } = (trpc as any).technicianPortal.getWorkOrderById.useQuery(
+    { id: workOrderId! },
+    { enabled: !!workOrderId && !!technicianId && isOnline }
+  );
+
+  // Persiste o detalhe no IndexedDB ao receber do servidor
+  useEffect(() => {
+    if (!serverOs) return;
+    const detail: Partial<OfflineOrder> & { id: number } = {
+      id:                  serverOs.id,
+      status:              serverOs.status,
+      description:         serverOs.description ?? null,
+      clientAddress:       serverOs.clientAddress ?? null,
+      clientPhone:         serverOs.clientPhone ?? null,
+      clientId:            serverOs.clientId,
+      technicianSignature: serverOs.technicianSignature ?? null,
+      technicianSignedAt:  serverOs.technicianSignedAt
+        ? new Date(serverOs.technicianSignedAt).toISOString()
+        : null,
+      clientSignature:     serverOs.clientSignature ?? null,
+      internalNotes:       serverOs.internalNotes ?? null,
+      startedAt:           serverOs.startedAt ? new Date(serverOs.startedAt).toISOString() : null,
+      completedAt:         serverOs.completedAt ? new Date(serverOs.completedAt).toISOString() : null,
+      pausedAt:            serverOs.pausedAt ? new Date(serverOs.pausedAt).toISOString() : null,
+      updatedAt:           serverOs.updatedAt ? new Date(serverOs.updatedAt).toISOString() : undefined,
+    };
+    saveOrderDetail(detail)
+      .then(() => getOrder(serverOs.id))
+      .then(o => o && setCachedOs(o))
+      .catch(err => console.error("[OFFLINE] Erro ao salvar detalhe da OS:", err));
+  }, [serverOs]);
+
+  // Online: usa dados do servidor se disponíveis
+  if (isOnline) {
+    const os = serverOs
+      ? { ...(cachedOs ?? {}), ...serverOs, _savedAt: cachedOs?._savedAt ?? 0 } as OfflineOrder
+      : cachedOs;
+    return { os, isLoading: loadingServer && !cachedOs, isOffline: false, refetch };
+  }
+
+  // Offline: usa cache local
+  return { os: cachedOs, isLoading: loadingCache, isOffline: true, refetch: () => {} };
+}
+
+// ---------------------------------------------------------------------------
+// usePendingCount — contagem de mutations pendentes para o badge no header
+// ---------------------------------------------------------------------------
+
+export type UsePendingCountResult = {
+  pendingCount: number;
+  pendingMutations: PendingMutation[];
+  refresh: () => void;
+};
+
+/**
+ * Retorna o número de mutations offline pendentes.
+ * Atualiza-se ao montar e expõe refresh() para atualizar manualmente.
+ * O TechnicianPortal chama refresh() após processar a fila.
+ */
+export function usePendingCount(): UsePendingCountResult {
+  const [pendingCount,     setPendingCount]     = useState(0);
+  const [pendingMutations, setPendingMutations] = useState<PendingMutation[]>([]);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [count, all] = await Promise.all([
+        countPendingMutations(),
+        getAllPendingMutations(),
+      ]);
+      setPendingCount(count);
+      setPendingMutations(all);
+    } catch (err) {
+      console.error("[OFFLINE] Erro ao contar mutations pendentes:", err);
+    }
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { pendingCount, pendingMutations, refresh };
 }

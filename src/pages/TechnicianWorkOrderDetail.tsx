@@ -45,6 +45,9 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import SignaturePad from "@/components/SignaturePad";
 import ChecklistForm from "@/components/ChecklistForm";
+import ConnectionStatus from "@/components/ConnectionStatus";
+import { useOfflineOrderDetail, useOnlineStatus } from "@/hooks/useOfflineOrders";
+import { enqueueMutation } from "@/lib/syncQueue";
 
 const TYPE_LABEL: Record<string, string> = {
   rotina: "Rotina",
@@ -105,12 +108,15 @@ export default function TechnicianWorkOrderDetail() {
     setTechnicianId(parseInt(id));
   }, []);
 
-  const { data: os, isLoading, refetch } = (trpc as any).technicianPortal.getWorkOrderById.useQuery(
-    { id: workOrderId! },
-    { enabled: !!workOrderId && !!technicianId }
-  );
+  // Hook offline: busca do servidor quando online, do IndexedDB quando offline
+  const { os: osRaw, isLoading, refetch } = useOfflineOrderDetail(workOrderId, technicianId);
+  const os = osRaw as any;
+  const isOnline = useOnlineStatus();
 
-  const canInteract = os?.status === "em_andamento" || os?.status === "pausada";
+  // Status local para atualização otimista (offline) — limpo ao receber nova resposta do servidor
+  const [localStatus, setLocalStatus] = useState<string | null>(null);
+  const effectiveStatus = localStatus ?? os?.status;
+  const canInteract = effectiveStatus === "em_andamento" || effectiveStatus === "pausada";
 
   // Tasks
   const { data: tasks, refetch: refetchTasks } = (trpc as any).technicianPortal.tasks.list.useQuery(
@@ -295,18 +301,31 @@ export default function TechnicianWorkOrderDetail() {
     }
   }
 
-  function handleIniciar() {
+  // Helper offline: enfileira mutation de status e atualiza UI imediatamente
+  async function mutateStatusOffline(newStatus: string, notes?: string) {
     if (!workOrderId) return;
+    await enqueueMutation("updateStatus", { workOrderId, newStatus, notes });
+    setLocalStatus(newStatus);
+    setPauseOpen(false);
+    setConcludeOpen(false);
+    toast.info("Status salvo localmente — será sincronizado ao voltar online");
+  }
+
+  async function handleIniciar() {
+    if (!workOrderId) return;
+    if (!isOnline) { await mutateStatusOffline("em_andamento"); return; }
     updateStatusMutation.mutate({ workOrderId, newStatus: "em_andamento" });
   }
 
-  function handleResumir() {
+  async function handleResumir() {
     if (!workOrderId) return;
+    if (!isOnline) { await mutateStatusOffline("em_andamento", "Atendimento retomado"); return; }
     updateStatusMutation.mutate({ workOrderId, newStatus: "em_andamento", notes: "Atendimento retomado" });
   }
 
-  function handlePausar() {
+  async function handlePausar() {
     if (!workOrderId) return;
+    if (!isOnline) { await mutateStatusOffline("pausada", pauseNotes || undefined); return; }
     updateStatusMutation.mutate({ workOrderId, newStatus: "pausada", notes: pauseNotes || undefined });
   }
 
@@ -328,7 +347,7 @@ export default function TechnicianWorkOrderDetail() {
     });
   }
 
-  function handleConcluir() {
+  async function handleConcluir() {
     if (!workOrderId) return;
     if (!os?.technicianSignature) {
       toast.error("É necessário assinar a OS antes de finalizar.");
@@ -336,17 +355,34 @@ export default function TechnicianWorkOrderDetail() {
       setSignOpen(true);
       return;
     }
+    if (!isOnline) { await mutateStatusOffline("concluida", concludeNotes || undefined); return; }
     updateStatusMutation.mutate({ workOrderId, newStatus: "concluida", notes: concludeNotes || undefined });
   }
 
-  function handleToggleTask(taskId: number, currentCompleted: number) {
+  async function handleToggleTask(taskId: number, currentCompleted: number) {
     if (!workOrderId) return;
     const newVal = currentCompleted === 1 ? false : true;
+    if (!isOnline) {
+      await enqueueMutation("toggleTask", { workOrderId, taskId, isCompleted: newVal });
+      toast.info("Tarefa salva localmente — será sincronizada ao voltar online");
+      return;
+    }
     toggleTaskMutation.mutate({ workOrderId, taskId, isCompleted: newVal });
   }
 
-  function handleSendComment() {
+  async function handleSendComment() {
     if (!workOrderId || !newComment.trim()) return;
+    if (!isOnline) {
+      await enqueueMutation("createComment", {
+        workOrderId,
+        comment:    newComment.trim(),
+        isInternal: commentIsInternal,
+      });
+      setNewComment("");
+      setCommentIsInternal(true);
+      toast.info("Comentário salvo localmente — será sincronizado ao voltar online");
+      return;
+    }
     createCommentMutation.mutate({ workOrderId, comment: newComment.trim(), isInternal: commentIsInternal });
   }
 
@@ -388,8 +424,9 @@ export default function TechnicianWorkOrderDetail() {
     }
   }
 
-  const isActive  = os?.status === "em_andamento";
-  const isPaused  = os?.status === "pausada";
+  // Usa effectiveStatus para refletir mudanças otimistas offline
+  const isActive  = effectiveStatus === "em_andamento";
+  const isPaused  = effectiveStatus === "pausada";
 
   if (!match || !workOrderId) {
     return (
@@ -401,6 +438,9 @@ export default function TechnicianWorkOrderDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Banner de status de conectividade */}
+      <ConnectionStatus />
+
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center gap-3">
@@ -579,7 +619,14 @@ export default function TechnicianWorkOrderDetail() {
                             initialResponses={responses}
                             onSave={(newResponses, isComplete) => {
                               setSavingChecklistId(checklist.id);
-                              updateResponsesMutation.mutate({ checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses, isComplete });
+                              if (!isOnline) {
+                                enqueueMutation("updateChecklistResponses", { checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses }).then(() => {
+                                  setSavingChecklistId(null);
+                                  toast.info("Respostas salvas localmente — serão sincronizadas ao voltar online");
+                                });
+                              } else {
+                                updateResponsesMutation.mutate({ checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses, isComplete });
+                              }
                             }}
                             isSaving={isSaving}
                             readOnly={!!checklist.isComplete}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { APP_LOGO } from "@/const";
 import InstallPWAPrompt from "@/components/InstallPWAPrompt";
 import ConnectionStatus from "@/components/ConnectionStatus";
-import { useOrdersWithOffline, useSyncOfflineOrders } from "@/hooks/useOfflineOrders";
+import {
+  useOrdersWithOffline,
+  useSyncOfflineOrders,
+  usePendingCount,
+} from "@/hooks/useOfflineOrders";
+import { processSyncQueue, getMutationLabel } from "@/lib/syncQueue";
 import {
   HardHat,
   LogOut,
@@ -19,31 +24,74 @@ import {
   CheckCircle,
   AlertCircle,
   FileText,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function TechnicianPortal() {
   const [, setLocation] = useLocation();
   const [technicianId, setTechnicianId] = useState<number | null>(null);
   const [technicianName, setTechnicianName] = useState("");
+  const [pendingModalOpen, setPendingModalOpen] = useState(false);
 
   useEffect(() => {
-    const id = localStorage.getItem("technicianId");
+    const id   = localStorage.getItem("technicianId");
     const name = localStorage.getItem("technicianName");
-    if (!id) {
-      window.location.href = "/technician/login";
-      return;
-    }
+    if (!id) { window.location.href = "/technician/login"; return; }
     setTechnicianId(parseInt(id));
     setTechnicianName(name ?? "Técnico");
   }, []);
 
-  // Hook offline: busca do servidor quando online, do IndexedDB quando offline
-  const { orders: workOrders, isLoading, isOffline, fromCache } = useOrdersWithOffline(!!technicianId);
+  // OS com fallback offline
+  const { orders: workOrders, isLoading, isOffline, fromCache } =
+    useOrdersWithOffline(!!technicianId);
 
-  // Hook de sincronização manual ("Atualizar OS offline")
-  const { syncStatus, lastSync, triggerSync, isOnline } = useSyncOfflineOrders(technicianId);
+  // Botão "Atualizar OS offline"
+  const { syncStatus, lastSync, triggerSync, isOnline } =
+    useSyncOfflineOrders(technicianId);
+
+  // Contagem de mutations pendentes para o badge
+  const { pendingCount, pendingMutations, refresh: refreshPending } = usePendingCount();
+
+  // Auto-sync ao voltar online: aguarda 2s e processa a fila
+  useEffect(() => {
+    const handleOnline = async () => {
+      await new Promise(r => setTimeout(r, 2000));
+
+      const count = await import("@/lib/syncQueue").then(m => m.getPendingCount());
+      if (count === 0) return;
+
+      const toastId = "offline-sync";
+      toast.loading(`Sincronizando ${count} alteração${count > 1 ? "ões" : ""}...`, { id: toastId });
+
+      const { synced, errors } = await processSyncQueue();
+      refreshPending();
+
+      if (errors === 0) {
+        toast.success(
+          `${synced} alteração${synced !== 1 ? "ões" : ""} sincronizada${synced !== 1 ? "s" : ""}!`,
+          { id: toastId }
+        );
+      } else {
+        toast.warning(
+          `${synced} sincronizadas, ${errors} com erro — veja em Pendentes`,
+          { id: toastId }
+        );
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, [refreshPending]);
 
   function handleLogout() {
     fetch("/api/technician-logout", { method: "POST" }).catch(() => {});
@@ -53,14 +101,11 @@ export default function TechnicianPortal() {
     window.location.href = "/technician/login";
   }
 
-  const total = workOrders.length;
-  const pendentes = workOrders.filter(o =>
-    ["aberta", "aprovada", "aguardando_aprovacao"].includes(o.status)
-  ).length;
+  const total       = workOrders.length;
+  const pendentes   = workOrders.filter(o => ["aberta", "aprovada", "aguardando_aprovacao"].includes(o.status)).length;
   const emAndamento = workOrders.filter(o => o.status === "em_andamento").length;
   const concluidas  = workOrders.filter(o => o.status === "concluida").length;
 
-  // Ícone e label do botão de sync conforme o estado atual
   const syncIcon =
     syncStatus === "downloading" ? <Loader2 className="w-4 h-4 animate-spin" /> :
     syncStatus === "done"        ? <CheckCircle className="w-4 h-4 text-green-500" /> :
@@ -71,19 +116,15 @@ export default function TechnicianPortal() {
     syncStatus === "downloading" ? "Baixando..." :
     syncStatus === "done"        ? "Atualizado!" :
     syncStatus === "error"       ? "Erro" :
-                                   "Atualizar OS offline";
+                                   "Atualizar OS";
 
-  // Formata o timestamp da última sincronização de forma amigável
   const lastSyncLabel = lastSync
     ? formatDistanceToNow(new Date(lastSync), { addSuffix: true, locale: ptBR })
     : "nunca";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Banner de instalação PWA */}
       <InstallPWAPrompt />
-
-      {/* Banner de status de conectividade */}
       <ConnectionStatus />
 
       {/* Header */}
@@ -96,8 +137,21 @@ export default function TechnicianPortal() {
               <p className="font-semibold text-sm">{technicianName}</p>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            {/* Botão de sincronização offline — desabilitado sem rede */}
+            {/* Badge de pendentes — visível quando há mutations na fila */}
+            {pendingCount > 0 && (
+              <button
+                onClick={() => setPendingModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-700 text-xs font-medium hover:bg-orange-100 transition-colors"
+                title="Ver alterações pendentes de sincronização"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                {pendingCount} pendente{pendingCount !== 1 ? "s" : ""}
+              </button>
+            )}
+
+            {/* Botão atualizar OS offline */}
             <div className="flex flex-col items-end">
               <Button
                 size="sm"
@@ -105,18 +159,18 @@ export default function TechnicianPortal() {
                 onClick={triggerSync}
                 disabled={!isOnline || syncStatus === "downloading"}
                 className="gap-1.5 h-8"
-                title={isOnline ? `Sincronizar OS (última sync: ${lastSyncLabel})` : "Sem conexão"}
+                title={isOnline ? `Sincronizar OS (última: ${lastSyncLabel})` : "Sem conexão"}
               >
                 {syncIcon}
                 <span className="hidden sm:inline text-xs">{syncLabel}</span>
               </Button>
-              {/* Timestamp da última sync — visível só quando há uma data */}
               {lastSync && (
                 <span className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
                   Sync {lastSyncLabel}
                 </span>
               )}
             </div>
+
             <Button size="sm" variant="outline" onClick={handleLogout} className="gap-1">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair</span>
@@ -143,7 +197,6 @@ export default function TechnicianPortal() {
           </button>
         </div>
 
-        {/* Aviso discreto quando os dados vêm do cache */}
         {fromCache && !isOffline && workOrders.length > 0 && (
           <p className="text-xs text-muted-foreground text-center">
             Exibindo dados locais enquanto carrega do servidor...
@@ -184,7 +237,7 @@ export default function TechnicianPortal() {
               <HardHat className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground">
                 {isOffline
-                  ? "Nenhuma OS no cache. Conecte-se à internet e clique em Atualizar OS offline."
+                  ? "Nenhuma OS no cache. Conecte-se à internet e clique em Atualizar OS."
                   : "Nenhuma OS atribuída a você."}
               </p>
             </div>
@@ -206,8 +259,7 @@ export default function TechnicianPortal() {
                       <p className="font-semibold truncate">{os.title}</p>
                       {os.clientName && (
                         <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                          <User className="w-3 h-3" />
-                          {os.clientName}
+                          <User className="w-3 h-3" />{os.clientName}
                         </p>
                       )}
                       {os.scheduledDate && (
@@ -225,6 +277,58 @@ export default function TechnicianPortal() {
           )}
         </div>
       </main>
+
+      {/* Modal de mutations pendentes */}
+      <Dialog open={pendingModalOpen} onOpenChange={setPendingModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-500" />
+              Alterações pendentes
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {pendingMutations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma alteração pendente.
+              </p>
+            ) : (
+              pendingMutations.map((m) => (
+                <div
+                  key={m.id}
+                  className={`p-3 rounded-lg border text-sm ${
+                    m.status === "error"
+                      ? "bg-red-50 border-red-200"
+                      : "bg-orange-50 border-orange-200"
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {m.status === "error"
+                      ? <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                      : <Clock className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">{getMutationLabel(m.type)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(m.createdAt), "dd/MM HH:mm", { locale: ptBR })}
+                        {m.retries > 0 && ` · ${m.retries} tentativa${m.retries > 1 ? "s" : ""}`}
+                      </p>
+                      {m.status === "error" && m.lastError && (
+                        <p className="text-xs text-red-600 mt-1 truncate">{m.lastError}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            {isOnline
+              ? "As alterações serão enviadas automaticamente."
+              : "Conecte-se à internet para sincronizar."}
+          </p>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
