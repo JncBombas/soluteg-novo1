@@ -174,6 +174,19 @@ export default function AdminWaterTankDashboard() {
     onError: (e: { message: string }) => toast.error(e.message),
   });
 
+  // Hooks devem ficar antes dos returns condicionais — regra dos hooks do React
+  const prevLevelRef = useRef<number | null>(null);
+  const currentLevel = data?.sensor?.currentLevel ?? null;
+  const trend: "up" | "down" | "stable" = (() => {
+    if (currentLevel === null || prevLevelRef.current === null) return "stable";
+    if (currentLevel > prevLevelRef.current + 1) return "up";
+    if (currentLevel < prevLevelRef.current - 1) return "down";
+    return "stable";
+  })();
+  useEffect(() => {
+    if (currentLevel != null) prevLevelRef.current = currentLevel;
+  }, [currentLevel]);
+
   if (isLoading || !adminId) {
     return (
       <DashboardLayout>
@@ -194,20 +207,6 @@ export default function AdminWaterTankDashboard() {
 
   const { sensor, history, alerts } = data;
   const dead = sensor.deadVolumePct ?? 0;
-
-  // Tendência: compara o nível atual com o da refetch anterior (a cada 30s)
-  // Muito mais preciso do que comparar buckets do histórico (que têm 15 min cada)
-  const prevLevelRef = useRef<number | null>(null);
-  const trend: "up" | "down" | "stable" = (() => {
-    const curr = sensor.currentLevel ?? null;
-    if (curr === null || prevLevelRef.current === null) return "stable";
-    if (curr > prevLevelRef.current + 1) return "up";
-    if (curr < prevLevelRef.current - 1) return "down";
-    return "stable";
-  })();
-  useEffect(() => {
-    if (sensor.currentLevel != null) prevLevelRef.current = sensor.currentLevel;
-  }, [sensor.currentLevel]);
   const a1   = sensor.alarm1Pct ?? 30;
   const a2   = sensor.alarm2Pct ?? 15;
   const a3   = (sensor as any).alarm3BoiaPct ?? 90;
