@@ -9,6 +9,7 @@ import {
   LogOut, Download, FileText, Loader2, Search, AlertCircle,
   FileQuestion, Calendar, Droplet, ChevronDown, ClipboardList,
   Home, FolderOpen, Activity, ChevronRight, Upload, Lock, User,
+  ArrowLeft,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -546,12 +547,21 @@ export default function ClientPortal() {
   const recentWorkOrders = [...(sharedWorkOrders as any[])].slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
 
       {/* ── Header ── */}
       <header className="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className={`mx-auto px-4 h-14 flex items-center justify-between ${activePage === "monitoring" ? "max-w-6xl" : "max-w-2xl"}`}>
           <div className="flex items-center gap-3">
+            {activePage !== "home" && (
+              <button
+                onClick={() => setActivePage("home")}
+                className="h-8 w-8 rounded-lg flex items-center justify-center hover:bg-slate-800 transition-colors text-slate-400 hover:text-white"
+                aria-label="Voltar ao início"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
             <img src={APP_LOGO} alt="Soluteg" className="h-8 object-contain" />
             <div className="leading-tight hidden sm:block">
               <p className="font-bold text-sm text-white">Portal do Cliente</p>
@@ -559,6 +569,27 @@ export default function ClientPortal() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Desktop navigation links */}
+            <nav className="hidden md:flex items-center gap-1 mr-4">
+              {[
+                { page: "home" as Page, label: "Início", icon: Home },
+                { page: "documents" as Page, label: "Documentos", icon: FolderOpen },
+                { page: "monitoring" as Page, label: "Monitoramento", icon: Activity },
+              ].map(({ page, label, icon: Icon }) => (
+                <button
+                  key={page}
+                  onClick={() => setActivePage(page)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    activePage === page
+                      ? "bg-amber-500/20 text-amber-400"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </nav>
             <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               {profilePhoto ? (
                 <img src={profilePhoto} alt="Foto" className="w-7 h-7 rounded-full object-cover flex-shrink-0" />
@@ -800,7 +831,18 @@ export default function ClientPortal() {
       {/* ── Page: Monitoring ── */}
       {activePage === "monitoring" && clientId && (
         <div className="max-w-6xl mx-auto px-4 py-5">
-          <h2 className="text-lg font-bold mb-4">Monitoramento</h2>
+          <div className="flex items-center gap-3 mb-5">
+            <button
+              onClick={() => setActivePage("home")}
+              className="md:hidden h-9 w-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Monitoramento</h2>
+              <p className="text-sm text-slate-500">Controle de reservatórios em tempo real</p>
+            </div>
+          </div>
           <WaterTankContent clientId={clientId} clientName={clientName} />
         </div>
       )}
@@ -810,8 +852,8 @@ export default function ClientPortal() {
         <SolutegFooter full={false} />
       </div>
 
-      {/* ── Bottom Navigation ── */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-40 safe-area-bottom">
+      {/* ── Bottom Navigation (mobile only) ── */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 z-40 safe-area-bottom md:hidden">
         <div className="max-w-2xl mx-auto flex">
           <button
             onClick={() => setActivePage("home")}
