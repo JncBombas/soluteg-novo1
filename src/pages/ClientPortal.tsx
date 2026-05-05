@@ -799,7 +799,7 @@ export default function ClientPortal() {
 
       {/* ── Page: Monitoring ── */}
       {activePage === "monitoring" && clientId && (
-        <div className="max-w-2xl mx-auto px-4 py-5">
+        <div className="max-w-6xl mx-auto px-4 py-5">
           <h2 className="text-lg font-bold mb-4">Monitoramento</h2>
           <WaterTankContent clientId={clientId} clientName={clientName} />
         </div>

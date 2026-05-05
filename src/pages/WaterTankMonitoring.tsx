@@ -459,17 +459,17 @@ function TankCard({ tank, sparkData, clientId }: {
             </div>
           </div>
 
-          {/* 3 columns */}
-          <div className="grid grid-cols-[160px_1fr_260px] gap-6">
+          {/* Row 1: Tank visual + info | Chart */}
+          <div className="flex gap-6">
 
-            {/* ── Col 1: Tank + stats ──────────────────────────────── */}
-            <div className="flex flex-col items-center">
+            {/* ── Left: Tank visual + stats ───────────────────────── */}
+            <div className="flex flex-col items-center shrink-0" style={{ width: 180 }}>
               <TankVisual pct={pct} dead={dead} alarm1={a1} alarm2={a2} large />
 
               {pct != null ? (
                 <>
                   <div className="mt-3 text-center">
-                    <span className={`text-5xl font-extrabold leading-none ${textCol}`}>{pct}%</span>
+                    <span className={`text-4xl font-extrabold leading-none ${textCol}`}>{pct}%</span>
                     {tank.capacity && (
                       <p className="text-sm text-slate-500 mt-1">
                         {fmt(Math.round((tank.capacity * pct) / 100))} L
@@ -488,38 +488,11 @@ function TankCard({ tank, sparkData, clientId }: {
                     )}
                   </div>
 
-                  {tank.capacity && (
-                    <div className="mt-3 w-full space-y-1 text-xs bg-slate-50 rounded-lg p-2.5">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Capacidade</span>
-                        <span className="font-semibold text-slate-900">{fmt(tank.capacity)} L</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Volume atual</span>
-                        <span className={`font-semibold ${textCol}`}>{fmt(Math.round((tank.capacity * pct) / 100))} L</span>
-                      </div>
-                      {dead > 0 && (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Reserva SCI</span>
-                            <span className="font-semibold text-red-600">{fmt(Math.round((tank.capacity * dead) / 100))} L</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-400">Utilizável</span>
-                            <span className={`font-semibold ${pct > dead ? "text-slate-900" : "text-red-600"}`}>
-                              {fmt(Math.max(0, Math.round((tank.capacity * (pct - dead)) / 100)))} L
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
                   <div className="mt-2 w-full flex flex-col gap-0.5 text-xs">
                     {dead > 0 && (
                       <span className="flex items-center gap-1 text-red-500">
                         <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: "repeating-linear-gradient(45deg,#ef4444,#ef4444 2px,#fca5a5 2px,#fca5a5 4px)" }} />
-                        Reserva SCI {dead}%
+                        SCI {dead}%
                       </span>
                     )}
                     {a1 > 0 && <span className="text-yellow-600">⚠ Alerta {a1}%</span>}
@@ -541,15 +514,51 @@ function TankCard({ tank, sparkData, clientId }: {
               )}
             </div>
 
-            {/* ── Col 2: Chart ─────────────────────────────────────── */}
-            <div>
+            {/* ── Right: Chart (takes remaining space) ────────────── */}
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-1.5">
                 <BarChart2 className="w-4 h-4 text-blue-500" /> Histórico de Nível
               </p>
-              <TankChart clientId={clientId} tankName={tank.tankName} alarm1={a1} alarm2={a2} dead={dead} height={260} />
+              <TankChart clientId={clientId} tankName={tank.tankName} alarm1={a1} alarm2={a2} dead={dead} height={280} />
             </div>
+          </div>
 
-            {/* ── Col 3: Alarms ────────────────────────────────────── */}
+          {/* Row 2: Stats + Alarms */}
+          <div className="grid grid-cols-2 gap-6 mt-5 pt-5 border-t border-slate-100">
+            {/* ── Stats ───────────────────────────────────────────── */}
+            {tank.capacity && pct != null ? (
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-slate-700 mb-2">Informações do Reservatório</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400">Capacidade</p>
+                    <p className="text-lg font-bold text-slate-900">{fmt(tank.capacity)} L</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3">
+                    <p className="text-xs text-slate-400">Volume atual</p>
+                    <p className={`text-lg font-bold ${textCol}`}>{fmt(Math.round((tank.capacity * pct) / 100))} L</p>
+                  </div>
+                  {dead > 0 && (
+                    <>
+                      <div className="bg-red-50 rounded-lg p-3">
+                        <p className="text-xs text-red-400">Reserva SCI</p>
+                        <p className="text-lg font-bold text-red-600">{fmt(Math.round((tank.capacity * dead) / 100))} L</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-lg p-3">
+                        <p className="text-xs text-slate-400">Utilizável</p>
+                        <p className={`text-lg font-bold ${pct > dead ? "text-slate-900" : "text-red-600"}`}>
+                          {fmt(Math.max(0, Math.round((tank.capacity * (pct - dead)) / 100)))} L
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            {/* ── Alarms ─────────────────────────────────────────── */}
             <div>
               {alarm && (
                 <div className="mb-3">
@@ -736,7 +745,7 @@ export function WaterTankContent({ clientId, clientName, sseConnected: propSse }
       {tanks.length > 0 && <SummaryStrip tanks={tanks} sseConnected={sseConnected} />}
 
       {tanks.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-1">
+        <div className="grid gap-5">
           {tanks.map((tank) => (
             <TankCard
               key={tank.tankName}
