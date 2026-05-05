@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { APP_LOGO } from "@/const";
 import InstallPWAPrompt from "@/components/InstallPWAPrompt";
+import ConnectionStatus from "@/components/ConnectionStatus";
+import { useOrdersWithOffline, useSyncOfflineOrders } from "@/hooks/useOfflineOrders";
 import {
   HardHat,
   LogOut,
@@ -13,10 +14,13 @@ import {
   Calendar,
   User,
   ClipboardList,
-  RefreshCw,
+  Download,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
   FileText,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function TechnicianPortal() {
@@ -35,10 +39,11 @@ export default function TechnicianPortal() {
     setTechnicianName(name ?? "Técnico");
   }, []);
 
-  const { data: workOrders = [], isLoading, refetch } = (trpc as any).technicianPortal.getMyWorkOrders.useQuery(
-    undefined,
-    { enabled: !!technicianId }
-  );
+  // Hook offline: busca do servidor quando online, do IndexedDB quando offline
+  const { orders: workOrders, isLoading, isOffline, fromCache } = useOrdersWithOffline(!!technicianId);
+
+  // Hook de sincronização manual ("Atualizar OS offline")
+  const { syncStatus, lastSync, triggerSync, isOnline } = useSyncOfflineOrders(technicianId);
 
   function handleLogout() {
     fetch("/api/technician-logout", { method: "POST" }).catch(() => {});
@@ -49,14 +54,37 @@ export default function TechnicianPortal() {
   }
 
   const total = workOrders.length;
-  const pendentes = (workOrders as any[]).filter(o => ["aberta", "aprovada", "aguardando_aprovacao"].includes(o.status)).length;
-  const emAndamento = (workOrders as any[]).filter(o => o.status === "em_andamento").length;
-  const concluidas = (workOrders as any[]).filter(o => o.status === "concluida").length;
+  const pendentes = workOrders.filter(o =>
+    ["aberta", "aprovada", "aguardando_aprovacao"].includes(o.status)
+  ).length;
+  const emAndamento = workOrders.filter(o => o.status === "em_andamento").length;
+  const concluidas  = workOrders.filter(o => o.status === "concluida").length;
+
+  // Ícone e label do botão de sync conforme o estado atual
+  const syncIcon =
+    syncStatus === "downloading" ? <Loader2 className="w-4 h-4 animate-spin" /> :
+    syncStatus === "done"        ? <CheckCircle className="w-4 h-4 text-green-500" /> :
+    syncStatus === "error"       ? <AlertCircle className="w-4 h-4 text-red-500" /> :
+                                   <Download className="w-4 h-4" />;
+
+  const syncLabel =
+    syncStatus === "downloading" ? "Baixando..." :
+    syncStatus === "done"        ? "Atualizado!" :
+    syncStatus === "error"       ? "Erro" :
+                                   "Atualizar OS offline";
+
+  // Formata o timestamp da última sincronização de forma amigável
+  const lastSyncLabel = lastSync
+    ? formatDistanceToNow(new Date(lastSync), { addSuffix: true, locale: ptBR })
+    : "nunca";
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Banner de instalação PWA — aparece no topo quando o browser suporta e o técnico ainda não instalou */}
+      {/* Banner de instalação PWA */}
       <InstallPWAPrompt />
+
+      {/* Banner de status de conectividade */}
+      <ConnectionStatus />
 
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-10">
@@ -69,9 +97,26 @@ export default function TechnicianPortal() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" onClick={() => refetch()} title="Atualizar">
-              <RefreshCw className="w-4 h-4" />
-            </Button>
+            {/* Botão de sincronização offline — desabilitado sem rede */}
+            <div className="flex flex-col items-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={triggerSync}
+                disabled={!isOnline || syncStatus === "downloading"}
+                className="gap-1.5 h-8"
+                title={isOnline ? `Sincronizar OS (última sync: ${lastSyncLabel})` : "Sem conexão"}
+              >
+                {syncIcon}
+                <span className="hidden sm:inline text-xs">{syncLabel}</span>
+              </Button>
+              {/* Timestamp da última sync — visível só quando há uma data */}
+              {lastSync && (
+                <span className="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">
+                  Sync {lastSyncLabel}
+                </span>
+              )}
+            </div>
             <Button size="sm" variant="outline" onClick={handleLogout} className="gap-1">
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sair</span>
@@ -97,7 +142,15 @@ export default function TechnicianPortal() {
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-blue-600" />
           </button>
         </div>
-        {/* Resumo */}
+
+        {/* Aviso discreto quando os dados vêm do cache */}
+        {fromCache && !isOffline && workOrders.length > 0 && (
+          <p className="text-xs text-muted-foreground text-center">
+            Exibindo dados locais enquanto carrega do servidor...
+          </p>
+        )}
+
+        {/* Resumo de contadores */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white dark:bg-gray-900 rounded-lg border p-3 text-center">
             <p className="text-2xl font-bold text-yellow-600">{pendentes}</p>
@@ -122,15 +175,22 @@ export default function TechnicianPortal() {
           </div>
 
           {isLoading ? (
-            <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+            <div className="text-center py-12 text-muted-foreground">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+              Carregando...
+            </div>
           ) : workOrders.length === 0 ? (
             <div className="bg-white dark:bg-gray-900 rounded-lg border p-8 text-center">
               <HardHat className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">Nenhuma OS atribuída a você.</p>
+              <p className="text-muted-foreground">
+                {isOffline
+                  ? "Nenhuma OS no cache. Conecte-se à internet e clique em Atualizar OS offline."
+                  : "Nenhuma OS atribuída a você."}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {(workOrders as any[]).map((os) => (
+              {workOrders.map((os) => (
                 <button
                   key={os.id}
                   onClick={() => setLocation(`/technician/work-orders/${os.id}`)}
