@@ -25,15 +25,24 @@ registerSW({
 
 const queryClient = new QueryClient();
 
+// Redireciona para a tela de login correta conforme o portal atual.
+// Sem isso, qualquer 401 manda o técnico para /gestor/login (fora do
+// escopo /technician do PWA), abrindo um aba do browser e quebrando o fluxo.
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
   if (!isUnauthorized) return;
 
-  window.location.href = getLoginUrl();
+  const path = window.location.pathname;
+  if (path.startsWith("/technician")) {
+    window.location.href = "/technician/login";
+  } else if (path.startsWith("/client")) {
+    window.location.href = "/client/login";
+  } else {
+    window.location.href = getLoginUrl();
+  }
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -55,8 +64,10 @@ queryClient.getMutationCache().subscribe(event => {
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      // Agora ele tenta ler do .env (localhost:3000/3001) ou usa a produção se não houver variável
-      url: `${import.meta.env.VITE_API_URL || 'https://jnc.soluteg.com.br'}/api/trpc`,
+      // VITE_API_URL quando definido no .env aponta para o backend (ex: http://localhost:5000).
+      // Sem a variável, usa a mesma origem do app — garante que o cookie de autenticação
+      // seja enviado corretamente (cookie de app.soluteg.com.br não vai para jnc.soluteg.com.br).
+      url: `${import.meta.env.VITE_API_URL || window.location.origin}/api/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
