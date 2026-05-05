@@ -1,19 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+
+    <!-- Ícone padrão do browser (favicon) -->
     <link rel="icon" type="image/jpg" href="/favicon.jpg" />
-    <link rel="apple-touch-icon" href="/favicon.ico" />
+
+    <!-- Ícone para iOS ao adicionar à tela inicial (apple-touch-icon) -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- PWA: fundo da splash screen no iOS (mesma cor do manifest) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Soluteg" />
+
+    <!-- PWA: cor da barra de endereço no Android Chrome -->
+    <meta name="theme-color" content="#141820" />
+
+    <!-- O manifest.webmanifest é injetado automaticamente pelo vite-plugin-pwa -->
+
     <title>%VITE_APP_TITLE%</title>
-    <!-- Add Google Fonts here, example:
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    -->
   </head>
 
   <body>

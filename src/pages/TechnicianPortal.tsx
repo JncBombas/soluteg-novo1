@@ -5,6 +5,7 @@ import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { APP_LOGO } from "@/const";
+import InstallPWAPrompt from "@/components/InstallPWAPrompt";
 import {
   HardHat,
   LogOut,
@@ -54,6 +55,9 @@ export default function TechnicianPortal() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Banner de instalação PWA — aparece no topo quando o browser suporta e o técnico ainda não instalou */}
+      <InstallPWAPrompt />
+
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">

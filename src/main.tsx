@@ -4,9 +4,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
+// Módulo virtual gerado pelo vite-plugin-pwa — só existe após o build
+import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
+
+// Registra o service worker assim que o app carrega.
+// updateSW() pode ser chamado futuramente para forçar atualização manual.
+// onRegistered: log de confirmação no console para debug em campo
+// onRegisterError: falha silenciosa — app funciona normalmente sem SW
+registerSW({
+  onRegistered(r: ServiceWorkerRegistration | undefined) {
+    console.log("[OFFLINE] Service worker registrado:", r);
+  },
+  onRegisterError(error: unknown) {
+    console.warn("[OFFLINE] Falha ao registrar service worker:", error);
+  },
+});
 
 const queryClient = new QueryClient();
 
