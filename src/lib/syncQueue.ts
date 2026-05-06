@@ -27,6 +27,10 @@ import { createSyncClient } from "./trpcStandalone";
 
 const MAX_RETRIES = 3;
 
+// Lock global para evitar que dois processSyncQueue() rodem ao mesmo tempo
+// (ex: auto-sync global + sync manual no TechnicianPortal)
+let syncInProgress = false;
+
 // ---------------------------------------------------------------------------
 // enqueueMutation — adiciona uma mutation à fila
 // ---------------------------------------------------------------------------
@@ -69,6 +73,20 @@ export type SyncResult = {
  * Retorna quantas foram sincronizadas e quantas falharam definitivamente.
  */
 export async function processSyncQueue(): Promise<SyncResult> {
+  if (syncInProgress) {
+    console.log("[OFFLINE] Sync já em andamento, ignorando chamada concorrente");
+    return { synced: 0, errors: 0 };
+  }
+  syncInProgress = true;
+
+  try {
+    return await _processSyncQueueInner();
+  } finally {
+    syncInProgress = false;
+  }
+}
+
+async function _processSyncQueueInner(): Promise<SyncResult> {
   const pending = await getPendingMutations();
   if (pending.length === 0) return { synced: 0, errors: 0 };
 

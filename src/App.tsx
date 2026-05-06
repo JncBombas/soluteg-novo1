@@ -49,6 +49,7 @@ import AdminLaudoForm from "./pages/AdminLaudoForm";
 import TecnicoLaudos from "./pages/TecnicoLaudos";
 import TecnicoLaudoForm from "./pages/TecnicoLaudoForm";
 import PdvLayout from "./components/pdv/PdvLayout";
+import { useAutoSync } from "./hooks/useAutoSync";
 import PdvDashboard from "./pages/pdv/PdvDashboard";
 import PdvSales from "./pages/pdv/PdvSales";
 import PdvProducts from "./pages/pdv/PdvProducts";
@@ -130,11 +131,20 @@ function Router() {
   );
 }
 
+// Componente invisível que ativa o auto-sync global.
+// Separado em componente próprio para isolar o hook de side-effects do App.
+function GlobalAutoSync() {
+  useAutoSync();
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
+          {/* Auto-sync sempre ativo, independente da tela atual */}
+          <GlobalAutoSync />
           <Toaster />
           <Router />
         </TooltipProvider>

@@ -108,6 +108,25 @@ export default function TechnicianWorkOrderDetail() {
     setTechnicianId(parseInt(id));
   }, []);
 
+  // Quando o auto-sync global conclui, atualiza todos os dados da tela
+  // e limpa os rascunhos offline de checklist salvos no localStorage
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      refetch();
+      refetchTasks?.();
+      refetchComments?.();
+      refetchChecklists?.();
+      // Limpa rascunhos offline de checklist agora que o servidor tem os dados
+      if (workOrderId && checklists?.length) {
+        (checklists as any[]).forEach((cl: any) => {
+          localStorage.removeItem(`offline_cl_${workOrderId}_${cl.id}`);
+        });
+      }
+    };
+    window.addEventListener("soluteg:sync-complete", handleSyncComplete);
+    return () => window.removeEventListener("soluteg:sync-complete", handleSyncComplete);
+  }, [refetch, refetchTasks, refetchComments, refetchChecklists, workOrderId, checklists]);
+
   // Hook offline: busca do servidor quando online, do IndexedDB quando offline
   const { os: osRaw, isLoading, refetch } = useOfflineOrderDetail(workOrderId, technicianId);
   const os = osRaw as any;
@@ -270,6 +289,11 @@ export default function TechnicianWorkOrderDetail() {
   async function handleAddPhotoFromChecklist(caption: string, file: File) {
     if (!workOrderId) return;
 
+    if (!isOnline) {
+      toast.error("Fotos precisam de conexão com a internet. Conecte-se e tente novamente.");
+      throw new Error("offline");
+    }
+
     setUploading(true);
     try {
       const formData = new FormData();
@@ -405,6 +429,14 @@ export default function TechnicianWorkOrderDetail() {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
     if (!files || files.length === 0 || !workOrderId) return;
+
+    // Fotos precisam de internet — o upload para Cloudinary é sempre online
+    // (sub-fase 3.4 adicionará suporte offline completo para fotos)
+    if (!isOnline) {
+      toast.error("Fotos precisam de conexão com a internet. Conecte-se e tente novamente.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
 
     setUploading(true);
     try {
@@ -609,7 +641,12 @@ export default function TechnicianWorkOrderDetail() {
                           : parsed;
                       } catch { /* ignore */ }
                     }
-                    const responses = checklist.responses ? JSON.parse(checklist.responses) : {};
+                    // Respostas do servidor — podem estar desatualizadas se preenchidas offline
+                    const serverResponses = checklist.responses ? JSON.parse(checklist.responses) : {};
+                    // Rascunho offline salvo no localStorage (sobrescreve o servidor)
+                    const localDraftKey = `offline_cl_${workOrderId}_${checklist.id}`;
+                    const localDraftRaw = localStorage.getItem(localDraftKey);
+                    const responses = localDraftRaw ? JSON.parse(localDraftRaw) : serverResponses;
                     // tipo_bomba vem das respostas salvas no template unificado de Bomba
                     const tipoBomba = responses?.tipo_bomba as string | undefined;
                     const isSaving = savingChecklistId === checklist.id && updateResponsesMutation.isPending;
@@ -635,12 +672,23 @@ export default function TechnicianWorkOrderDetail() {
                             initialResponses={responses}
                             onSave={(newResponses, isComplete) => {
                               setSavingChecklistId(checklist.id);
+                              const draftKey = `offline_cl_${workOrderId}_${checklist.id}`;
                               if (!isOnline) {
-                                enqueueMutation("updateChecklistResponses", { checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses }).then(() => {
-                                  setSavingChecklistId(null);
-                                  toast.info("Respostas salvas localmente — serão sincronizadas ao voltar online");
-                                });
+                                // Salva no localStorage para persistir entre navegações
+                                localStorage.setItem(draftKey, JSON.stringify(newResponses));
+                                enqueueMutation("updateChecklistResponses", { checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses })
+                                  .then(() => {
+                                    setSavingChecklistId(null);
+                                    toast.info("Respostas salvas localmente — serão sincronizadas ao voltar online");
+                                    console.log(`[OFFLINE] Respostas do checklist #${checklist.id} salvas no localStorage`);
+                                  })
+                                  .catch(() => {
+                                    setSavingChecklistId(null);
+                                    toast.error("Erro ao salvar respostas offline.");
+                                  });
                               } else {
+                                // Online: envia direto e limpa rascunho local se existia
+                                localStorage.removeItem(draftKey);
                                 updateResponsesMutation.mutate({ checklistId: checklist.id, workOrderId: workOrderId!, responses: newResponses, isComplete });
                               }
                             }}

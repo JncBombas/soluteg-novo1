@@ -11,7 +11,7 @@ import {
   useSyncOfflineOrders,
   usePendingCount,
 } from "@/hooks/useOfflineOrders";
-import { processSyncQueue, getMutationLabel } from "@/lib/syncQueue";
+import { getMutationLabel } from "@/lib/syncQueue";
 import {
   HardHat,
   LogOut,
@@ -62,35 +62,11 @@ export default function TechnicianPortal() {
   // Contagem de mutations pendentes para o badge
   const { pendingCount, pendingMutations, refresh: refreshPending } = usePendingCount();
 
-  // Auto-sync ao voltar online: aguarda 2s e processa a fila
+  // Atualiza contagem de pendentes quando o auto-sync global (App.tsx) conclui
   useEffect(() => {
-    const handleOnline = async () => {
-      await new Promise(r => setTimeout(r, 2000));
-
-      const count = await import("@/lib/syncQueue").then(m => m.getPendingCount());
-      if (count === 0) return;
-
-      const toastId = "offline-sync";
-      toast.loading(`Sincronizando ${count} alteração${count > 1 ? "ões" : ""}...`, { id: toastId });
-
-      const { synced, errors } = await processSyncQueue();
-      refreshPending();
-
-      if (errors === 0) {
-        toast.success(
-          `${synced} alteração${synced !== 1 ? "ões" : ""} sincronizada${synced !== 1 ? "s" : ""}!`,
-          { id: toastId }
-        );
-      } else {
-        toast.warning(
-          `${synced} sincronizadas, ${errors} com erro — veja em Pendentes`,
-          { id: toastId }
-        );
-      }
-    };
-
-    window.addEventListener("online", handleOnline);
-    return () => window.removeEventListener("online", handleOnline);
+    const handleSyncComplete = () => refreshPending();
+    window.addEventListener("soluteg:sync-complete", handleSyncComplete);
+    return () => window.removeEventListener("soluteg:sync-complete", handleSyncComplete);
   }, [refreshPending]);
 
   function handleLogout() {
