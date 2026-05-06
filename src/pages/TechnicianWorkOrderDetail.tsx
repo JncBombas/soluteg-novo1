@@ -108,25 +108,6 @@ export default function TechnicianWorkOrderDetail() {
     setTechnicianId(parseInt(id));
   }, []);
 
-  // Quando o auto-sync global conclui, atualiza todos os dados da tela
-  // e limpa os rascunhos offline de checklist salvos no localStorage
-  useEffect(() => {
-    const handleSyncComplete = () => {
-      refetch();
-      refetchTasks?.();
-      refetchComments?.();
-      refetchChecklists?.();
-      // Limpa rascunhos offline de checklist agora que o servidor tem os dados
-      if (workOrderId && checklists?.length) {
-        (checklists as any[]).forEach((cl: any) => {
-          localStorage.removeItem(`offline_cl_${workOrderId}_${cl.id}`);
-        });
-      }
-    };
-    window.addEventListener("soluteg:sync-complete", handleSyncComplete);
-    return () => window.removeEventListener("soluteg:sync-complete", handleSyncComplete);
-  }, [refetch, refetchTasks, refetchComments, refetchChecklists, workOrderId, checklists]);
-
   // Hook offline: busca do servidor quando online, do IndexedDB quando offline
   const { os: osRaw, isLoading, refetch } = useOfflineOrderDetail(workOrderId, technicianId);
   const os = osRaw as any;
@@ -165,6 +146,26 @@ export default function TechnicianWorkOrderDetail() {
     undefined,
     { enabled: canInteract }
   );
+
+  // ATENÇÃO: este useEffect DEVE ficar DEPOIS de todas as declarações de refetch/checklists.
+  // Colocá-lo antes causaria TDZ (Temporal Dead Zone) — const acessado antes de ser declarado.
+  // Ouve o evento global de sync-complete para atualizar dados e limpar rascunhos offline.
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      refetch();
+      refetchTasks?.();
+      refetchComments?.();
+      refetchChecklists?.();
+      // Remove rascunhos offline de checklist — o servidor já tem os dados sincronizados
+      if (workOrderId && (checklists as any[]).length > 0) {
+        (checklists as any[]).forEach((cl: any) => {
+          localStorage.removeItem(`offline_cl_${workOrderId}_${cl.id}`);
+        });
+      }
+    };
+    window.addEventListener("soluteg:sync-complete", handleSyncComplete);
+    return () => window.removeEventListener("soluteg:sync-complete", handleSyncComplete);
+  }, [refetch, refetchTasks, refetchComments, refetchChecklists, workOrderId, checklists]);
 
   const updateResponsesMutation = (trpc as any).technicianPortal.checklists.updateResponses.useMutation({
     onSuccess: () => {
