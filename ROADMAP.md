@@ -4,7 +4,7 @@
 **Dedicação:** ~3h/dia
 **Princípio:** uma fase por vez. Não pula. Não mistura.
 
-**Última atualização:** 04/05/2026
+**Última atualização:** 07/05/2026
 **Fase 2 pulada deliberadamente** — hardware será definido em paralelo com Fase 3, fora do código.
 
 ---
@@ -90,48 +90,72 @@
 **Critério de saída:** técnico no subsolo conclui OS completa offline e sincroniza ao sair.
 
 ### Preparação
-- [ ] Estudar arquitetura PWA: Service Worker + IndexedDB
-- [ ] Definir o que precisa funcionar offline: visualizar OS, preencher checklist, fotos, assinaturas
-- [ ] Definir o que NÃO funciona offline: criar nova OS, alterações de admin
-- [ ] Mapear todas as mutations tRPC do portal técnico
+- [x] Estudar arquitetura PWA: Service Worker + IndexedDB
+- [x] Definir o que precisa funcionar offline: visualizar OS, preencher checklist, fotos, assinaturas
+- [x] Definir o que NÃO funciona offline: criar nova OS, fotos precisam de internet apenas para upload (captura é offline), Concluir requer online
+- [x] Mapear todas as mutations tRPC do portal técnico
 
-### Implementação base
-- [ ] Configurar Vite PWA plugin no projeto Soluteg
-- [ ] Criar manifest.json com ícones, nome, cores
-- [ ] Configurar Service Worker para cache de assets
-- [ ] Implementar IndexedDB para dados das OS
-- [ ] Implementar download proativo: ao entrar no portal, baixar OS atribuídas
+### Implementação base (Sub-fase 3.1 — concluída 05/05/2026)
+- [x] Configurar Vite PWA plugin no projeto Soluteg (`vite-plugin-pwa`, `registerType: autoUpdate`)
+- [x] Criar manifest.json: "Soluteg Técnico", scope `/technician`, start_url `/technician/login`, tema `#141820`
+- [x] Configurar Service Worker: Workbox, NetworkOnly para `/api/`, pré-cache do bundle inteiro
+- [x] Prompt de instalação `<InstallPWAPrompt>` no portal do técnico
+- [x] PWA instalável também no portal do cliente ("Soluteg Cliente", manifest separado, mesmo SW)
 
-### Lógica offline
-- [ ] Detectar status online/offline com listener nativo
-- [ ] Indicador visual claro (banner topo: "Offline — sincronizando ao voltar")
-- [ ] Fila de mutations pendentes no IndexedDB
-- [ ] Lógica de sincronização ao voltar online
-- [ ] Tratamento de conflitos (admin alterou OS enquanto técnico estava offline)
+### Cache de leitura (Sub-fase 3.2 — concluída 05/05/2026)
+- [x] Implementar IndexedDB (`soluteg-offline`) para dados das OS (lib `idb`)
+- [x] Implementar download proativo: ao entrar no portal, baixar OS atribuídas
+- [x] `useOfflineOrderDetail`: detalhe da OS lido do IndexedDB quando offline
+- [x] Botão "Atualizar OS offline" no header com timestamp de última sync
+- [x] Banner amarelo quando offline, invisível quando online
 
-### Upload de mídia offline
-- [ ] Salvar fotos no IndexedDB (base64 ou Blob)
-- [ ] Upload assíncrono ao Cloudinary quando voltar online
-- [ ] Indicador de progresso de upload
-- [ ] Retry automático em caso de falha
+### Lógica offline (Sub-fase 3.3 — concluída 06/05/2026)
+- [x] Detectar status online/offline com `useOnlineStatus()` (window online/offline events)
+- [x] Indicador visual claro (banner amarelo: "Modo offline — alterações serão sincronizadas ao voltar")
+- [x] Fila de mutations pendentes no IndexedDB (`pendingMutations`)
+- [x] Lógica de sincronização ao voltar online — auto-sync global em `App.tsx` (qualquer tela)
+- [x] Tratamento de conflitos: técnico vence (payload completo sobrescreve)
+- [x] Badge de pendentes no header com modal listando tipo/data/retries
+- [x] Checklist offline: respostas persistidas em localStorage entre navegações
+- [x] Comentários, tarefas e status enfileirados e sincronizados
+
+### Upload de mídia offline (Sub-fase 3.4 — concluída 07/05/2026)
+- [x] Salvar fotos no IndexedDB como Blob (store `pendingMedia`)
+- [x] Preview local via `URL.createObjectURL()` com badge "Offline"
+- [x] Upload assíncrono ao Cloudinary via `processMediaQueue()` ao reconectar
+- [x] Retry automático (máx. 3 tentativas com backoff)
+- [x] Assinatura do técnico offline: enfileirada + localStorage + indicador visual
+- [x] Assinatura do cliente offline: idem
+- [x] Concluir bloqueado offline (evita OS fechada com fotos/dados na fila)
+- [x] Limpeza de blobs antigos (> 7 dias) ao iniciar o app
+- [x] Detecção de `QuotaExceededError` com alerta ao usuário
+- [x] Compressão preparada e desabilitada por padrão (`COMPRESS_PHOTOS = false`)
 
 ### Push notifications
-- [ ] Configurar VAPID keys
+- [ ] Configurar VAPID keys ← deliberadamente adiado (PWA cobre o uso em campo)
 - [ ] Backend envia push quando admin atribui nova OS
 - [ ] Notificação aparece mesmo com app fechado
 - [ ] Click na notificação abre a OS no portal
 
-### Validação
-- [ ] Teste em campo: técnico vai num subsolo real
-- [ ] Faz OS completa offline (checklist + fotos + assinatura)
-- [ ] Sai do prédio, valida sincronização automática
-- [ ] Validar que admin vê tudo correto após sync
+### Polimento (Sub-fase 3.5 — pendente)
+- [ ] Página `/technician/offline-status`: OS baixadas, mutations pendentes, tamanho do IndexedDB
+- [ ] Botão "Forçar sincronização" e "Limpar dados offline"
+- [ ] Log de erros persistente (store `errorLog`, rolling buffer 100 entradas)
+- [ ] Lighthouse PWA score > 90
 
-### Bonus (se sobrar tempo na Fase 3)
+### Validação (feita em campo — 06/05–07/05/2026)
+- [x] Técnico testou offline: OS visível sem rede
+- [x] Checklist preenchido offline: dados persistem entre navegações
+- [x] Fotos capturadas offline: preview aparece, upload automático ao reconectar
+- [x] Assinaturas técnico e cliente offline: indicador visual, persistência, sync
+- [x] Status da OS alterado offline: sincroniza ao voltar online
+- [ ] Validação formal em subsolo real com admin confirmando dados (pendente)
+
+### Bonus (adiado)
 - [ ] Reorganizar portal técnico em abas: OS / Orçamentos / Laudos
-- [ ] Adicionar sessões dentro de cada aba: aberta / em andamento / concluída
+- [ ] Adicionar filtros por status dentro de cada aba
 
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [ ] Concluída em ___/___/___
+**Status da fase:** [ ] Não iniciada [x] Em andamento (sub-fase 3.5 pendente) [ ] Concluída em ___/___/___
 
 ---
 
@@ -199,15 +223,23 @@ Adiados deliberadamente para não desviar foco:
 
 ## 📊 INDICADOR GERAL DE PROGRESSO
 
-[x] Fase 1 — Alarmes              16/16 itens de implementação/diagnóstico/regras ✅ (falta: validação em campo)
-[ ] Fase 2 — Hardware             0/19 itens
-[ ] Fase 3 — PWA Offline          0/27 itens
+[x] Fase 1 — Alarmes              Concluída ✅ 04/05/2026
+[x] Fase 2 — Hardware             Pulada deliberadamente
+[~] Fase 3 — PWA Offline          Sub-fases 3.1–3.4 concluídas ✅ | Sub-fase 3.5 (polimento) pendente
 [ ] Fase 4 — Validação comercial  0/13 itens
 [ ] Fase 5 — Landing Soluteg      0/7 itens
 
 ---
 
 ## 📝 LOG DE PROGRESSO
+
+### Sessão 05–07/05/2026 — Fase 3 (Sub-fases 3.1 a 3.4)
+- Sub-fase 3.1: PWA instalável — `vite-plugin-pwa`, manifest Soluteg Técnico, InstallPWAPrompt, correção auth redirect 401, URL tRPC via `window.location.origin`
+- Sub-fase 3.2: Cache IndexedDB — `offlineDB.ts`, `useOfflineOrders`, `ConnectionStatus`, botão sync offline com timestamp
+- Sub-fase 3.3: Fila de mutations — `syncQueue.ts`, `trpcStandalone.ts`, `useAutoSync` global em App.tsx, checklist localStorage, auto-sync em qualquer tela
+- Sub-fase 3.4: Fotos e assinaturas — `pendingMedia` (Blob no IndexedDB), `processMediaQueue`, assinatura técnico/cliente offline com localStorage, Concluir bloqueado offline, PWA portal do cliente (`manifest-client.webmanifest`)
+- Múltiplos bugs corrigidos: TDZ do useEffect, timing do localStorage, SW interferia com Cloudinary, `isComplete` faltava no payload offline, `saveClientSignature` adicionada ao syncQueue
+- Validado em campo pelo usuário
 
 ### Sessão 04/05/2026
 - Diagnóstico completo: WhatsApp falhava silenciosamente (alerta perdido para sempre quando !isReady)
