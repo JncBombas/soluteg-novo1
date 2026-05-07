@@ -50,7 +50,7 @@ export default function EditClient() {
       phone: client.phone ?? "",
       address: client.address ?? "",
       syndicName: client.syndicName ?? "",
-      type: client.type ?? "com_portal",
+      type: (client.type === "sem_portal" ? "sem_portal" : "com_portal"),
       newPassword: "",
     });
   }, [client]);
