@@ -151,21 +151,33 @@ export default function TechnicianWorkOrderDetail() {
   // Colocá-lo antes causaria TDZ (Temporal Dead Zone) — const acessado antes de ser declarado.
   // Ouve o evento global de sync-complete para atualizar dados e limpar rascunhos offline.
   useEffect(() => {
-    const handleSyncComplete = () => {
+    const handleSyncComplete = (event: Event) => {
+      const { errors } = (event as CustomEvent<{ synced: number; errors: number }>).detail;
+
       refetch();
       refetchTasks?.();
       refetchComments?.();
-      refetchChecklists?.();
-      // Remove rascunhos offline de checklist — o servidor já tem os dados sincronizados
-      if (workOrderId && (checklists as any[]).length > 0) {
-        (checklists as any[]).forEach((cl: any) => {
-          localStorage.removeItem(`offline_cl_${workOrderId}_${cl.id}`);
-        });
-      }
+
+      // Refetch checklists e só ENTÃO limpa o localStorage — garante que o servidor
+      // já recebeu e confirmou os dados antes de remover o rascunho offline.
+      // Se houve erros na fila, mantém o rascunho para não perder dados não sincronizados.
+      const p = refetchChecklists?.() ?? Promise.resolve();
+      p.then(() => {
+        if (errors === 0 && workOrderId) {
+          const prefix = `offline_cl_${workOrderId}_`;
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key?.startsWith(prefix)) {
+              localStorage.removeItem(key);
+              console.log(`[OFFLINE] Rascunho de checklist removido após sync: ${key}`);
+            }
+          }
+        }
+      });
     };
     window.addEventListener("soluteg:sync-complete", handleSyncComplete);
     return () => window.removeEventListener("soluteg:sync-complete", handleSyncComplete);
-  }, [refetch, refetchTasks, refetchComments, refetchChecklists, workOrderId, checklists]);
+  }, [refetch, refetchTasks, refetchComments, refetchChecklists, workOrderId]);
 
   const updateResponsesMutation = (trpc as any).technicianPortal.checklists.updateResponses.useMutation({
     onSuccess: () => {
