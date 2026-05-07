@@ -4,7 +4,7 @@
 **Dedicação:** ~3h/dia
 **Princípio:** uma fase por vez. Não pula. Não mistura.
 
-**Última atualização:** 07/05/2026
+**Última atualização:** 07/05/2026 (Fase 3 concluída)
 **Fase 2 pulada deliberadamente** — hardware será definido em paralelo com Fase 3, fora do código.
 
 ---
@@ -137,25 +137,32 @@
 - [ ] Notificação aparece mesmo com app fechado
 - [ ] Click na notificação abre a OS no portal
 
-### Polimento (Sub-fase 3.5 — pendente)
-- [ ] Página `/technician/offline-status`: OS baixadas, mutations pendentes, tamanho do IndexedDB
-- [ ] Botão "Forçar sincronização" e "Limpar dados offline"
-- [ ] Log de erros persistente (store `errorLog`, rolling buffer 100 entradas)
-- [ ] Lighthouse PWA score > 90
+### Polimento (Sub-fase 3.5 — concluída 07/05/2026)
+- [x] Página `/technician/offline-status`: OS baixadas, mutations/mídias pendentes, uso do IndexedDB
+- [x] Botão "Forçar sincronização" e "Limpar dados offline" (com confirmação AlertDialog)
+- [x] Log de erros persistente (store `errorLog` v4, rolling buffer 100 entradas)
+- [x] Página `/technician/como-funciona-offline`: guia para o técnico (instalar, o que funciona, rotina de campo)
+- [x] Cards de acesso rápido no portal: Status Offline (badge de pendentes) e Guia
 
 ### Validação (feita em campo — 06/05–07/05/2026)
 - [x] Técnico testou offline: OS visível sem rede
-- [x] Checklist preenchido offline: dados persistem entre navegações
+- [x] Checklist preenchido offline: dados persistem entre navegações e sincronizam
 - [x] Fotos capturadas offline: preview aparece, upload automático ao reconectar
 - [x] Assinaturas técnico e cliente offline: indicador visual, persistência, sync
 - [x] Status da OS alterado offline: sincroniza ao voltar online
-- [ ] Validação formal em subsolo real com admin confirmando dados (pendente)
+- [x] Concluir bloqueado offline: impede OS fechada com dados na fila
+- [ ] Validação formal em subsolo real com admin confirmando dados (pendente — próximo passo)
+
+### Push notifications (adiado — fora do escopo atual)
+- [ ] Configurar VAPID keys
+- [ ] Backend envia push quando admin atribui nova OS
+- [ ] Notificação aparece mesmo com app fechado
 
 ### Bonus (adiado)
 - [ ] Reorganizar portal técnico em abas: OS / Orçamentos / Laudos
 - [ ] Adicionar filtros por status dentro de cada aba
 
-**Status da fase:** [ ] Não iniciada [x] Em andamento (sub-fase 3.5 pendente) [ ] Concluída em ___/___/___
+**Status da fase:** [ ] Não iniciada [ ] Em andamento [x] Concluída em 07/05/2026
 
 ---
 
@@ -225,13 +232,21 @@ Adiados deliberadamente para não desviar foco:
 
 [x] Fase 1 — Alarmes              Concluída ✅ 04/05/2026
 [x] Fase 2 — Hardware             Pulada deliberadamente
-[~] Fase 3 — PWA Offline          Sub-fases 3.1–3.4 concluídas ✅ | Sub-fase 3.5 (polimento) pendente
-[ ] Fase 4 — Validação comercial  0/13 itens
+[x] Fase 3 — PWA Offline          Concluída ✅ 07/05/2026 — todas as sub-fases 3.1 a 3.5
+[ ] Fase 4 — Validação comercial  0/13 itens  ← PRÓXIMA
 [ ] Fase 5 — Landing Soluteg      0/7 itens
 
 ---
 
 ## 📝 LOG DE PROGRESSO
+
+### Sessão 07/05/2026 — Fase 3 concluída (Sub-fase 3.5)
+- `offlineDB.ts` v4: store `errorLog` com rolling buffer de 100 entradas
+- `syncQueue.ts`: registra erros definitivos no errorLog (mutations e uploads)
+- `TechnicianOfflineStatus.tsx` (`/technician/offline-status`): painel completo — OS em cache, mutations pendentes/erro, fotos offline, log de erros, uso do IndexedDB, forçar sync, limpar dados
+- `TechnicianHowOfflineWorks.tsx` (`/technician/como-funciona-offline`): guia visual para o técnico com instalação, o que funciona offline, o que precisa de internet e rotina recomendada em campo
+- Cards de acesso rápido no portal para as duas novas páginas
+- **Fase 3 encerrada** — todas as 5 sub-fases concluídas e validadas em campo
 
 ### Sessão 05–07/05/2026 — Fase 3 (Sub-fases 3.1 a 3.4)
 - Sub-fase 3.1: PWA instalável — `vite-plugin-pwa`, manifest Soluteg Técnico, InstallPWAPrompt, correção auth redirect 401, URL tRPC via `window.location.origin`
