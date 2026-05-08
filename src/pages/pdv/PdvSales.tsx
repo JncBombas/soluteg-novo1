@@ -17,6 +17,28 @@ interface CartItem {
   subtotal: number;
 }
 
+function HeaderClock() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 rounded-lg border" style={{ borderColor: "#D4A15E", backgroundColor: "rgba(0,0,0,0.25)" }}>
+      <Clock className="h-4 w-4" style={{ color: "#D4A15E" }} />
+      <div className="text-right">
+        <p className="text-sm font-semibold text-white">
+          {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+        </p>
+        <p className="text-lg font-bold tabular-nums" style={{ color: "#D4A15E" }}>
+          {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function PdvSales() {
   const [barcode, setBarcode] = useState("");
   const [searchName, setSearchName] = useState("");
@@ -30,14 +52,8 @@ export default function PdvSales() {
   const [lastSale, setLastSale] = useState<any>(null);
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [barcodeBuffer, setBarcodeBuffer] = useState("");
+  const barcodeBufferRef = useRef("");
   const barcodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const getProductByBarcode = trpc.pdv.products.getByBarcode.useQuery({ barcode }, { enabled: false });
   const searchProducts = trpc.pdv.products.search.useQuery({ query: searchName }, { enabled: searchName.length >= 2 });
@@ -51,17 +67,19 @@ export default function PdvSales() {
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
       if (barcodeTimeoutRef.current) clearTimeout(barcodeTimeoutRef.current);
-      if (e.key === "Enter" && barcodeBuffer.length > 0) {
+      if (e.key === "Enter" && barcodeBufferRef.current.length > 0) {
         e.preventDefault();
-        setBarcode(barcodeBuffer);
-        setBarcodeBuffer("");
+        setBarcode(barcodeBufferRef.current);
+        barcodeBufferRef.current = "";
         barcodeInputRef.current?.focus();
         setTimeout(() => getProductByBarcode.refetch(), 100);
         return;
       }
       if (e.key.length === 1) {
-        setBarcodeBuffer(prev => prev + e.key);
-        barcodeTimeoutRef.current = setTimeout(() => setBarcodeBuffer(""), 200);
+        barcodeBufferRef.current += e.key;
+        barcodeTimeoutRef.current = setTimeout(() => {
+          barcodeBufferRef.current = "";
+        }, 200);
       }
     };
     window.addEventListener("keydown", handleKeyPress);
@@ -69,7 +87,7 @@ export default function PdvSales() {
       window.removeEventListener("keydown", handleKeyPress);
       if (barcodeTimeoutRef.current) clearTimeout(barcodeTimeoutRef.current);
     };
-  }, [barcodeBuffer]);
+  }, []);
 
   const handleBarcodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,17 +160,7 @@ export default function PdvSales() {
             <h1 className="text-3xl font-bold tracking-tight text-white">Ponto de Venda</h1>
             <p className="text-slate-300 mt-1">Use o leitor de código de barras ou digite manualmente</p>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 rounded-lg border" style={{ borderColor: "#D4A15E", backgroundColor: "rgba(0,0,0,0.25)" }}>
-            <Clock className="h-4 w-4" style={{ color: "#D4A15E" }} />
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">
-                {currentTime.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-              </p>
-              <p className="text-lg font-bold tabular-nums" style={{ color: "#D4A15E" }}>
-                {currentTime.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-              </p>
-            </div>
-          </div>
+          <HeaderClock />
         </div>
       </div>
 
