@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import EnableNotificationsBanner from "@/components/EnableNotificationsBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   LogOut, Droplet, AlertTriangle, Loader2, ArrowLeft,
@@ -797,6 +798,9 @@ export default function WaterTankMonitoring() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Banner push — aparece quando o cliente abre o Monitoramento pela 1ª vez */}
+      <EnableNotificationsBanner portal="client" show={!!clientId} />
+
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           <Droplet className="w-6 h-6 text-blue-500 shrink-0" />

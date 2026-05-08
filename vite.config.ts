@@ -21,8 +21,8 @@ const plugins = [
       enabled: false,
     },
 
-    // Inclui arquivos extras no pré-cache do workbox
-    includeAssets: ["favicon.ico", "favicon-192x192.png", "favicon-512x512.png", "apple-touch-icon.png"],
+    // Inclui arquivos extras no pré-cache do workbox (incluindo ícones de push)
+    includeAssets: ["favicon.ico", "favicon-192x192.png", "favicon-512x512.png", "apple-touch-icon.png", "icon-192.png", "badge-72.png", "sw-push.js"],
 
     // Web App Manifest — metadados do app instalável
     manifest: {
@@ -70,6 +70,9 @@ const plugins = [
       // que ele seja pré-cacheado — sem isso o modo offline não funciona.
       // 4 MiB = 4 * 1024 * 1024
       maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      // Importa o handler de push no SW gerado — adiciona push + notificationclick
+      // sem precisar trocar para injectManifest (que quebraria o offline da Fase 3)
+      importScripts: ["/sw-push.js"],
       // Cache runtime: estratégia "NetworkFirst" para o app shell
       runtimeCaching: [
         {

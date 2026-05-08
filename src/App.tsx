@@ -142,6 +142,29 @@ function GlobalAutoSync() {
   return null;
 }
 
+// Escuta mensagens do Service Worker e navega para a URL indicada.
+// Quando o usuário clica em uma notificação push, o SW envia
+// { type: 'NAVIGATE', url: '/technician/work-orders/42' } via postMessage.
+// Sem isso, o clique abre o app mas não navega para a tela específica.
+function SwNavigationListener() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "NAVIGATE" && typeof event.data.url === "string") {
+        setLocation(event.data.url);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [setLocation]);
+
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -149,6 +172,8 @@ function App() {
         <TooltipProvider>
           {/* Auto-sync sempre ativo, independente da tela atual */}
           <GlobalAutoSync />
+          {/* Navega para a URL correta quando o usuário clica em uma notificação push */}
+          <SwNavigationListener />
           <Toaster />
           <Router />
         </TooltipProvider>

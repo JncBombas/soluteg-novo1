@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useRoute } from "wouter";
+import EnableNotificationsBanner from "@/components/EnableNotificationsBanner";
 import { trpc } from "@/lib/trpc";
 import { StatusBadge, PriorityBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -653,6 +654,9 @@ export default function TechnicianWorkOrderDetail() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Banner de status de conectividade */}
       <ConnectionStatus />
+
+      {/* Banner de notificações push — aparece na primeira OS aberta */}
+      <EnableNotificationsBanner portal="technician" show={!!os} />
 
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b shadow-sm sticky top-0 z-10">
