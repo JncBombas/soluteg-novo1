@@ -3,6 +3,7 @@ import { sendWhatsappAlert, sendWhatsappAlertWithPDF, sendWhatsappToNumberWithPD
 import { adminLocalProcedure, protectedClientProcedure, publicProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { notify } from "../lib/notifications";
 
 
 export const budgetsRouter = router({
@@ -148,18 +149,35 @@ export const budgetsRouter = router({
       const budget = await budgetsDb.getBudgetById(id);
       if (budget) {
         const cliente = await db.getClientById(budget.clientId);
-        if (cliente?.phone) {
+        if (cliente) {
           const approvalUrl = `https://app.soluteg.com.br/orcamento/${result.token}`;
-          const msg =
-            `📋 *JNC Soluteg – Orçamento Disponível*\n\n` +
-            `Olá, ${cliente.name}!\n\n` +
-            `Seu orçamento *${budget.budgetNumber}* está pronto para análise.\n` +
-            `🔧 Serviço: ${budget.title}\n` +
-            `💰 Valor total: R$ ${((budget.totalValue ?? 0) / 100).toFixed(2).replace('.', ',')}\n` +
-            `📅 Válido até: ${result.validUntil.toLocaleDateString('pt-BR')}\n\n` +
-            `👉 *Acesse para aprovar ou reprovar:*\n${approvalUrl}`;
-          const { sendWhatsappToNumber } = await import("../whatsapp");
-          sendWhatsappToNumber(cliente.phone, msg).catch(e => console.error("Erro Zap aprovação:", e));
+          const valor = `R$ ${((budget.totalValue ?? 0) / 100).toFixed(2).replace('.', ',')}`;
+          const validade = result.validUntil.toLocaleDateString('pt-BR');
+
+          // Notifica via Push (se PWA instalado) com fallback WhatsApp
+          notify(
+            {
+              title: "Orçamento disponível para aprovação",
+              body: `${budget.budgetNumber} — ${budget.title} — ${valor}`,
+              url: `/orcamento/${result.token}`,
+              tag: `budget-${id}`,
+              whatsappMessage:
+                `📋 *JNC Soluteg – Orçamento Disponível*\n\n` +
+                `Olá, ${cliente.name}!\n\n` +
+                `Seu orçamento *${budget.budgetNumber}* está pronto para análise.\n` +
+                `🔧 Serviço: ${budget.title}\n` +
+                `💰 Valor total: ${valor}\n` +
+                `📅 Válido até: ${validade}\n\n` +
+                `👉 *Acesse para aprovar ou reprovar:*\n${approvalUrl}`,
+            },
+            {
+              userId: budget.clientId,
+              userType: "client",
+              notificationType: "budget_new",
+              channel: "auto",
+              whatsappPhone: cliente.phone ?? undefined,
+            }
+          ).catch(e => console.error("[NOTIFY] Erro ao notificar cliente sobre orçamento:", e));
         }
       }
 

@@ -5,6 +5,14 @@ import * as technicianDb from "../technicianDb";
 import * as workOrdersDb from "../workOrdersDb";
 
 export const technicianPortalRouter = router({
+  // Verifica se o técnico está autenticado e retorna dados básicos.
+  // Usado pelo TechnicianLogin para auto-redirecionar ao portal se já logado.
+  me: protectedTechnicianProcedure.query(async ({ ctx }) => {
+    const tech = await technicianDb.getTechnicianById(ctx.technicianId);
+    if (!tech) throw new TRPCError({ code: "NOT_FOUND", message: "Técnico não encontrado" });
+    return { id: tech.id, name: tech.name };
+  }),
+
   getMyWorkOrders: protectedTechnicianProcedure
     .query(async ({ ctx }) => {
       return await technicianDb.getWorkOrdersByTechnicianId(ctx.technicianId);

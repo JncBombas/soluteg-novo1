@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,12 +7,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { HardHat, LogIn, AlertCircle } from "lucide-react";
 import { APP_LOGO } from "@/const";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function TechnicianLogin() {
+  const [, setLocation] = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Verifica silenciosamente se o técnico já está autenticado (cookie ainda válido).
+  // Se sim, redireciona para o portal sem exibir o formulário de login.
+  // Isso resolve o problema de PWA sempre abrir na tela de login ao reiniciar.
+  const meQuery = trpc.technicianPortal.me.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (meQuery.isSuccess) {
+      setLocation("/technician/portal");
+    }
+  }, [meQuery.isSuccess, setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

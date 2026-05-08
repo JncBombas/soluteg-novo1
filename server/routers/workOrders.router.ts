@@ -3,6 +3,7 @@ import { sendWhatsappAlert } from "../whatsapp";
 import { adminLocalProcedure, protectedClientProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { notify } from "../lib/notifications";
 
 export const workOrdersRouter = router({
   list: adminLocalProcedure
@@ -73,6 +74,33 @@ export const workOrdersRouter = router({
 
       sendWhatsappAlert(msg).catch(e => console.error("Erro no Zap JNC:", e));
 
+      // Notifica o técnico se foi atribuído na criação
+      if (input.technicianId) {
+        const technicianDb = await import("../technicianDb");
+        const tech = await technicianDb.getTechnicianById(input.technicianId);
+        notify(
+          {
+            title: "Nova OS atribuída",
+            body: `${input.title} — ${nomeCliente}`,
+            url: `/technician/work-orders/${osId}`,
+            tag: `order-${osId}`,
+            whatsappMessage:
+              `🛠️ *Nova OS atribuída*\n\n` +
+              `OS: ${osId}\n` +
+              `Serviço: ${input.title}\n` +
+              `Cliente: ${nomeCliente}\n` +
+              `Acesse: https://app.soluteg.com.br/technician/work-orders/${osId}`,
+          },
+          {
+            userId: input.technicianId,
+            userType: "technician",
+            notificationType: "order_new",
+            channel: "auto",
+            whatsappPhone: tech?.phone ?? undefined,
+          }
+        ).catch(e => console.error("[NOTIFY] Erro ao notificar técnico na criação:", e));
+      }
+
       return { success: true, message: "OS criada com sucesso", id: osId };
     }),
 
@@ -113,6 +141,34 @@ export const workOrdersRouter = router({
         scheduledDate: data.scheduledDate ? new Date(data.scheduledDate) : undefined,
       };
       await workOrdersDb.updateWorkOrder(id, convertedData as any);
+
+      // Notifica o técnico sobre a alteração (se a OS tiver técnico atribuído)
+      const osAtualizada = await workOrdersDb.getWorkOrderById(id);
+      if (osAtualizada?.technicianId) {
+        const technicianDb = await import("../technicianDb");
+        const tech = await technicianDb.getTechnicianById(osAtualizada.technicianId);
+        notify(
+          {
+            title: "OS atualizada",
+            body: `${osAtualizada.title} — ${osAtualizada.clientName ?? ""}`,
+            url: `/technician/work-orders/${id}`,
+            tag: `order-${id}`,
+            whatsappMessage:
+              `📋 *OS atualizada*\n\n` +
+              `Serviço: ${osAtualizada.title}\n` +
+              `Cliente: ${osAtualizada.clientName ?? ""}\n` +
+              `Acesse: https://app.soluteg.com.br/technician/work-orders/${id}`,
+          },
+          {
+            userId: osAtualizada.technicianId,
+            userType: "technician",
+            notificationType: "order_updated",
+            channel: "auto",
+            whatsappPhone: tech?.phone ?? undefined,
+          }
+        ).catch(e => console.error("[NOTIFY] Erro ao notificar técnico na atualização:", e));
+      }
+
       return { success: true, message: "OS atualizada com sucesso" };
     }),
 
@@ -150,6 +206,42 @@ export const workOrdersRouter = router({
     .mutation(async ({ input }) => {
       const workOrdersDb = await import("../workOrdersDb");
       await workOrdersDb.assignTechnicianToWorkOrder(input.workOrderId, input.technicianId);
+
+      // Notifica o técnico recém-atribuído (se algum foi passado)
+      if (input.technicianId) {
+        const [os, technicianDb] = await Promise.all([
+          workOrdersDb.getWorkOrderById(input.workOrderId),
+          import("../technicianDb"),
+        ]);
+        const tech = await technicianDb.getTechnicianById(input.technicianId);
+
+        if (os) {
+          notify(
+            {
+              title: "Nova OS atribuída a você",
+              body: `${os.title} — ${os.clientName ?? ""}`,
+              url: `/technician/work-orders/${input.workOrderId}`,
+              tag: `order-${input.workOrderId}`,
+              requireInteraction: true,
+              whatsappMessage:
+                `🛠️ *Nova OS atribuída*\n\n` +
+                `Olá, ${tech?.name ?? "Técnico"}!\n\n` +
+                `OS: ${os.osNumber}\n` +
+                `Serviço: ${os.title}\n` +
+                `Cliente: ${os.clientName ?? ""}\n\n` +
+                `Acesse: https://app.soluteg.com.br/technician/work-orders/${input.workOrderId}`,
+            },
+            {
+              userId: input.technicianId,
+              userType: "technician",
+              notificationType: "order_new",
+              channel: "auto",
+              whatsappPhone: tech?.phone ?? undefined,
+            }
+          ).catch(e => console.error("[NOTIFY] Erro ao notificar técnico na atribuição:", e));
+        }
+      }
+
       return { success: true };
     }),
 
@@ -691,7 +783,7 @@ export const workOrdersRouter = router({
       await workOrdersDb.shareWorkOrderToPortal(input.id, portalTab);
 
       const cliente = clientePortal;
-      if (cliente?.phone) {
+      if (cliente) {
         const portalUrl = `https://app.soluteg.com.br/client/portal`;
         const tabLabel: Record<string, string> = {
           vistoria: "Vistoria",
@@ -700,19 +792,31 @@ export const workOrdersRouter = router({
           orcamentos: "Orçamentos",
         };
         const saudacaoPortal = cliente.syndicName ? `Olá, ${cliente.syndicName}!` : `Olá!`;
-        const msg =
-          `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
-          `${saudacaoPortal}\n\n` +
-          `A *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
-          `🔗 Acesse: ${portalUrl}\n` +
-          `👤 Login: ${cliente.username}\n` +
-          `🔑 Senha: (sua senha cadastrada)\n\n` +
-          `Em caso de dúvidas, entre em contato conosco.`;
 
-        const { sendWhatsappToNumber } = await import("../whatsapp");
-        sendWhatsappToNumber(cliente.phone, msg).catch(e =>
-          console.error("Erro ao notificar cliente via WhatsApp:", e)
-        );
+        // Notificação via Push (se PWA instalado) com fallback WhatsApp
+        notify(
+          {
+            title: "Nova atualização no seu portal",
+            body: `${wo.osNumber} disponível na aba ${tabLabel[portalTab] || portalTab}`,
+            url: `/client/portal`,
+            tag: `order-${input.id}`,
+            whatsappMessage:
+              `📋 *JNC Soluteg – Portal do Cliente*\n\n` +
+              `${saudacaoPortal}\n\n` +
+              `A *${wo.osNumber}* foi disponibilizada na aba *${tabLabel[portalTab] || portalTab}* do seu portal.\n\n` +
+              `🔗 Acesse: ${portalUrl}\n` +
+              `👤 Login: ${cliente.username}\n` +
+              `🔑 Senha: (sua senha cadastrada)\n\n` +
+              `Em caso de dúvidas, entre em contato conosco.`,
+          },
+          {
+            userId: wo.clientId,
+            userType: "client",
+            notificationType: "order_new",
+            channel: "auto",
+            whatsappPhone: cliente.phone ?? undefined,
+          }
+        ).catch(e => console.error("[NOTIFY] Erro ao notificar cliente no portal:", e));
       }
 
       return { success: true, portalTab };
