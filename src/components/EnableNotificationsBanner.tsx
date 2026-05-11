@@ -60,11 +60,12 @@ export default function EnableNotificationsBanner({ portal, show }: Props) {
   };
 
   // Condições para esconder o banner
+  // Nota: permission==="granted" sozinho não esconde — o usuário pode ter dado permissão
+  // mas a subscription nunca ter sido salva (falha de rede, reinstalação do app, etc.)
   if (
     !show ||
     !isSupported ||
     permission === "denied" ||
-    permission === "granted" ||
     isSubscribed ||
     dismissed
   ) {

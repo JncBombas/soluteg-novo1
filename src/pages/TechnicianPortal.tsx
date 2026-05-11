@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { APP_LOGO } from "@/const";
 import InstallPWAPrompt from "@/components/InstallPWAPrompt";
 import ConnectionStatus from "@/components/ConnectionStatus";
+import EnableNotificationsBanner from "@/components/EnableNotificationsBanner";
 import {
   useOrdersWithOffline,
   useSyncOfflineOrders,
@@ -103,6 +104,7 @@ export default function TechnicianPortal() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <InstallPWAPrompt />
+      <EnableNotificationsBanner portal="technician" show={true} />
       <ConnectionStatus />
 
       {/* Header */}

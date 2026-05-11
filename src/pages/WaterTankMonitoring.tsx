@@ -407,7 +407,7 @@ function AlarmBanners({ alarm, compact = false }: { alarm: ReturnType<typeof get
       <AlertTriangle className={`${icon} text-yellow-600 shrink-0 mt-0.5`} />
       <div>
         <p className={`${title} font-bold text-yellow-900`}>Nível baixo</p>
-        <p className={`${sub} text-yellow-800 mt-0.5`}>Verificar abastecimento em breve.</p>
+        <p className={`${sub} text-yellow-800 mt-0.5`}>Possível falha da chave de boia superior.</p>
       </div>
     </div>
   );
