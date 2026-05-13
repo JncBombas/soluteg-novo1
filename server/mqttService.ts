@@ -226,6 +226,12 @@ export function broadcastTankUpdate(clientId: number, data: object): void {
 }
 
 export function initMqtt(): void {
+  // Staging: permite desabilitar MQTT via .env para evitar conflito com produção
+  if (process.env.MQTT_DISABLED === "true") {
+    console.log("[MQTT] MQTT_DISABLED=true — serviço MQTT desabilitado (staging)");
+    return;
+  }
+  
   const brokerUrl = process.env.MQTT_BROKER_URL;
 
   if (!brokerUrl) {
