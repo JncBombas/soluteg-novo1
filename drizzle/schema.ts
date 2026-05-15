@@ -1001,6 +1001,10 @@ export type InsertNotificationLog = typeof notificationLogs.$inferInsert;
 // ============================================================
 // TABELAS DE AUDITORIA E SEGURANÇA — Fase 3.7.1a (multi-tenant)
 // Criadas em 2026-05-13. NÃO alteram dados ou tabelas existentes.
+//
+// COLLATION: utf8mb4_bin (aplicada via migration manual).
+// O Drizzle não suporta collation por tabela no schema — ao gerar
+// novas migrations, adicione COLLATE=utf8mb4_bin manualmente no SQL.
 // ============================================================
 
 /**
@@ -1167,3 +1171,217 @@ export const migrationAuditLog = mysqlTable('migrationAuditLog', {
 
 export type MigrationAuditLog = typeof migrationAuditLog.$inferSelect;
 export type InsertMigrationAuditLog = typeof migrationAuditLog.$inferInsert;
+
+// ============================================================
+// TABELAS DE DOMÍNIO MULTI-TENANT — Fase 3.7.1b
+// Criadas em 2026-05-14. NÃO alteram tabelas existentes.
+// Migration aplicada manualmente no staging após revisão.
+// Ordem: tenants → platformAdmins → gestors → condominiums
+//        → notificationContacts (respeitando dependências de FK)
+//
+// COLLATION: utf8mb4_bin (configurada no SQL da migration 0033).
+// O Drizzle não suporta collation por tabela no schema — ao gerar
+// novas migrations, adicione COLLATE=utf8mb4_bin manualmente no SQL.
+// ============================================================
+
+/**
+ * Tenants da plataforma — cada empresa/contexto é um tenant.
+ *
+ * Exemplos: "JNC Elétrica" (slug: "jnc"), "Soluteg Direto"
+ * (slug: "soluteg-direto"), futuros parceiros.
+ *
+ * Campos importantes:
+ *   slug             → identificador único legível na URL e em logs
+ *   isPlatformTenant → 1 = tenant especial "Soluteg Direto", clientes que
+ *                       contratam a plataforma diretamente (sem empresa parceira)
+ *   primaryColor     → cor hexadecimal para branding do portal do tenant
+ *
+ * Exclusão via soft delete: campo `active = 0`. Nunca deletar fisicamente.
+ */
+export const tenants = mysqlTable('tenants', {
+  id:               int('id').autoincrement().primaryKey(),
+  name:             varchar('name', { length: 200 }).notNull(),
+
+  // Identificador curto e único — usado em URLs e logs (ex: "jnc", "soluteg-direto")
+  slug:             varchar('slug', { length: 100 }).notNull(),
+
+  // 1 = tenant especial para clientes diretos da plataforma Soluteg
+  isPlatformTenant: tinyint('isPlatformTenant').notNull().default(0),
+
+  // Dados de identidade visual
+  logoUrl:          varchar('logoUrl', { length: 500 }),
+  primaryColor:     varchar('primaryColor', { length: 7 }).notNull().default('#D4A84B'),
+
+  // Dados de contato e localização
+  whatsappNumber:   varchar('whatsappNumber', { length: 30 }),
+  contactEmail:     varchar('contactEmail', { length: 200 }),
+  cnpj:             varchar('cnpj', { length: 18 }),
+  address:          text('address'),
+  city:             varchar('city', { length: 100 }),
+  state:            varchar('state', { length: 2 }),
+
+  active:           tinyint('active').notNull().default(1),
+  createdAt:        timestamp('createdAt').defaultNow().notNull(),
+  updatedAt:        timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  uniqueIndex('tenants_slug_unique').on(t.slug),
+  index('tenants_active_idx').on(t.active),
+]);
+
+export type Tenant = typeof tenants.$inferSelect;
+export type InsertTenant = typeof tenants.$inferInsert;
+
+/**
+ * Administradores da plataforma Soluteg — visão global do sistema.
+ *
+ * Separados dos admins de tenant (tabela `admins` existente).
+ * Têm acesso a todos os tenants e podem criar/desativar tenants.
+ * Autenticam via área administrativa da plataforma.
+ *
+ * mustResetPassword: 1 = forçar troca de senha no próximo login.
+ *   Usar ao criar um platformAdmin manualmente.
+ */
+export const platformAdmins = mysqlTable('platformAdmins', {
+  id:                int('id').autoincrement().primaryKey(),
+  name:              varchar('name', { length: 200 }).notNull(),
+  email:             varchar('email', { length: 200 }).notNull(),
+  passwordHash:      varchar('passwordHash', { length: 255 }).notNull(),
+  active:            tinyint('active').notNull().default(1),
+  lastLoginAt:       timestamp('lastLoginAt'),
+
+  // 1 = bloquear login e exigir nova senha (via e-mail ou suporte)
+  mustResetPassword: tinyint('mustResetPassword').notNull().default(0),
+
+  createdAt:         timestamp('createdAt').defaultNow().notNull(),
+  updatedAt:         timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  uniqueIndex('platformAdmins_email_unique').on(t.email),
+  index('platformAdmins_active_idx').on(t.active),
+]);
+
+export type PlatformAdmin = typeof platformAdmins.$inferSelect;
+export type InsertPlatformAdmin = typeof platformAdmins.$inferInsert;
+
+/**
+ * Gestores de condomínio — síndicos, administradoras, zeladores.
+ *
+ * Vinculados a um tenant. São quem loga no portal do gestor para
+ * acompanhar ordens de serviço, sensores e comunicações.
+ *
+ * username: único DENTRO de cada tenant (constraint composta),
+ *   não precisa ser único globalmente entre tenants.
+ *
+ * mustResetPassword: default 1 — gestores migrados do sistema legado
+ *   devem trocar senha no primeiro acesso.
+ *
+ * role (cargo dentro do condomínio):
+ *   sindico | subsindico | conselheiro | zelador |
+ *   gerente_manutencao | administradora | outro
+ */
+export const gestors = mysqlTable('gestors', {
+  id:                int('id').autoincrement().primaryKey(),
+
+  // FK para tenant — sem CASCADE (soft delete controla exclusão)
+  tenantId:          int('tenantId').notNull().references(() => tenants.id),
+
+  name:              varchar('name', { length: 200 }).notNull(),
+  email:             varchar('email', { length: 200 }),
+  whatsapp:          varchar('whatsapp', { length: 30 }),
+
+  // Login único dentro do tenant
+  username:          varchar('username', { length: 100 }).notNull(),
+  passwordHash:      varchar('passwordHash', { length: 255 }).notNull(),
+
+  // Cargo do gestor no condomínio
+  role:              varchar('role', { length: 40 }).notNull().default('sindico'),
+
+  active:            tinyint('active').notNull().default(1),
+
+  // 1 = exige troca de senha no próximo login (padrão para gestores migrados)
+  mustResetPassword: tinyint('mustResetPassword').notNull().default(1),
+
+  lastLoginAt:       timestamp('lastLoginAt'),
+  createdAt:         timestamp('createdAt').defaultNow().notNull(),
+  updatedAt:         timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  index('gestors_tenantId_idx').on(t.tenantId),
+  // username único por tenant — dois tenants podem ter o mesmo username
+  uniqueIndex('gestors_tenantId_username_unique').on(t.tenantId, t.username),
+  index('gestors_active_idx').on(t.active),
+]);
+
+export type Gestor = typeof gestors.$inferSelect;
+export type InsertGestor = typeof gestors.$inferInsert;
+
+/**
+ * Condomínios — locais físicos vinculados a um tenant.
+ *
+ * Representa o condomínio, empresa ou local físico que recebe ordens de
+ * serviço e tem equipamentos monitorados (caixas d'água, bombas, etc.).
+ * Pode existir sem gestor atribuído — gestorId é nullable.
+ *
+ * units: número de unidades (apartamentos, salas, etc.). Informativo.
+ *
+ * Exclusão via soft delete: campo `active = 0`.
+ */
+export const condominiums = mysqlTable('condominiums', {
+  id:       int('id').autoincrement().primaryKey(),
+
+  // FK para tenant — sem CASCADE
+  tenantId: int('tenantId').notNull().references(() => tenants.id),
+
+  // FK para gestor — nullable: condomínio pode existir sem gestor atribuído
+  gestorId: int('gestorId').references(() => gestors.id),
+
+  name:     varchar('name', { length: 200 }).notNull(),
+  address:  text('address'),
+  city:     varchar('city', { length: 100 }),
+  state:    varchar('state', { length: 2 }),
+  zipCode:  varchar('zipCode', { length: 10 }),
+  units:    int('units'),   // número de unidades do condomínio
+
+  active:    tinyint('active').notNull().default(1),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  index('condominiums_tenantId_idx').on(t.tenantId),
+  index('condominiums_gestorId_idx').on(t.gestorId),
+  // Permite buscar condomínios por nome dentro de um tenant
+  index('condominiums_tenantId_name_idx').on(t.tenantId, t.name),
+  index('condominiums_active_idx').on(t.active),
+]);
+
+export type Condominium = typeof condominiums.$inferSelect;
+export type InsertCondominium = typeof condominiums.$inferInsert;
+
+/**
+ * Contatos de notificação — técnicos avulsos do "Cenário B".
+ *
+ * No tenant Soluteg Direto, o síndico pode indicar um técnico de
+ * manutenção próprio para receber alertas (caixa d'água, alarmes, etc.).
+ * Este contato NÃO tem login no sistema — apenas recebe notificações
+ * via WhatsApp e/ou e-mail. Vinculado a um condomínio específico.
+ *
+ * Exemplos de role: "Manutenção", "Bombeiro hidráulico", "Eletricista"
+ */
+export const notificationContacts = mysqlTable('notificationContacts', {
+  id:            int('id').autoincrement().primaryKey(),
+
+  // FK para condomínio — sem CASCADE
+  condominiumId: int('condominiumId').notNull().references(() => condominiums.id),
+
+  name:     varchar('name', { length: 200 }).notNull(),
+  whatsapp: varchar('whatsapp', { length: 30 }).notNull(),
+  email:    varchar('email', { length: 200 }),
+  role:     varchar('role', { length: 100 }),  // ex: "Manutenção", "Eletricista"
+
+  active:    tinyint('active').notNull().default(1),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+}, (t) => [
+  index('notificationContacts_condominiumId_idx').on(t.condominiumId),
+  index('notificationContacts_active_idx').on(t.active),
+]);
+
+export type NotificationContact = typeof notificationContacts.$inferSelect;
+export type InsertNotificationContact = typeof notificationContacts.$inferInsert;
