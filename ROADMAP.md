@@ -1,271 +1,148 @@
-# Roadmap Soluteg — Checklist de Execução
+# Roadmap Soluteg — Status e Próximos Passos
 
-**Período total estimado:** 8 a 12 semanas
+**Última atualização:** 15/05/2026
 **Dedicação:** ~3h/dia
-**Princípio:** uma fase por vez. Não pula. Não mistura.
-
-**Última atualização:** 07/05/2026 (Fase 3 concluída)
-**Fase 2 pulada deliberadamente** — hardware será definido em paralelo com Fase 3, fora do código.
+**Princípio:** uma fase por vez. Não pular. Não misturar.
 
 ---
 
-## 🚨 FASE 1 — ALARMES FUNCIONANDO
+## 📌 Onde estamos hoje
 
-**Estimativa:** 1 a 2 semanas
-**Critério de saída:** alarme dispara de forma confiável em ambiente real, sem falsos positivos nem falsos negativos.
-
-### Diagnóstico
-- [x] Auditar logs do sistema atual: onde o alarme falha?
-- [x] Identificar se o problema é detecção (sensor → backend) ou notificação (backend → cliente/admin)
-- [x] Documentar todos os tipos de alarme existentes hoje
-- [x] Listar bugs específicos encontrados
-
-### Regras de negócio (definir antes de codar)
-- [x] Definir tipos de alerta: aviso (WhatsApp para admin), crítico (OS automática), emergência (OS + técnico direcionado)
-- [x] Definir thresholds: porcentagem de nível, tempo de inatividade do sensor, etc
-- [x] Definir destinatários: quem recebe cada tipo (cliente, admin, técnico)
-- [x] Definir cooldown: tempo mínimo entre dois alarmes do mesmo sensor
-- [x] Documentar tudo num arquivo `ALARMS.md` no repositório
-
-### Implementação
-- [x] Refatorar lógica de detecção no backend
-- [x] Implementar fila de notificações com retry
-- [x] Adicionar fallback: se WhatsApp falhar 3x, enviar email
-- [x] Implementar lógica de OS automática (regras claras de quando criar)
-- [x] Implementar direcionamento automático ao técnico
-- [x] Adicionar logs detalhados de cada disparo
-
-### Validação
-- [x] Teste em laboratório: simular nível baixo, sensor offline, sensor com dado errado
-- [x] Validar que mensagens chegam no WhatsApp do admin e cliente
-- [x] Validar que OS é criada corretamente
-- [x] Validar que técnico é notificado
-- [x] Rodar 48h em ambiente real sem falhas
-
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [x] Concluída em 04/05/2026
+```
+✅ Fase 1   — Alarmes funcionando
+⏭️  Fase 2   — Pulada deliberadamente (hardware definido fora do código)
+✅ Fase 3   — Portal técnico PWA offline
+🟡 Fase 3.6 — Web Push (infra pronta, ativação adiada para após multi-tenant)
+🟡 Fase 3.7 — Multi-tenant (EM ANDAMENTO — Sub-fase 3.7.1b concluída)
+⏳ Fase 4   — Validação comercial
+⏳ Fase 5   — Landing page comercial soluteg.com.br
+```
 
 ---
 
-## 🔧 FASE 2 — HARDWARE DEFINIDO
+## ✅ FASE 1 — Alarmes funcionando
 
-**Estimativa:** 2 a 4 semanas
-**Critério de saída:** kit replicável que JNC compra, monta e instala sem você presente.
+**Status:** Concluída.
 
-### Definição de hardware
-- [ ] Definir modelo final do ESP32 (revisão e fornecedor)
-- [ ] Definir sensor de nível: qual modelo, qual range, qual precisão
-- [ ] Definir fonte de alimentação: bateria? PoE? 220V com fonte chaveada?
-- [ ] Definir conectividade: WiFi do condomínio? 4G? LoRa?
-- [ ] Definir gabinete: IP65? Como prender na caixa?
-- [ ] Listar BOM (Bill of Materials) completa com fornecedores
+Sistema de alertas de caixa d'água operacional em campo:
+- Detecção via sensores ESP32 + JSN-SR04T
+- WhatsApp como canal primário, email como fallback
+- Auto-criação de OS emergencial em níveis críticos
+- Auto-atribuição de técnico
+- Cooldown e retry queue implementados
 
-### Custos e logística
-- [ ] Calcular custo unitário do kit (peças + montagem + margem)
-- [ ] Definir preço de venda da instalação
-- [ ] Definir preço da mensalidade
-- [ ] Identificar fornecedores brasileiros confiáveis para reposição
-- [ ] Comprar lote inicial de peças (3 a 5 kits)
-
-### Processo de instalação
-- [ ] Documentar passo a passo de montagem do kit
-- [ ] Documentar passo a passo de instalação no condomínio
-- [ ] Listar ferramentas necessárias
-- [ ] Estimar tempo de instalação por unidade
-- [ ] Criar checklist de instalação para o técnico
-- [ ] Criar formulário de comissionamento (vincular sensor a condomínio no sistema)
-
-### Validação
-- [ ] Montar 3 kits seguindo a documentação
-- [ ] Instalar 1 kit num condomínio piloto (cliente real, pagando)
-- [ ] Operar por 30 dias coletando feedback
-- [ ] Ajustar documentação baseado nos problemas reais
-
-**Status da fase:** [x] Pulada deliberadamente — hardware definido fora do código, em paralelo
+Detalhes técnicos: [`docs/ALARMS.md`](./docs/ALARMS.md).
 
 ---
 
-## 📱 FASE 3 — PORTAL TÉCNICO OFFLINE (PWA)
+## ⏭️ FASE 2 — Hardware
 
-**Estimativa:** 3 a 5 semanas
-**Critério de saída:** técnico no subsolo conclui OS completa offline e sincroniza ao sair.
-
-### Preparação
-- [x] Estudar arquitetura PWA: Service Worker + IndexedDB
-- [x] Definir o que precisa funcionar offline: visualizar OS, preencher checklist, fotos, assinaturas
-- [x] Definir o que NÃO funciona offline: criar nova OS, fotos precisam de internet apenas para upload (captura é offline), Concluir requer online
-- [x] Mapear todas as mutations tRPC do portal técnico
-
-### Implementação base (Sub-fase 3.1 — concluída 05/05/2026)
-- [x] Configurar Vite PWA plugin no projeto Soluteg (`vite-plugin-pwa`, `registerType: autoUpdate`)
-- [x] Criar manifest.json: "Soluteg Técnico", scope `/technician`, start_url `/technician/login`, tema `#141820`
-- [x] Configurar Service Worker: Workbox, NetworkOnly para `/api/`, pré-cache do bundle inteiro
-- [x] Prompt de instalação `<InstallPWAPrompt>` no portal do técnico
-- [x] PWA instalável também no portal do cliente ("Soluteg Cliente", manifest separado, mesmo SW)
-
-### Cache de leitura (Sub-fase 3.2 — concluída 05/05/2026)
-- [x] Implementar IndexedDB (`soluteg-offline`) para dados das OS (lib `idb`)
-- [x] Implementar download proativo: ao entrar no portal, baixar OS atribuídas
-- [x] `useOfflineOrderDetail`: detalhe da OS lido do IndexedDB quando offline
-- [x] Botão "Atualizar OS offline" no header com timestamp de última sync
-- [x] Banner amarelo quando offline, invisível quando online
-
-### Lógica offline (Sub-fase 3.3 — concluída 06/05/2026)
-- [x] Detectar status online/offline com `useOnlineStatus()` (window online/offline events)
-- [x] Indicador visual claro (banner amarelo: "Modo offline — alterações serão sincronizadas ao voltar")
-- [x] Fila de mutations pendentes no IndexedDB (`pendingMutations`)
-- [x] Lógica de sincronização ao voltar online — auto-sync global em `App.tsx` (qualquer tela)
-- [x] Tratamento de conflitos: técnico vence (payload completo sobrescreve)
-- [x] Badge de pendentes no header com modal listando tipo/data/retries
-- [x] Checklist offline: respostas persistidas em localStorage entre navegações
-- [x] Comentários, tarefas e status enfileirados e sincronizados
-
-### Upload de mídia offline (Sub-fase 3.4 — concluída 07/05/2026)
-- [x] Salvar fotos no IndexedDB como Blob (store `pendingMedia`)
-- [x] Preview local via `URL.createObjectURL()` com badge "Offline"
-- [x] Upload assíncrono ao Cloudinary via `processMediaQueue()` ao reconectar
-- [x] Retry automático (máx. 3 tentativas com backoff)
-- [x] Assinatura do técnico offline: enfileirada + localStorage + indicador visual
-- [x] Assinatura do cliente offline: idem
-- [x] Concluir bloqueado offline (evita OS fechada com fotos/dados na fila)
-- [x] Limpeza de blobs antigos (> 7 dias) ao iniciar o app
-- [x] Detecção de `QuotaExceededError` com alerta ao usuário
-- [x] Compressão preparada e desabilitada por padrão (`COMPRESS_PHOTOS = false`)
-
-### Push notifications
-- [ ] Configurar VAPID keys ← deliberadamente adiado (PWA cobre o uso em campo)
-- [ ] Backend envia push quando admin atribui nova OS
-- [ ] Notificação aparece mesmo com app fechado
-- [ ] Click na notificação abre a OS no portal
-
-### Polimento (Sub-fase 3.5 — concluída 07/05/2026)
-- [x] Página `/technician/offline-status`: OS baixadas, mutations/mídias pendentes, uso do IndexedDB
-- [x] Botão "Forçar sincronização" e "Limpar dados offline" (com confirmação AlertDialog)
-- [x] Log de erros persistente (store `errorLog` v4, rolling buffer 100 entradas)
-- [x] Página `/technician/como-funciona-offline`: guia para o técnico (instalar, o que funciona, rotina de campo)
-- [x] Cards de acesso rápido no portal: Status Offline (badge de pendentes) e Guia
-
-### Validação (feita em campo — 06/05–07/05/2026)
-- [x] Técnico testou offline: OS visível sem rede
-- [x] Checklist preenchido offline: dados persistem entre navegações e sincronizam
-- [x] Fotos capturadas offline: preview aparece, upload automático ao reconectar
-- [x] Assinaturas técnico e cliente offline: indicador visual, persistência, sync
-- [x] Status da OS alterado offline: sincroniza ao voltar online
-- [x] Concluir bloqueado offline: impede OS fechada com dados na fila
-- [ ] Validação formal em subsolo real com admin confirmando dados (pendente — próximo passo)
-
-### Push notifications (adiado — fora do escopo atual)
-- [ ] Configurar VAPID keys
-- [ ] Backend envia push quando admin atribui nova OS
-- [ ] Notificação aparece mesmo com app fechado
-
-### Bonus (adiado)
-- [ ] Reorganizar portal técnico em abas: OS / Orçamentos / Laudos
-- [ ] Adicionar filtros por status dentro de cada aba
-
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [x] Concluída em 07/05/2026
+**Status:** Pulada deliberadamente. Definição feita em paralelo, fora do código.
 
 ---
 
-## 🚀 FASE 4 — VALIDAÇÃO COMERCIAL
+## ✅ FASE 3 — Portal técnico PWA offline
 
-**Estimativa:** 4 a 8 semanas (sobrepõe parcialmente com Fase 3)
-**Critério de saída:** 3 a 5 condomínios pagando mensalidade, com 30+ dias de uso real sem você apagando incêndio.
+**Status:** Concluída e validada em campo.
 
-### Piloto comercial
-- [ ] Selecionar 3 a 5 condomínios da carteira JNC para piloto pago
-- [ ] Apresentar proposta com preço definido (instalação + mensalidade)
-- [ ] Fechar contrato simples (1 lauda) com cada um
-- [ ] Instalar com a documentação da Fase 2
-- [ ] Configurar usuários, perfis, alertas
-
-### Operação
-- [ ] Acompanhar primeiros 7 dias de cada instalação de perto
-- [ ] Documentar todos os problemas que aparecerem
-- [ ] Coletar feedback semanal dos síndicos
-- [ ] Coletar feedback dos técnicos JNC
-
-### Métricas a acompanhar
-- [ ] Tempo médio de resposta a alertas
-- [ ] Quantidade de OS abertas automaticamente
-- [ ] Quantidade de chamadas evitadas (estimativa)
-- [ ] NPS do síndico no fim de 30 dias
-
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [ ] Concluída em ___/___/___
+Sub-fases 3.1 a 3.5 todas entregues:
+- PWA instalável
+- IndexedDB para cache offline
+- Sync queue de mutations
+- Captura offline de fotos e assinaturas
+- Página de status de sincronização
 
 ---
 
-## 📢 FASE 5 — LANDING SOLUTEG
+## 🟡 FASE 3.6 — Web Push notifications
 
-**Estimativa:** 1 a 2 semanas
-**Critério de entrada:** Fase 4 concluída, com pelo menos 3 cases reais.
-**Critério de saída:** site no ar com depoimentos reais e preços definidos.
+**Status:** Infraestrutura pronta, ativação adiada.
 
-- [ ] Coletar depoimentos reais dos síndicos do piloto (com foto, nome, condomínio)
-- [ ] Compilar números reais (X% de redução de chamados, Y litros economizados)
-- [ ] Definir tabela de preços final
-- [ ] Executar os prompts da landing soluteg.com.br
-- [ ] Deploy no VPS (mesmo fluxo do jnc.soluteg.com.br)
-- [ ] Configurar Google Analytics + Search Console
-- [ ] Submeter sitemap
+- VAPID keys geradas e configuradas
+- Tabelas `pushSubscriptions` e `notificationLogs` criadas
+- Estratégia decidida: Push primário + WhatsApp fallback
 
-**Status da fase:** [ ] Não iniciada [ ] Em andamento [ ] Concluída em ___/___/___
+**Adiado porque:** vai entrar **depois** do multi-tenant, para evitar refactor duplo.
 
 ---
 
-## ❌ EXPLICITAMENTE FORA DESTE ROADMAP
+## 🟡 FASE 3.7 — Refactor multi-tenant
 
-Adiados deliberadamente para não desviar foco:
+**Status:** EM ANDAMENTO. Sub-fase 3.7.1b recém concluída.
 
-- ❌ App mobile nativo (PWA cobre 90% do uso)
-- ❌ Integração Claude/IA no sistema (hype, não resolve problema real)
-- ❌ Integração PDV/OS (não bloqueia venda)
-- ❌ Calendário do técnico (manual resolve enquanto for poucos técnicos)
-- ❌ Animação de abertura no portal cliente (acabamento estético)
-- ❌ UI/UX ultra-moderna do portal cliente (Fase 4 vai dizer se importa)
-- ❌ Ajustes finais da landing JNC (já está no ar, suficiente por enquanto)
+Visão arquitetural completa em [`ARCHITECTURE_HANDOFF.md`](./ARCHITECTURE_HANDOFF.md) seção 5.
 
-**Regra:** se sentir vontade de mexer em algo dessa lista, escreve numa nota e volta para a fase atual. Esses itens só voltam à mesa depois da Fase 5.
+### Sub-fases
+
+| Sub-fase | Descrição | Status |
+|----------|-----------|--------|
+| 3.7.1a | Tabelas de segurança (auditLog, loginAttempts, migrationAuditLog) + helper de ambiente | ✅ Concluída |
+| 3.7.1b | Tabelas centrais (tenants, platformAdmins, gestors, condominiums, notificationContacts) | ✅ Concluída |
+| 3.7.1c | Adicionar `tenantId` nas tabelas existentes (nullable) | ⏳ PRÓXIMA |
+| 3.7.1d | Script de migração de dados (dry-run) | ⏳ Pendente |
+| 3.7.1e | Executar migração real + criar conta platformAdmin | ⏳ Pendente |
+| 3.7.1f | `tenantId` NOT NULL + rotacionar JWT_SECRET | ⏳ Pendente |
+| 3.7.2 | Isolamento de queries (helper `forTenant`) — **mais crítica** | ⏳ Pendente |
+| 3.7.3 | Procedures tRPC tipadas por papel | ⏳ Pendente |
+| 3.7.4 | UI portal platformAdmin | ⏳ Pendente |
+| 3.7.5 | Branding dinâmico por tenant | ⏳ Pendente |
+| 3.7.6 | Fluxo de primeiro acesso do gestor migrado | ⏳ Pendente |
+| 3.7.7 | Auditoria ativa (registrar ações sensíveis) | ⏳ Pendente |
+| 3.7.8 | Testes E2E de isolamento | ⏳ Pendente |
+
+### Histórico recente
+
+- **13/05/2026** — Sub-fase 3.7.1a concluída em staging. 14 divergências de schema legacy descobertas e sincronizadas. Helper `environment.ts` criado.
+- **14/05/2026** — Bugfix paralelo: aprovação de orçamento via link público falhava ao gerar OS. Causa: `getBudgetByToken` sem `adminId`/`priority` no SELECT. Mergeado em master, deployado em produção (commit `51a18a7`).
+- **15/05/2026** — Sub-fase 3.7.1b concluída em staging. 5 tabelas multi-tenant criadas com `utf8mb4_bin`, 4 FKs e 18 índices. Senha do banco staging rotacionada.
+
+### Pendência crítica
+
+Todas as mudanças aplicadas em staging precisam replicar em produção antes do merge `multi-tenant → master`. Checklist completo em [`PENDENCIAS_DEPLOY_PRODUCAO.md`](./PENDENCIAS_DEPLOY_PRODUCAO.md).
 
 ---
 
-## 📊 INDICADOR GERAL DE PROGRESSO
+## ⏳ FASE 4 — Validação comercial
 
-[x] Fase 1 — Alarmes              Concluída ✅ 04/05/2026
-[x] Fase 2 — Hardware             Pulada deliberadamente
-[x] Fase 3 — PWA Offline          Concluída ✅ 07/05/2026 — todas as sub-fases 3.1 a 3.5
-[ ] Fase 4 — Validação comercial  0/13 itens  ← PRÓXIMA
-[ ] Fase 5 — Landing Soluteg      0/7 itens
+**Status:** Pendente. Pré-requisito: multi-tenant completo.
+
+**Critério de saída:** 3-5 condomínios pagantes ativos no Soluteg (sob tenant "Soluteg Direto" ou parceiros).
+
+### Sub-tarefas previstas
+
+- Plano comercial (mensalidade, modelo de cobrança)
+- Termo de uso + política de privacidade publicados
+- DPO formal (Thiago como DPO inicial)
+- Onboarding dos 5 primeiros condomínios
+- Refinamento baseado em feedback real
 
 ---
 
-## 📝 LOG DE PROGRESSO
+## ⏳ FASE 5 — Landing comercial soluteg.com.br
 
-### Sessão 07/05/2026 — Fase 3 concluída (Sub-fase 3.5)
-- `offlineDB.ts` v4: store `errorLog` com rolling buffer de 100 entradas
-- `syncQueue.ts`: registra erros definitivos no errorLog (mutations e uploads)
-- `TechnicianOfflineStatus.tsx` (`/technician/offline-status`): painel completo — OS em cache, mutations pendentes/erro, fotos offline, log de erros, uso do IndexedDB, forçar sync, limpar dados
-- `TechnicianHowOfflineWorks.tsx` (`/technician/como-funciona-offline`): guia visual para o técnico com instalação, o que funciona offline, o que precisa de internet e rotina recomendada em campo
-- Cards de acesso rápido no portal para as duas novas páginas
-- **Fase 3 encerrada** — todas as 5 sub-fases concluídas e validadas em campo
+**Status:** Pendente. Pré-requisito: Fase 4 com tração inicial.
 
-### Sessão 05–07/05/2026 — Fase 3 (Sub-fases 3.1 a 3.4)
-- Sub-fase 3.1: PWA instalável — `vite-plugin-pwa`, manifest Soluteg Técnico, InstallPWAPrompt, correção auth redirect 401, URL tRPC via `window.location.origin`
-- Sub-fase 3.2: Cache IndexedDB — `offlineDB.ts`, `useOfflineOrders`, `ConnectionStatus`, botão sync offline com timestamp
-- Sub-fase 3.3: Fila de mutations — `syncQueue.ts`, `trpcStandalone.ts`, `useAutoSync` global em App.tsx, checklist localStorage, auto-sync em qualquer tela
-- Sub-fase 3.4: Fotos e assinaturas — `pendingMedia` (Blob no IndexedDB), `processMediaQueue`, assinatura técnico/cliente offline com localStorage, Concluir bloqueado offline, PWA portal do cliente (`manifest-client.webmanifest`)
-- Múltiplos bugs corrigidos: TDZ do useEffect, timing do localStorage, SW interferia com Cloudinary, `isComplete` faltava no payload offline, `saveClientSignature` adicionada ao syncQueue
-- Validado em campo pelo usuário
+Astro static site, dark theme, palette dourado (#D4A84B) + navy.
 
-### Sessão 04/05/2026
-- Diagnóstico completo: WhatsApp falhava silenciosamente (alerta perdido para sempre quando !isReady)
-- Definidas regras de negócio por tipo de caixa (superior/inferior) para alarm1, alarm2, SCI e alarm3_boia
-- Mensagens contextuais por tipo: alarm1 superior orienta verificar cisterna/painel; alarm1 inferior orienta verificar entrada de água
-- alarm2 cria OS emergencial automaticamente + notifica admin e cliente
-- Implementada fila de retry: alertas com delivered=0 são reenviados ao WhatsApp reconectar
-- Fallback email via nodemailer quando WhatsApp falha
-- alarm3_boia toggle por sensor (habilitável/desabilitável na UI)
-- Fix: listSensorsWithStatus não retornava alarm3BoiaPct, tankType, distVazia, distCheia (formulário de edição sempre em branco)
-- Fix crítico: multer (upload) nunca foi instanciado em index.ts — causava crash no boot do servidor
-- Fix crítico: 2 bugs impediam o alarme de disparar (primeira leitura e nível travado em 0%)
-- Direcionamento automático ao técnico: technicianId no sensor, WhatsApp específico + OS já atribuída
-- Migrations 0039 e 0040 criadas (rodar no VPS)
+Adiado deliberadamente: não faz sentido investir tempo numa landing comercial antes de ter clientes para validar a proposta.
+
+---
+
+## 🔮 Pós-multi-tenant (sem fase atribuída)
+
+- Migrar WhatsApp Web.js → Business API oficial (quando viável financeiramente)
+- Backup automatizado (cron diário + S3)
+- Observabilidade (Sentry, Better Uptime)
+- Suite de testes (Vitest, primeiro foco em isolamento de tenant)
+- Code splitting do bundle frontend (hoje 2.4MB minificado)
+- Consolidação das migrations (resolver caos do `drizzle/` vs `drizzle/migrations/`)
+
+---
+
+## ❌ Decisões explícitas de NÃO fazer (por enquanto)
+
+- App nativo mobile (React Native, Expo) — PWA atende o caso técnico
+- Integração com Claude/AI dentro do produto — feature de hype, sem ROI claro
+- Calendário visual para técnicos — lista é suficiente
+- Refinamento estético do portal admin — funcional > bonito nesta fase
+- Modal de PDV específico — fluxo atual funciona
