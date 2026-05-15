@@ -193,6 +193,161 @@ ORDER BY TABLE_NAME, COLUMN_NAME;
 
 ---
 
+## 3.7.1b — Tabelas multi-tenant + FKs e índices
+
+### Pré-validação obrigatória em produção
+
+```sql
+-- 1. Confirmar que tabelas multi-tenant NÃO existem ainda
+SELECT TABLE_NAME 
+FROM information_schema.TABLES 
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb' 
+AND TABLE_NAME IN (
+  'tenants', 'platformAdmins', 'gestors', 
+  'condominiums', 'notificationContacts'
+);
+-- Esperado: 0 linhas (tabelas ainda não existem)
+
+-- 2. Confirmar que tabelas de auditoria (3.7.1a) existem
+SELECT TABLE_NAME, TABLE_COLLATION 
+FROM information_schema.TABLES 
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb' 
+AND TABLE_NAME IN ('auditLog', 'loginAttempts', 'migrationAuditLog');
+-- Esperado: 3 linhas (criadas pela 0032)
+```
+
+> ⚠️ **Backup completo do banco produção ANTES de aplicar qualquer migration.**
+
+### Migrations a aplicar (NA ORDEM)
+
+#### Passo 1 — Corrigir collation das tabelas de auditoria (0042)
+
+Arquivo: `drizzle/migrations/0042_collation_fix_audit_tables.sql`
+
+```sql
+ALTER TABLE `auditLog` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+ALTER TABLE `loginAttempts` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+ALTER TABLE `migrationAuditLog` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+```
+
+> Pré-requisito: a migration 0032 (que cria essas 3 tabelas) já deve ter sido aplicada.
+
+#### Passo 2 — Criar as 5 tabelas multi-tenant (0033)
+
+Arquivo: `drizzle/0033_giant_tomorrow_man.sql`
+
+> ⚠️ **IMPORTANTE:** O arquivo contém marcadores `"--> statement-breakpoint"` do Drizzle Kit 
+> que devem ser filtrados antes de passar para o mysql CLI:
+> 
+> ```bash
+> grep -v "statement-breakpoint" drizzle/0033_giant_tomorrow_man.sql | mysql -u USER -p DATABASE
+> ```
+> 
+> **Atenção:** Quando aplicado via pipe, apenas os CREATE TABLE entram.
+> As foreign keys e índices regulares NÃO são aplicados pelo pipe
+> e precisam ser aplicados separadamente (passos 3 e 4).
+
+#### Passo 3 — Aplicar manualmente os 4 ALTER TABLE de FOREIGN KEY
+
+```sql
+ALTER TABLE `condominiums` ADD CONSTRAINT `condominiums_tenantId_tenants_id_fk` 
+  FOREIGN KEY (`tenantId`) REFERENCES `tenants`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+ALTER TABLE `condominiums` ADD CONSTRAINT `condominiums_gestorId_gestors_id_fk` 
+  FOREIGN KEY (`gestorId`) REFERENCES `gestors`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+ALTER TABLE `gestors` ADD CONSTRAINT `gestors_tenantId_tenants_id_fk` 
+  FOREIGN KEY (`tenantId`) REFERENCES `tenants`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+ALTER TABLE `notificationContacts` ADD CONSTRAINT `notificationContacts_condominiumId_condominiums_id_fk` 
+  FOREIGN KEY (`condominiumId`) REFERENCES `condominiums`(`id`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+```
+
+#### Passo 4 — Aplicar manualmente os 13 CREATE INDEX
+
+```sql
+-- condominiums (4 índices)
+CREATE INDEX `condominiums_tenantId_idx` ON `condominiums` (`tenantId`);
+CREATE INDEX `condominiums_gestorId_idx` ON `condominiums` (`gestorId`);
+CREATE INDEX `condominiums_tenantId_name_idx` ON `condominiums` (`tenantId`,`name`);
+CREATE INDEX `condominiums_active_idx` ON `condominiums` (`active`);
+
+-- gestors (2 índices)
+CREATE INDEX `gestors_tenantId_idx` ON `gestors` (`tenantId`);
+CREATE INDEX `gestors_active_idx` ON `gestors` (`active`);
+
+-- notificationContacts (2 índices)
+CREATE INDEX `notificationContacts_condominiumId_idx` ON `notificationContacts` (`condominiumId`);
+CREATE INDEX `notificationContacts_active_idx` ON `notificationContacts` (`active`);
+
+-- platformAdmins (1 índice)
+CREATE INDEX `platformAdmins_active_idx` ON `platformAdmins` (`active`);
+
+-- tenants (1 índice — pode já ter entrado pelo pipe, verificar antes)
+CREATE INDEX `tenants_active_idx` ON `tenants` (`active`);
+```
+
+> **Nota:** `tenants_active_idx` é o último statement do arquivo e pode ter sido 
+> aplicado pelo pipe original. Verificar com:
+> ```sql
+> SHOW INDEX FROM tenants WHERE Key_name = 'tenants_active_idx';
+> ```
+> Se já existir, pular este CREATE INDEX.
+
+### Validação pós-aplicação
+
+```sql
+-- 1. Confirma collation das 8 tabelas multi-tenant (todas utf8mb4_bin)
+SELECT TABLE_NAME, TABLE_COLLATION 
+FROM information_schema.TABLES 
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb' 
+AND TABLE_NAME IN (
+  'auditLog', 'loginAttempts', 'migrationAuditLog',
+  'tenants', 'platformAdmins', 'gestors', 
+  'condominiums', 'notificationContacts'
+)
+ORDER BY TABLE_NAME;
+-- Esperado: 8 linhas, todas com utf8mb4_bin
+
+-- 2. Confirma que as 5 tabelas novas estão vazias
+SELECT 
+  (SELECT COUNT(*) FROM tenants) AS tenants,
+  (SELECT COUNT(*) FROM platformAdmins) AS platformAdmins,
+  (SELECT COUNT(*) FROM gestors) AS gestors,
+  (SELECT COUNT(*) FROM condominiums) AS condominiums,
+  (SELECT COUNT(*) FROM notificationContacts) AS notificationContacts;
+-- Esperado: todos 0
+
+-- 3. Confirma 4 FKs registradas
+SELECT CONSTRAINT_NAME, TABLE_NAME, CONSTRAINT_TYPE
+FROM information_schema.TABLE_CONSTRAINTS
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb'
+AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+AND TABLE_NAME IN ('condominiums', 'gestors', 'notificationContacts')
+ORDER BY TABLE_NAME;
+-- Esperado: 4 linhas
+
+-- 4. Confirma índices nas 5 tabelas novas
+SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME
+FROM information_schema.STATISTICS
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb'
+AND TABLE_NAME IN ('tenants', 'platformAdmins', 'gestors', 'condominiums', 'notificationContacts')
+ORDER BY TABLE_NAME, INDEX_NAME;
+-- Esperado: 18 entradas (incluindo PKs e UNIQUEs)
+
+-- 5. Confirma estrutura com FKs
+SHOW CREATE TABLE condominiums\G
+
+-- 6. Confirma dados existentes intactos
+SELECT 
+  (SELECT COUNT(*) FROM clients) AS clientes,
+  (SELECT COUNT(*) FROM workOrders) AS ordens,
+  (SELECT COUNT(*) FROM products) AS produtos;
+-- Esperado: mesmos counts de antes da aplicação
+```
+
+---
+
 ## Status
 
 | Mudança | Staging | Produção |
@@ -211,3 +366,11 @@ ORDER BY TABLE_NAME, COLUMN_NAME;
 | sales.total NOT NULL | ✅ Aplicado | ⏳ Pendente |
 | waterTankAlertLog.direction sem DEFAULT | ✅ Aplicado | ⏳ Pendente |
 | waterTankAlertLog.tankType sem DEFAULT | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** collation fix auditoria (0042) | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** tabela tenants | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** tabela platformAdmins | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** tabela gestors | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** tabela condominiums | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** tabela notificationContacts | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** 4 FKs multi-tenant | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1b** 13 índices multi-tenant | ✅ Aplicado | ⏳ Pendente |
