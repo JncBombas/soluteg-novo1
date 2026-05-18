@@ -1,7 +1,7 @@
 # Soluteg — Documento Técnico de Arquitetura e Handoff
 
 > **Versão:** 1.0
-> **Data:** 15 de maio de 2026
+> **Data:** 18 de maio de 2026
 > **Autor:** Thiago (com assessoria de Claude AI)
 > **Audiência:** Arquiteto de software, desenvolvedores seniores, contributors técnicos
 > **Status do projeto:** Em produção (JNC) | Refactor multi-tenant em andamento
@@ -506,8 +506,8 @@ Cloudinary plano grátis suporta até ~20 condomínios sem custo. Pago US$89/mê
 |----------|-----------|--------|
 | 3.7.1a | Tabelas de segurança (auditLog, loginAttempts, migrationAuditLog) + helper de ambiente | ✅ CONCLUÍDA |
 | 3.7.1b | Tabelas centrais (tenants, platformAdmins, gestors, condominiums, notificationContacts) | ✅ CONCLUÍDA |
-| 3.7.1c | Adicionar coluna `tenantId` nas tabelas existentes (nullable) | ⏳ PRÓXIMA |
-| 3.7.1d | Script de migração de dados (dry-run primeiro) | ⏳ PENDENTE |
+| 3.7.1c | Adicionar coluna `tenantId` nas tabelas existentes (nullable) | ✅ CONCLUÍDA |
+| 3.7.1d | Script de migração de dados (dry-run primeiro) | ⏳ PRÓXIMA |
 | 3.7.1e | Executar migração real + criar conta platformAdmin | ⏳ PENDENTE |
 | 3.7.1f | Tornar `tenantId` NOT NULL + rotacionar JWT_SECRET | ⏳ PENDENTE |
 | 3.7.2 | Isolamento de queries por tenant (helper centralizado + audit) | ⏳ PENDENTE |
@@ -584,6 +584,56 @@ Durante o multi-tenant, surgiu um bug crítico em produção:
 A função "irmã" `getBudgetById` (usada pelo fluxo de admin) já incluía esses campos — foi uma inconsistência entre dois "getters" que evoluíram em momentos diferentes.
 
 **Fix:** 2 linhas adicionadas ao SELECT. Commit `51a18a7`, branch `fix/budget-approval`, mergeado em master e deployado em produção. Validado.
+
+### 8.4 Sub-fase 3.7.1c — `tenantId` nullable em tabelas existentes (18/05/2026)
+
+**Objetivo:** preparar todas as tabelas operacionais para receber o identificador de tenant, sem quebrar a aplicação em produção e sem migrar dados ainda.
+
+**Entregue:**
+
+38 tabelas operacionais receberam `ADD COLUMN tenantId INT NULL` via migration `drizzle/0034_wonderful_vulcan.sql`. As tabelas incluem todas as entidades de negócio: `clients`, `workOrders`, `budgets`, `technicians`, `products`, `sales`, `saleItems`, `cashTransactions`, `laudos`, `waterTankSensors`, `waterTankAlertLog`, `waterTankFaultLog`, `documents`, `checklists`, `pushSubscriptions`, entre outras.
+
+Total de tabelas com `tenantId` no banco após esta sub-fase:
+- 1 tabela (3.7.1a): `migrationAuditLog`
+- 2 tabelas (3.7.1b): `gestors`, `condominiums` (FKs referenciam `tenants`)
+- 38 tabelas (3.7.1c): todas as tabelas operacionais restantes
+- **Total: 41 tabelas**
+
+**Decisão de design — denormalização deliberada:**
+
+A coluna `tenantId` foi adicionada a **todas** as tabelas operacionais, inclusive às "filhas" (`workOrderTasks`, `workOrderMaterials`, `budgetItems`, etc), mesmo que o `tenantId` pudesse ser derivado pela cadeia de FKs (ex: `workOrderTasks → workOrders → tenantId`).
+
+Razão: performance e simplicidade. Com `tenantId` direto em cada tabela, qualquer query pode ser filtrada por tenant em uma única cláusula `WHERE tenantId = ?`, sem JOINs adicionais. Esse padrão é chamado de **"denormalização defensiva"** e é a abordagem standard em shared-database multi-tenancy de alta performance.
+
+Trade-off aceito: redundância de dados (risco de inconsistência se `tenantId` for atualizado em uma tabela sem atualizar nas filhas). Mitigado porque: (a) `tenantId` nunca muda após criação, e (b) o helper `forTenant()` da sub-fase 3.7.2 será a única forma de fazer queries nessas tabelas.
+
+**Bug encontrado e resolvido durante aplicação:**
+
+O Drizzle Kit gerou o arquivo de migration com marcadores `--> statement-breakpoint` **inline** (na mesma linha dos statements SQL), não em linhas separadas. Isso fez com que o método documentado até então (`grep -v "statement-breakpoint"`) **não funcionasse** — o `grep -v` remove linhas inteiras, mas quando o marcador está embutido no meio do SQL, a linha inteira era descartada junto.
+
+Solução: usar `sed` para remover apenas o texto do marcador, preservando o statement:
+
+```bash
+sed 's|--> statement-breakpoint||g' drizzle/0034_wonderful_vulcan.sql | \
+  mysql -h 69.6.213.57 -u <user> -p <database>
+```
+
+Essa diferença de comportamento entre arquivos de migration depende de como o Drizzle Kit os gera (varia com o número e tipo de statements). **A partir de agora, `sed` é o método padrão recomendado para todos os arquivos de migration.**
+
+**Validação pós-aplicação:**
+
+Dados existentes intactos. Confirmado via:
+```sql
+SELECT COUNT(*) FROM clients;      -- 29 ✅
+SELECT COUNT(*) FROM workOrders;   -- 76 ✅
+SELECT COUNT(*) FROM products;     -- 270 ✅
+```
+
+Coluna `tenantId` presente em todas as 38 tabelas, valor `NULL` para todos os registros existentes (esperado — dados serão populados na 3.7.1e).
+
+**Migração:** `drizzle/0034_wonderful_vulcan.sql`
+
+**Pendências para produção:** ver `PENDENCIAS_DEPLOY_PRODUCAO.md` seção "3.7.1c".
 
 ---
 
@@ -1003,8 +1053,8 @@ SMTP_PASS=...
 
 ## Encerramento
 
-Este documento reflete o estado em **15 de maio de 2026**. À medida que o multi-tenant avança e novas decisões são tomadas, este documento **deve ser atualizado** — preferencialmente na mesma branch onde a mudança acontece.
+Este documento reflete o estado em **18 de maio de 2026**. À medida que o multi-tenant avança e novas decisões são tomadas, este documento **deve ser atualizado** — preferencialmente na mesma branch onde a mudança acontece.
 
 Para qualquer dúvida ou sugestão, ver o `ROADMAP.md` para contexto de prioridades, ou abrir issue no GitHub.
 
-**Próximo marco:** Sub-fase 3.7.1c — adicionar `tenantId` (nullable) nas tabelas existentes. Aguardando validação arquitetural antes de prosseguir.
+**Próximo marco:** Sub-fase 3.7.1d — script de migração de dados em modo dry-run. O script lerá os dados existentes, calculará as operações necessárias e exibirá um preview completo sem escrever nada no banco.

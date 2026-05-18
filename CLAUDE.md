@@ -4,7 +4,7 @@
 > Contém o **contexto operacional vivo** — o que está sendo feito agora, regras invioláveis, comandos comuns.
 > Para visão arquitetural completa, ver [`ARCHITECTURE_HANDOFF.md`](./ARCHITECTURE_HANDOFF.md).
 
-**Última atualização:** 15/05/2026 (após Sub-fase 3.7.1b)
+**Última atualização:** 18/05/2026 (após Sub-fase 3.7.1c)
 
 ---
 
@@ -22,7 +22,7 @@
 
 ---
 
-## 2. Estado atual (15/05/2026)
+## 2. Estado atual (18/05/2026)
 
 ### Em andamento
 **Fase 3.7 — Refactor multi-tenant.** Branch `multi-tenant`.
@@ -32,13 +32,12 @@
 - ✅ Sub-fase 3.7.1b — 5 tabelas centrais (`tenants`, `platformAdmins`, `gestors`, `condominiums`, `notificationContacts`) com `utf8mb4_bin`, 4 FKs, 18 índices
 - ✅ Bugfix de aprovação de orçamento em produção (commit `51a18a7`) — `getBudgetByToken` sem `adminId`/`priority` no SELECT
 - ✅ Consolidação completa da documentação do projeto
+- ✅ Sub-fase 3.7.1c — 38 tabelas operacionais receberam `tenantId INT NULL`. Total: 41 tabelas com `tenantId` no banco. Dados existentes intactos (29 clients, 76 workOrders, 270 products).
 
 ### Próxima
-**Sub-fase 3.7.1c — Adicionar coluna `tenantId` (nullable) nas tabelas existentes.**
+**Sub-fase 3.7.1d — Script de migração de dados em dry-run.**
 
-Tabelas alvo: `clients`, `workOrders`, `budgets`, `technicians`, `waterTankSensors`, `products`, `sales`, `cashTransactions`, `laudos`, etc.
-
-Sem FK ainda (vai entrar na 3.7.1f, após populado). Sem index ainda (idem).
+Script Node.js (`scripts/migrate-to-multi-tenant.ts`) que lê os dados existentes, calcula as operações (criar tenant JNC, condominiums, gestors, popular `tenantId`) e exibe preview completo sem escrever nada. Modo `--apply` para execução real.
 
 ### Roadmap restante (resumo)
 Sub-fases 3.7.1c → 3.7.1d (script migração dry-run) → 3.7.1e (migração real) → 3.7.1f (NOT NULL + rotação JWT) → 3.7.2 (isolamento queries via helper `forTenant` — **mais crítica**) → 3.7.3 a 3.7.8.
@@ -142,7 +141,8 @@ Helper `server/lib/environment.ts` aborta scripts se rodarem no banco errado. **
 ### 5.5 Migrations Drizzle — cuidados especiais
 
 - Arquivos gerados pelo Drizzle Kit contêm `--> statement-breakpoint` que **NÃO é SQL válido**
-- Para aplicar via `mysql` CLI: filtrar com `grep -v "statement-breakpoint"`
+- ~~`grep -v "statement-breakpoint"`~~ **NÃO é confiável** — quando os marcadores estão inline (mesma linha do SQL), o `grep -v` descarta o statement inteiro junto com o marcador
+- **Método correto:** `sed 's|--> statement-breakpoint||g' arquivo.sql | mysql ...` — remove apenas o texto do marcador, preserva o statement
 - Quando aplicado via pipe, **multi-statements (FK + INDEX) podem ser ignorados silenciosamente** — sempre validar `information_schema.TABLE_CONSTRAINTS` e `information_schema.STATISTICS` após aplicar
 - `__drizzle_migrations` está VAZIA — tudo foi sempre aplicado manualmente, NUNCA via `drizzle-kit migrate`
 - Duas pastas com migrations (`drizzle/` e `drizzle/migrations/`) — numeração colide. Antes de criar migration nova, verificar próximo número global disponível
@@ -183,9 +183,12 @@ pm2 restart soluteg-sistema --update-env
 ### Aplicar migration multi-statement
 
 ```bash
-# Filtra os marcadores do Drizzle e aplica
-grep -v "statement-breakpoint" <arquivo>.sql | \
+# MÉTODO CORRETO — sed remove apenas o texto do marcador, preserva o statement
+sed 's|--> statement-breakpoint||g' <arquivo>.sql | \
   mysql -h 69.6.213.57 -u <user> -p <database>
+
+# NÃO usar grep -v: quando os marcadores estão inline (mesma linha do SQL),
+# o grep -v descarta o statement inteiro junto com o marcador.
 
 # IMPORTANTE: validar depois com information_schema, porque FKs e índices
 # pós-CREATE TABLE podem não ser aplicados pelo pipe

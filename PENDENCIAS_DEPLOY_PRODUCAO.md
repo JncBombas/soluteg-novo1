@@ -348,6 +348,85 @@ SELECT
 
 ---
 
+---
+
+## 3.7.1c — tenantId em tabelas existentes
+
+### O que foi feito em staging
+
+38 tabelas operacionais receberam `ADD COLUMN tenantId INT NULL` em staging via migration `drizzle/0034_wonderful_vulcan.sql`.
+
+> ⚠️ **AVISO IMPORTANTE — método de aplicação:**
+>
+> O arquivo `0034_wonderful_vulcan.sql` foi gerado pelo Drizzle Kit com marcadores `--> statement-breakpoint` **inline** (na mesma linha do SQL, não em linha própria). Por isso, o método `grep -v "statement-breakpoint"` **NÃO funciona** neste arquivo — ele descartaria os statements inteiros junto com os marcadores.
+>
+> **Use `sed` em vez de `grep -v`:**
+> ```bash
+> sed 's|--> statement-breakpoint||g' drizzle/0034_wonderful_vulcan.sql | \
+>   mysql -h 69.6.213.57 -u <user> -p <database>
+> ```
+
+### Pré-validação em produção
+
+Confirmar que nenhuma das 38 tabelas já tem a coluna `tenantId`:
+
+```sql
+SELECT TABLE_NAME, COLUMN_NAME
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb'
+  AND COLUMN_NAME = 'tenantId'
+  AND TABLE_NAME NOT IN ('gestors', 'condominiums', 'migrationAuditLog');
+-- Esperado: 0 linhas (se > 0, a coluna já existe em algumas tabelas — pular essas no ALTER)
+```
+
+### Aplicação em produção
+
+```bash
+# Backup obrigatório antes
+mysqldump -h 69.6.213.57 -u d5ea2e96_soluteg -p \
+  --single-transaction --no-tablespaces \
+  d5ea2e96_solutegdb > /var/backups/soluteg-producao/backup-pre-3.7.1c-$(date +%Y%m%d-%H%M%S).sql
+chmod 600 /var/backups/soluteg-producao/backup-pre-3.7.1c-*.sql
+
+# Aplicar migration com sed (não grep -v)
+sed 's|--> statement-breakpoint||g' drizzle/0034_wonderful_vulcan.sql | \
+  mysql -h 69.6.213.57 -u d5ea2e96_soluteg -p d5ea2e96_solutegdb
+```
+
+### Validação pós-aplicação
+
+```sql
+-- 1. Confirmar que a coluna tenantId existe nas 38 tabelas
+SELECT TABLE_NAME
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb'
+  AND COLUMN_NAME = 'tenantId'
+ORDER BY TABLE_NAME;
+-- Esperado: 41 tabelas (38 da 3.7.1c + gestors + condominiums + migrationAuditLog)
+
+-- 2. Confirmar tipo correto da coluna
+SELECT TABLE_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = 'd5ea2e96_solutegdb'
+  AND COLUMN_NAME = 'tenantId'
+  AND TABLE_NAME IN ('clients', 'workOrders', 'budgets', 'technicians', 'products')
+ORDER BY TABLE_NAME;
+-- Esperado: COLUMN_TYPE = 'int', IS_NULLABLE = 'YES', COLUMN_DEFAULT = NULL
+
+-- 3. Confirmar dados existentes intactos
+SELECT
+  (SELECT COUNT(*) FROM clients)    AS clientes,
+  (SELECT COUNT(*) FROM workOrders) AS ordens,
+  (SELECT COUNT(*) FROM products)   AS produtos;
+-- Esperado: 29, 76, 270 (ou mais — produção pode ter crescido desde 18/05/2026)
+
+-- 4. Confirmar que todos os tenantId são NULL (ainda não populados)
+SELECT COUNT(*) AS com_tenant_preenchido FROM clients WHERE tenantId IS NOT NULL;
+-- Esperado: 0 (será populado na sub-fase 3.7.1e)
+```
+
+---
+
 ## Status
 
 | Mudança | Staging | Produção |
@@ -374,3 +453,11 @@ SELECT
 | **3.7.1b** tabela notificationContacts | ✅ Aplicado | ⏳ Pendente |
 | **3.7.1b** 4 FKs multi-tenant | ✅ Aplicado | ⏳ Pendente |
 | **3.7.1b** 13 índices multi-tenant | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em clients | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em workOrders | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em budgets | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em technicians | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em products/sales | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em laudos | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em waterTankSensors | ✅ Aplicado | ⏳ Pendente |
+| **3.7.1c** tenantId em demais 31 tabelas | ✅ Aplicado | ⏳ Pendente |

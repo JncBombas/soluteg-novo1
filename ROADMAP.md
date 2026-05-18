@@ -1,6 +1,6 @@
 # Roadmap Soluteg — Status e Próximos Passos
 
-**Última atualização:** 15/05/2026
+**Última atualização:** 18/05/2026
 **Dedicação:** ~3h/dia
 **Princípio:** uma fase por vez. Não pular. Não misturar.
 
@@ -13,7 +13,7 @@
 ⏭️  Fase 2   — Pulada deliberadamente (hardware definido fora do código)
 ✅ Fase 3   — Portal técnico PWA offline
 🟡 Fase 3.6 — Web Push (infra pronta, ativação adiada para após multi-tenant)
-🟡 Fase 3.7 — Multi-tenant (EM ANDAMENTO — Sub-fase 3.7.1b concluída)
+🟡 Fase 3.7 — Multi-tenant (EM ANDAMENTO — Sub-fase 3.7.1c concluída)
 ⏳ Fase 4   — Validação comercial
 ⏳ Fase 5   — Landing page comercial soluteg.com.br
 ```
@@ -68,7 +68,7 @@ Sub-fases 3.1 a 3.5 todas entregues:
 
 ## 🟡 FASE 3.7 — Refactor multi-tenant
 
-**Status:** EM ANDAMENTO. Sub-fase 3.7.1b recém concluída.
+**Status:** EM ANDAMENTO. Sub-fase 3.7.1c recém concluída.
 
 Visão arquitetural completa em [`ARCHITECTURE_HANDOFF.md`](./ARCHITECTURE_HANDOFF.md) seção 5.
 
@@ -78,8 +78,8 @@ Visão arquitetural completa em [`ARCHITECTURE_HANDOFF.md`](./ARCHITECTURE_HANDO
 |----------|-----------|--------|
 | 3.7.1a | Tabelas de segurança (auditLog, loginAttempts, migrationAuditLog) + helper de ambiente | ✅ Concluída |
 | 3.7.1b | Tabelas centrais (tenants, platformAdmins, gestors, condominiums, notificationContacts) | ✅ Concluída |
-| 3.7.1c | Adicionar `tenantId` nas tabelas existentes (nullable) | ⏳ PRÓXIMA |
-| 3.7.1d | Script de migração de dados (dry-run) | ⏳ Pendente |
+| 3.7.1c | Adicionar `tenantId` nas tabelas existentes (nullable) | ✅ Concluída |
+| 3.7.1d | Script de migração de dados (dry-run) | ⏳ PRÓXIMA |
 | 3.7.1e | Executar migração real + criar conta platformAdmin | ⏳ Pendente |
 | 3.7.1f | `tenantId` NOT NULL + rotacionar JWT_SECRET | ⏳ Pendente |
 | 3.7.2 | Isolamento de queries (helper `forTenant`) — **mais crítica** | ⏳ Pendente |
@@ -95,6 +95,7 @@ Visão arquitetural completa em [`ARCHITECTURE_HANDOFF.md`](./ARCHITECTURE_HANDO
 - **13/05/2026** — Sub-fase 3.7.1a concluída em staging. 14 divergências de schema legacy descobertas e sincronizadas. Helper `environment.ts` criado.
 - **14/05/2026** — Bugfix paralelo: aprovação de orçamento via link público falhava ao gerar OS. Causa: `getBudgetByToken` sem `adminId`/`priority` no SELECT. Mergeado em master, deployado em produção (commit `51a18a7`).
 - **15/05/2026** — Sub-fase 3.7.1b concluída em staging. 5 tabelas multi-tenant criadas com `utf8mb4_bin`, 4 FKs e 18 índices. Senha do banco staging rotacionada.
+- **18/05/2026** — Sub-fase 3.7.1c concluída em staging. 38 tabelas operacionais receberam coluna `tenantId INT NULL`. Dados existentes intactos (29 clients, 76 workOrders, 270 products). Bug descoberto: `grep -v "statement-breakpoint"` não funciona quando os marcadores estão inline; solução documentada em `PENDENCIAS_DEPLOY_PRODUCAO.md` (`sed` em vez de `grep -v`).
 
 ### Pendência crítica
 
