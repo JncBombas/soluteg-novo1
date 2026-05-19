@@ -597,7 +597,11 @@ async function main() {
 }
 
 main().catch(err => {
-  console.error('\n✗ Erro fatal:', err instanceof Error ? err.message : err);
-  if (err instanceof Error && err.stack) console.error(err.stack);
+  console.error('===== ERRO COMPLETO =====');
+  console.error('Mensagem:', err.message);
+  console.error('Cause:', err.cause);
+  console.error('Stack:', err.stack);
+  console.error('Toda a propriedade do erro:');
+  console.error(JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
   process.exit(1);
 });
