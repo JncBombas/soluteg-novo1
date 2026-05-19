@@ -159,14 +159,14 @@ async function promptSilent(q: string): Promise<string> {
 type AnyDb = any;
 
 async function tabelaExiste(db: AnyDb, tabela: string): Promise<boolean> {
-  const [rows] = await db.execute(sql.raw(
+  const rows = await db.execute(sql.raw(
     `SELECT 1 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${tabela}'`
   ));
   return (rows as unknown[]).length > 0;
 }
 
 async function colunaExiste(db: AnyDb, tabela: string, coluna: string): Promise<boolean> {
-  const [rows] = await db.execute(sql.raw(
+  const rows = await db.execute(sql.raw(
     `SELECT 1 FROM information_schema.COLUMNS ` +
     `WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${tabela}' AND COLUMN_NAME = '${coluna}'`
   ));
@@ -174,12 +174,12 @@ async function colunaExiste(db: AnyDb, tabela: string, coluna: string): Promise<
 }
 
 async function contar(db: AnyDb, tabela: string): Promise<number> {
-  const [rows] = await db.execute(sql.raw(`SELECT COUNT(*) AS n FROM \`${tabela}\``));
+  const rows = await db.execute(sql.raw(`SELECT COUNT(*) AS n FROM \`${tabela}\``));
   return Number((rows as Array<{ n: unknown }>)[0]?.n ?? 0);
 }
 
 async function contarNulos(db: AnyDb, tabela: string): Promise<number> {
-  const [rows] = await db.execute(sql.raw(
+  const rows = await db.execute(sql.raw(
     `SELECT COUNT(*) AS n FROM \`${tabela}\` WHERE tenantId IS NULL`
   ));
   return Number((rows as Array<{ n: unknown }>)[0]?.n ?? 0);
@@ -388,7 +388,7 @@ async function main() {
       step('Etapa 3 — Popular tenantId nas 38 tabelas');
 
       for (const tabela of TABELAS_OPERACIONAIS) {
-        const [res] = await tx.execute(sql.raw(
+        const res = await tx.execute(sql.raw(
           `UPDATE \`${tabela}\` SET tenantId = ${jncId} WHERE tenantId IS NULL`
         ));
         const n = Number((res as { affectedRows?: number }).affectedRows ?? 0);
@@ -518,7 +518,7 @@ async function main() {
     // Verifica se todos os tenantIds apontam para um tenant existente
     console.log('\n  Verificando integridade referencial (tenantId aponta para tenant válido):');
     for (const t of ['clients', 'workOrders', 'budgets', 'products'] as const) {
-      const [rows] = await (db as AnyDb).execute(sql.raw(
+      const rows = await (db as AnyDb).execute(sql.raw(
         `SELECT COUNT(*) AS n FROM \`${t}\` WHERE tenantId NOT IN (SELECT id FROM tenants)`
       ));
       const n = Number((rows as Array<{ n: unknown }>)[0]?.n ?? 0);
